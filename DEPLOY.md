@@ -94,6 +94,49 @@ php artisan view:cache
 
 ---
 
+## صفحة خطأ متكررة: `Call to undefined function highlight_file()`
+
+الاستضافة (Cloudways من ضمنها) قافلة دالة `highlight_file` في `disable_functions`.
+صفحة الخطأ التفصيلية بتاعة Symfony بتستدعيها، فبتقع هي كمان وبتعمل تكرار لا نهائي —
+**والخطأ الحقيقي بيتخبّى وراها**.
+
+### الخطوة الأولى: شوف الخطأ الحقيقي
+
+```bash
+cd /home/1216096.cloudwaysapps.com/sjqdrzbznj/public_html
+tail -60 storage/logs/laravel.log
+```
+
+### الخطوة التانية: أوقف الصفحة دي
+
+```bash
+# اتأكد إن APP_DEBUG=false
+grep APP_DEBUG .env
+
+# لو كانت true غيّرها لـ false، وبعدين — مهم جدًا:
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+```
+
+> لو عملت `config:cache` قبل كده وإنت حاطط `APP_DEBUG=true`، تغيير `.env` لوحده
+> **مش هيعمل حاجة**. لازم `config:clear`.
+
+السيستم دلوقتي فيه صفحة خطأ بديلة بتشتغل تلقائيًا في الحالة دي وبتعرض الخطأ
+الحقيقي ومكانه بدل التكرار.
+
+### دوال تانية بتتقفل على Cloudways
+
+| الدالة | التأثير | الحل |
+|---|---|---|
+| `highlight_file` | صفحة الخطأ التفصيلية بتقع | اتحل تلقائيًا — والأفضل `APP_DEBUG=false` |
+| `symlink` | `php artisan storage:link` بيفشل | `cp -r storage/app/public public/storage` |
+| `set_time_limit` | توليد الداتا ممكن يقطع | استخدم `php artisan lv:demo` من التيرمنال بدل الزرار |
+
+`php artisan lv:doctor` بيفحص الدوال دي كلها ويقولك أي واحدة مقفولة.
+
+---
+
 ## «الدخول مش راضي يشتغل»
 
 الترتيب ده بيحل 95% من الحالات:

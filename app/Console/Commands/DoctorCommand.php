@@ -112,6 +112,28 @@ class DoctorCommand extends Command
                 : $this->bad('امتداد ' . $ext . ' مش مفعّل', 'فعّله من لوحة الاستضافة (PHP Extensions)');
         }
 
+        /* الاستضافات المشتركة بتقفل دوال — وبعضها بيكسر صفحة الخطأ نفسها،
+           فالخطأ الحقيقي بيتخبّى ورا تكرار لا نهائي. */
+        $disabled = array_filter(array_map('trim', explode(',', (string) ini_get('disable_functions'))));
+        $matters  = array_values(array_intersect($disabled,
+            ['highlight_file', 'symlink', 'proc_open', 'exec', 'shell_exec', 'putenv', 'set_time_limit']));
+
+        if (in_array('highlight_file', $matters, true)) {
+            $this->note('highlight_file مقفولة — صفحة الخطأ التفصيلية بتاعة Symfony هتقع',
+                'السيستم بيستخدم صفحة بديلة تلقائيًا. الأفضل: APP_DEBUG=false على السيرفر');
+        }
+        if (in_array('symlink', $matters, true)) {
+            $this->note('symlink مقفولة — php artisan storage:link مش هيشتغل',
+                'اعمل نسخ بدل الرابط: cp -r storage/app/public public/storage');
+        }
+        if (in_array('set_time_limit', $matters, true)) {
+            $this->note('set_time_limit مقفولة — توليد الداتا ممكن يقطع',
+                'استخدم php artisan lv:demo من التيرمنال بدل الزرار');
+        }
+        if (!$matters) {
+            $this->ok('مفيش دوال مقفولة بتأثر على السيستم');
+        }
+
         config('app.key')
             ? $this->ok('APP_KEY موجود')
             : $this->bad('APP_KEY فاضي — كل صفحة هترمي 500', 'php artisan key:generate');
