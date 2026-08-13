@@ -48,8 +48,14 @@ composer install --no-dev --optimize-autoloader
 
 **لو الداتا اللي عندك مش مهمة (الحالة دي):**
 ```bash
-php artisan migrate:fresh --seed --force
+php artisan migrate:fresh --force
+
+# اختار واحدة:
+php artisan lv:demo      # ديمو كامل — للتجربة والفهم
+php artisan lv:master    # بيانات أساسية بس — للبدء بشغل حقيقي
 ```
+> `migrate:fresh --seed` بيعمل الأدوار والمستخدمين + **الديمو الكامل**.
+> لو عايز تبدأ نضيف، شغّل `migrate:fresh --seed --force` وبعدها `php artisan lv:master`.
 
 **لو عايز تحافظ على الداتا:**
 ```bash
@@ -129,8 +135,9 @@ php artisan view:cache
 | الأمر | بيعمل إيه |
 |---|---|
 | `php artisan lv:doctor` | فحص شامل — شغّله بعد أي تعديل |
-| `php artisan lv:demo` | يمسح بيانات الشغل ويولّد داتا ديمو كاملة |
-| `php artisan lv:reset` | يمسح بيانات الشغل ويسيب المستخدمين والأدوار |
+| `php artisan lv:demo` | ديمو كامل — السيستم وهو شغّال بكل مستنداته |
+| `php artisan lv:master` | بيانات أساسية بس (بدون مستندات) — للبدء بشغل حقيقي |
+| `php artisan lv:reset` | يمسح كل بيانات الشغل ويسيب المستخدمين والأدوار |
 
 نفس الزرارين موجودين في **الإعدادات ← أدوات الداتا** (للأدمن بس).
 

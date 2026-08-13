@@ -78,10 +78,7 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
 .sidebar a.nav-item.active{background:var(--lv-brand);color:#fff;font-weight:600;
   box-shadow:inset 3px 0 0 #F0D6E6}
 .sidebar a.nav-item i{width:18px;text-align:center;opacity:.9}
-.sidebar .step-no{margin-inline-start:auto;font-size:.62rem;color:#C49BB6;
-  border:1px solid rgba(255,255,255,.22);border-radius:4px;padding:0 5px;line-height:15px}
-.sidebar a.nav-item.active .step-no{color:#F5E3EE;border-color:rgba(255,255,255,.45)}
-.sidebar .badge-count{margin-inline-start:6px;background:#D8394F;color:#fff;font-size:.68rem;
+.sidebar .badge-count{margin-inline-start:auto;background:#D8394F;color:#fff;font-size:.68rem;
   min-width:20px;padding:2px 6px}
 .sidebar .nav-group-btn .badge-count{margin-inline-start:auto}
 
@@ -185,79 +182,83 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
 
   /* المنيو مرتّب بترتيب الفلو الحقيقي. كل مجموعة تاب بيتفتح ويتقفل،
      والتاب اللي فيه الشاشة المفتوحة بيفتح لوحده.
-     العنصر: [الراوت, العنوان, الأيقونة, الصلاحية, رقم الخطوة, الشرح] */
+     العنصر: [الراوت, العنوان, الأيقونة, الصلاحية, الشرح]
+     الرقم الأحمر الوحيد اللي بيظهر معناه: فيه شغل مستني منك هنا. */
+  /* المنيو مرتّب بترتيب الفلو الحقيقي.
+     العنصر: [الراوت, العنوان, الأيقونة, الصلاحية, الشرح]
+     الرقم الأحمر هو الرقم الوحيد في المنيو، ومعناه: فيه شغل مستني منك هنا. */
   $nav = [
     ['main', '', 'bi-grid', [
-      ['dashboard', 'لوحة التحكم', 'bi-speedometer2', null, null,
+      ['dashboard', 'لوحة التحكم', 'bi-speedometer2', null,
        'صورة السيستم كله: الشراء، القماش، التشغيل، التغطية'],
     ]],
 
-    ['buy', '① دورة الشراء', 'bi-cart3', [
+    ['buy', 'دورة الشراء', 'bi-cart3', [
       ['purchase-orders.index', 'طلبات الشراء', 'bi-file-earmark-text',
-       'po.view|po.request|po.source|po.finance', null,
+       'po.view|po.request|po.source|po.finance',
        'مستند واحد بيمر على التخطيط ثم المشتريات ثم الحسابات ثم الاعتماد'],
-      ['finance.payables', 'المستحقات المتوقعة', 'bi-cash-coin', 'po.finance', null,
+      ['finance.payables', 'المستحقات المتوقعة', 'bi-cash-coin', 'po.finance',
        'إيه اللي جاي على الحسابات فلوس، لمين، وإمتى'],
     ]],
 
-    ['fabric', '② وصول القماش', 'bi-box-arrow-in-down', [
-      ['stock-additions.index', 'إذن إضافة', 'bi-box-arrow-in-down', 'receipt.view', '1',
+    ['fabric', 'وصول القماش', 'bi-box-arrow-in-down', [
+      ['stock-additions.index', 'إذن إضافة', 'bi-box-arrow-in-down', 'receipt.view',
        'أول مستند: بيولّد الحوض ويحجز الكمية تحت الفحص'],
-      ['inspections.index', 'تقرير فحص قماش', 'bi-search', 'qc.view', '2',
+      ['inspections.index', 'تقرير فحص قماش', 'bi-search', 'qc.view',
        'جرد الأتواب وقياس عرض وطول كل توب ⇐ أقل عرض'],
-      ['lab-reports.index', 'تقرير المعمل', 'bi-thermometer-half', 'qc.view', '3',
+      ['lab-reports.index', 'تقرير المعمل', 'bi-thermometer-half', 'qc.view',
        'وزن البنشر والانكماش ومطابقة اللون'],
-      ['goods-receipts.index', 'إذن استلام خام', 'bi-truck', 'receipt.view', '4',
+      ['goods-receipts.index', 'إذن استلام خام', 'bi-truck', 'receipt.view',
        'الإفراج — دلوقتي بس القماش يبقى متاح للتشغيل'],
-      ['consignments.index', 'الأحواض', 'bi-box-seam', 'receipt.view', null,
+      ['consignments.index', 'الأحواض', 'bi-box-seam', 'receipt.view',
        'كل رسالة قماش وحالتها ورصيدها المحجوز والمتاح'],
     ]],
 
-    ['prod', '③ التشغيل', 'bi-hammer', [
-      ['markers.requests', 'طلبات الماركر', 'bi-envelope-paper', 'marker.view', '1',
+    ['prod', 'التشغيل', 'bi-hammer', [
+      ['markers.requests', 'طلبات الماركر', 'bi-envelope-paper', 'marker.view',
        'المخطط بيطلب تعشيقة على أقل عرض'],
-      ['markers.index', 'الماركرات', 'bi-grid-3x3', 'marker.view', '2',
+      ['markers.index', 'الماركرات', 'bi-grid-3x3', 'marker.view',
        'طول الفرشة وعدد القطع فيها والموديلات'],
-      ['work-orders.index', 'أوامر الشغل', 'bi-hammer', 'wo.view', '3',
+      ['work-orders.index', 'أوامر الشغل', 'bi-hammer', 'wo.view',
        'حوض + ماركر + مصنع ⇐ الحسبة والكميات المتوقعة'],
-      ['cut-declarations.index', 'بيانات القص', 'bi-scissors', 'cut.view', '4',
+      ['cut-declarations.index', 'بيانات القص', 'bi-scissors', 'cut.view',
        'الفعلي من المصنع — وأهم رقم فيه طول الفرشة الفعلي'],
-      ['production-receipts.index', 'استلامات الإنتاج', 'bi-inboxes', 'prod.manage|wo.view', '5',
+      ['production-receipts.index', 'استلامات الإنتاج', 'bi-inboxes', 'prod.manage|wo.view',
        'استلام على دفعات لحد ما أمر الشغل يتقفل'],
     ]],
 
-    ['plan', '④ التخطيط', 'bi-graph-up-arrow', [
-      ['planning.calculator', 'حاسبة التخطيط', 'bi-calculator', null, null,
+    ['plan', 'التخطيط', 'bi-graph-up-arrow', [
+      ['planning.calculator', 'حاسبة التخطيط', 'bi-calculator', null,
        'جرّب الأرقام من غير ما تعمل مستند'],
-      ['planning.coverage', 'أيام التغطية', 'bi-clock-history', 'forecast.view', null,
+      ['planning.coverage', 'أيام التغطية', 'bi-clock-history', 'forecast.view',
        'الرصيد يكفي كام يوم — بديل شغل النواقص'],
-      ['planning.forecast', 'الفوركاست', 'bi-graph-up-arrow', 'forecast.view', null,
+      ['planning.forecast', 'الفوركاست', 'bi-graph-up-arrow', 'forecast.view',
        'المتوقع شهريًا لكل موديل ولون، والفعلي مقابله'],
-      ['planning.color-ratios', 'نسب الألوان', 'bi-pie-chart', 'forecast.view', null,
+      ['planning.color-ratios', 'نسب الألوان', 'bi-pie-chart', 'forecast.view',
        'توزيع الموديل على الألوان — مستنتج من الصرف وقابل للتعديل'],
-      ['planning.safety-stock', 'مخزون الأمان', 'bi-shield-check', 'forecast.view', null,
+      ['planning.safety-stock', 'مخزون الأمان', 'bi-shield-check', 'forecast.view',
        'الكمية اللي بتتخصم قبل حساب التغطية'],
     ]],
 
     ['master', 'البيانات الأساسية', 'bi-database', [
-      ['product-models.index', 'الموديلات', 'bi-tags', 'master.view', null, 'المنتجات ومقاساتها وقائمة إكسسواراتها'],
-      ['colors.index', 'الألوان', 'bi-palette', 'master.view', null, 'أكواد الألوان — دمج وإيقاف، مفيش حذف'],
-      ['fabric-types.index', 'الخامات', 'bi-layers', 'master.view', null, 'الخامات ومواصفاتها المعتمدة'],
-      ['accessories.index', 'الإكسسوارات', 'bi-paperclip', 'master.view', null, 'الكياس والاستيكرات والزراير والسوست'],
-      ['sizes.index', 'المقاسات', 'bi-rulers', 'master.view', null, 'المقاسات المتاحة'],
-      ['suppliers.index', 'الموردين', 'bi-shop', 'master.view', null, 'الموردين وبياناتهم وشروط الدفع'],
-      ['factories.index', 'المصانع', 'bi-building', 'master.view', null, 'المصانع وطاقتها اليومية ودورة تشغيلها'],
-      ['warehouses.index', 'المخازن', 'bi-house-gear', 'master.view', null, 'المخازن وتاريخ آخر جرد'],
+      ['product-models.index', 'الموديلات', 'bi-tags', 'master.view', 'المنتجات ومقاساتها وقائمة إكسسواراتها'],
+      ['colors.index', 'الألوان', 'bi-palette', 'master.view', 'أكواد الألوان — دمج وإيقاف، مفيش حذف'],
+      ['fabric-types.index', 'الخامات', 'bi-layers', 'master.view', 'الخامات ومواصفاتها المعتمدة'],
+      ['accessories.index', 'الإكسسوارات', 'bi-paperclip', 'master.view', 'الكياس والاستيكرات والزراير والسوست'],
+      ['sizes.index', 'المقاسات', 'bi-rulers', 'master.view', 'المقاسات المتاحة'],
+      ['suppliers.index', 'الموردين', 'bi-shop', 'master.view', 'الموردين وبياناتهم وشروط الدفع'],
+      ['factories.index', 'المصانع', 'bi-building', 'master.view', 'المصانع وطاقتها اليومية ودورة تشغيلها'],
+      ['warehouses.index', 'المخازن', 'bi-house-gear', 'master.view', 'المخازن وتاريخ آخر جرد'],
     ]],
 
     ['sys', 'النظام', 'bi-gear', [
-      ['approvals.index', 'الاعتمادات', 'bi-check2-square', null, null, 'كل حاجة مستنية توقيعك'],
-      ['io.index', 'استيراد وتصدير', 'bi-file-earmark-excel', 'import.manage', null, 'إكسيل: ألوان ومبيعات وأرصدة وتقارير'],
-      ['settings.users', 'المستخدمين', 'bi-people', 'settings.users', null, 'إضافة مستخدمين وتحديد أدوارهم'],
-      ['settings.roles', 'الأدوار والصلاحيات', 'bi-key', 'settings.roles', null, 'مين يشوف إيه ومين يعمل إيه'],
-      ['settings.flows', 'دورات الاعتماد', 'bi-diagram-3', 'settings.flows', null, 'مين يعتمد إيه — بيتغيّر من غير كود'],
-      ['settings.activity', 'سجل الحركة', 'bi-journal-text', 'settings.audit', null, 'مين عمل إيه وإمتى'],
-      ['settings.data', 'أدوات الداتا', 'bi-database-gear', 'settings.data', null, 'مسح بيانات الشغل أو توليد داتا ديمو'],
+      ['approvals.index', 'الاعتمادات', 'bi-check2-square', null, 'كل حاجة مستنية توقيعك'],
+      ['io.index', 'استيراد وتصدير', 'bi-file-earmark-excel', 'import.manage', 'إكسيل: ألوان ومبيعات وأرصدة وتقارير'],
+      ['settings.users', 'المستخدمين', 'bi-people', 'settings.users', 'إضافة مستخدمين وتحديد أدوارهم'],
+      ['settings.roles', 'الأدوار والصلاحيات', 'bi-key', 'settings.roles', 'مين يشوف إيه ومين يعمل إيه'],
+      ['settings.flows', 'دورات الاعتماد', 'bi-diagram-3', 'settings.flows', 'مين يعتمد إيه — بيتغيّر من غير كود'],
+      ['settings.activity', 'سجل الحركة', 'bi-journal-text', 'settings.audit', 'مين عمل إيه وإمتى'],
+      ['settings.data', 'أدوات الداتا', 'bi-database-gear', 'settings.data', 'مسح بيانات الشغل أو توليد داتا ديمو'],
     ]],
   ];
 
@@ -288,10 +289,10 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
     @continue(!count($visible))
 
     @if(!$group)
-      @foreach($visible as [$route,$label,$icon,$perm,$step,$info])
+      @foreach($visible as [$route,$label,$icon,$perm,$info])
         <a class="nav-item {{ request()->routeIs($route) ? 'active' : '' }}" href="{{ route($route) }}"
            title="{{ $info }}">
-          <i class="bi {{ $icon }}"></i><span>{{ $label }}</span>
+          <i class="bi {{ $icon }}" aria-hidden="true"></i><span>{{ $label }}</span>
         </a>
       @endforeach
       @continue
@@ -306,14 +307,15 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
     </button>
 
     <div class="collapse {{ $isOpen ? 'show' : '' }}" id="g-{{ $gid }}">
-      @foreach($visible as [$route,$label,$icon,$perm,$step,$info])
+      @foreach($visible as [$route,$label,$icon,$perm,$info])
         @php $n = $cnt[$route] ?? 0; @endphp
         <a class="nav-item {{ request()->routeIs(str_replace('.index','.*',$route)) || request()->routeIs($route) ? 'active' : '' }}"
            href="{{ route($route) }}" title="{{ $info }}">
-          <i class="bi {{ $icon }}"></i>
+          <i class="bi {{ $icon }}" aria-hidden="true"></i>
           <span>{{ $label }}</span>
-          @if($step)<span class="step-no">{{ $step }}</span>@endif
-          @if($n > 0)<span class="badge badge-count rounded-pill">{{ $n }}</span>@endif
+          @if($n > 0)
+            <span class="badge badge-count rounded-pill" title="{{ $n }} مستني منك">{{ $n }}</span>
+          @endif
         </a>
       @endforeach
     </div>

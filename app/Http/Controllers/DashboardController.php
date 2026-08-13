@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Consignment;
+use App\Models\Forecast;
+use App\Models\SalesSnapshot;
 use App\Models\CutDeclaration;
 use App\Models\DocumentComment;
 use App\Models\Factory;
@@ -49,6 +51,12 @@ class DashboardController extends Controller
             'lateOrders'  => WorkOrder::late()->with(['factory','consignment'])->limit(6)->get(),
             'talk'        => DocumentComment::with('user')->where('kind', '!=', 'system')
                                 ->latest('id')->limit(6)->get(),
+
+            // ── الأناليتكس ──
+            'trend'       => $this->trend(),
+            'statusMix'   => $this->statusMix(),
+            'coverageMix' => $this->coverageMix(),
+            'upcoming'    => $this->upcoming(),
         ]);
     }
 
@@ -134,6 +142,143 @@ class DashboardController extends Controller
             'unknown' => $cov->where('flag', 'unknown')->count(),
             'models'  => $cov->count(),
         ];
+    }
+
+    /**
+     * اتجاه 12 شهر: المبيعات مقابل الإنتاج المستلم مقابل الفوركاست.
+     * الشارت ده بيجاوب على السؤال الوحيد المهم: بننتج بقدر ما بنبيع ولا لأ.
+     */
+    private function trend(): array
+    {
+        $months = collect(range(11, 0))->map(fn ($k) => now()->copy()->subMonths($k)->startOfMonth());
+
+        $sales = SalesSnapshot::query()
+            ->selectRaw("DATE_FORMAT(period_from, '%Y-%m') ym, SUM(qty_pcs) q")
+            ->where('period_from', '>=', $months->first()->toDateString())
+            /*
+             | اللقطات الشهرية بس. لقطة «آخر 30 يوم» بتتشال لأنها بتتداخل
+             | مع الشهر الحالي — والفلتر على LAST_DAY أدق من DAY()=1 لأن
+             | يوم 31 في شهر 31 يوم بيخلي الاتنين متساويين.
+            */
+            ->whereRaw('DAY(period_from) = 1 AND period_to = LAST_DAY(period_from)')
+            // الاستيراد المتكرر بيسجّل مراجعة جديدة — بناخد الأحدث بس
+            ->whereRaw('revision = (SELECT MAX(s2.revision) FROM sales_snapshots s2
+                        WHERE s2.product_model_id <=> sales_snapshots.product_model_id
+                          AND s2.period_from = sales_snapshots.period_from)')
+            ->groupBy('ym')->pluck('q', 'ym');
+
+        $prod = ProductionReceipt::query()
+            ->selectRaw("DATE_FORMAT(doc_date, '%Y-%m') ym, SUM(total_pieces) q")
+            ->where('status', 'approved')
+            ->where('doc_date', '>=', $months->first()->toDateString())
+            ->groupBy('ym')->pluck('q', 'ym');
+
+        $fc = Forecast::query()
+            ->selectRaw("CONCAT(year, '-', LPAD(month, 2, '0')) ym, SUM(forecast_qty) q")
+            ->groupBy('ym')->pluck('q', 'ym');
+
+        $names = [1=>'يناير',2=>'فبراير',3=>'مارس',4=>'أبريل',5=>'مايو',6=>'يونيو',
+                  7=>'يوليو',8=>'أغسطس',9=>'سبتمبر',10=>'أكتوبر',11=>'نوفمبر',12=>'ديسمبر'];
+
+        return [
+            'labels'   => $months->map(fn ($m) => $names[$m->month] . ' ' . substr((string) $m->year, 2))->all(),
+            'sales'    => $months->map(fn ($m) => (int) ($sales[$m->format('Y-m')] ?? 0))->all(),
+            'produced' => $months->map(fn ($m) => (int) ($prod[$m->format('Y-m')] ?? 0))->all(),
+            'forecast' => $months->map(fn ($m) => (int) ($fc[$m->format('Y-m')] ?? 0))->all(),
+        ];
+    }
+
+    /** توزيع الأحواض على الحالات — بيوريك القماش واقف فين */
+    private function statusMix(): array
+    {
+        $rows = Consignment::query()->selectRaw('status, COUNT(*) c, SUM(total_kg) kg')
+            ->groupBy('status')->get();
+
+        $order = ['under_inspection', 'inspected', 'lab_done', 'released', 'in_production', 'closed', 'rejected'];
+        $colors = [
+            'under_inspection' => '#D9A114', 'inspected' => '#2E86AB', 'lab_done' => '#5B7FA6',
+            'released' => '#1B7A50', 'in_production' => '#9D197E', 'closed' => '#6B606A',
+            'rejected' => '#B5342B',
+        ];
+
+        $out = ['labels' => [], 'data' => [], 'kg' => [], 'colors' => []];
+        foreach ($order as $st) {
+            $r = $rows->firstWhere('status', $st);
+            if (!$r || $r->c == 0) continue;
+            $out['labels'][] = Consignment::STATUSES[$st] ?? $st;
+            $out['data'][]   = (int) $r->c;
+            $out['kg'][]     = round((float) $r->kg);
+            $out['colors'][] = $colors[$st];
+        }
+        return $out;
+    }
+
+    /** توزيع الموديلات على شرايح التغطية */
+    private function coverageMix(): array
+    {
+        $cov = collect(CoverageService::overview());
+        $map = [
+            'out'     => ['خلص',        '#3B092F'],
+            'danger'  => ['خطر',        '#B5342B'],
+            'watch'   => ['مراقبة',     '#D9A114'],
+            'ok'      => ['تمام',       '#1B7A50'],
+            'high'    => ['مخزون عالي', '#2E86AB'],
+            'unknown' => ['مفيش مبيعات','#9A8E96'],
+        ];
+
+        $out = ['labels' => [], 'data' => [], 'colors' => []];
+        foreach ($map as $flag => [$label, $color]) {
+            $n = $cov->where('flag', $flag)->count();
+            if (!$n) continue;
+            $out['labels'][] = $label;
+            $out['data'][]   = $n;
+            $out['colors'][] = $color;
+        }
+        return $out;
+    }
+
+    /**
+     * المواعيد القادمة — توريدات من الموردين وتسليمات من المصانع.
+     * المتأخر بيظهر الأول لأنه اللي محتاج تحرّك.
+     */
+    private function upcoming(): array
+    {
+        $rows = [];
+
+        foreach (PurchaseOrder::with('supplier')
+            ->whereIn('stage', ['approved', 'receiving'])
+            ->whereNotNull('delivery_date')
+            ->whereDate('delivery_date', '<=', now()->addDays(45))
+            ->orderBy('delivery_date')->limit(12)->get() as $po) {
+            $rows[] = [
+                'date'  => $po->delivery_date,
+                'kind'  => 'توريد',
+                'icon'  => 'bi-truck',
+                'no'    => $po->po_no,
+                'who'   => $po->supplier?->name ?? '—',
+                'note'  => number_format((float) $po->total_qty, 0) . ' وحدة',
+                'link'  => route('purchase-orders.edit', $po),
+            ];
+        }
+
+        foreach (WorkOrder::with('factory')->open()
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '<=', now()->addDays(45))
+            ->orderBy('due_date')->limit(12)->get() as $wo) {
+            $rows[] = [
+                'date'  => $wo->due_date,
+                'kind'  => 'تسليم',
+                'icon'  => 'bi-hammer',
+                'no'    => $wo->wo_no,
+                'who'   => $wo->factory?->name ?? '—',
+                'note'  => number_format($wo->outstanding_pieces) . ' قطعة متبقية',
+                'link'  => route('work-orders.show', $wo),
+            ];
+        }
+
+        usort($rows, fn ($a, $b) => $a['date'] <=> $b['date']);
+
+        return array_slice($rows, 0, 14);
     }
 
     private function factoryLoad()

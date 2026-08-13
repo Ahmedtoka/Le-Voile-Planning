@@ -257,6 +257,7 @@ Route::middleware('auth.user')->group(function () {
         Route::middleware('can.do:settings.data')->group(function () {
             Route::get('data',           [DemoDataController::class, 'index'])->name('settings.data');
             Route::post('data/generate', [DemoDataController::class, 'generate'])->name('data.generate');
+            Route::post('data/master',   [DemoDataController::class, 'generateMaster'])->name('data.master');
             Route::post('data/reset',    [DemoDataController::class, 'reset'])->name('data.reset');
         });
 

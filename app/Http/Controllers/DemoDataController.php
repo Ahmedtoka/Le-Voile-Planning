@@ -23,19 +23,37 @@ class DemoDataController extends Controller
         ]);
     }
 
+    /** ① ديمو كامل — السيستم وهو شغّال بكل مستنداته */
     public function generate(Request $request)
     {
         $request->validate(['confirm' => ['required', 'in:توليد']], [], ['confirm' => 'التأكيد']);
 
-        @set_time_limit(600);
+        @set_time_limit(900);
 
         // generate() بيمسح الأول لوحده — أرقام المستندات متسلسلة
         $stats = (new DemoDataService())->generate();
-        ActivityLogger::log('demo_generated', null, 'توليد داتا ديمو');
+        ActivityLogger::log('demo_generated', null, 'توليد ديمو كامل');
 
-        $summary = collect($stats)->map(fn ($v, $k) => "{$k}: {$v}")->implode(' · ');
+        return back()->with('info',
+            '<b>تم توليد الديمو الكامل.</b> السيستم دلوقتي فيه مستندات في كل مرحلة — '
+            . 'ادخل بأي دور وشوف الرقم الأحمر جنب شاشاته.<br><span class="hint">'
+            . e(collect($stats)->map(fn ($v, $k) => "{$k}: {$v}")->implode(' · ')) . '</span>');
+    }
 
-        return back()->with('info', 'تم توليد الداتا الديمو.<br><span class="hint">' . e($summary) . '</span>');
+    /** ② بيانات أساسية بس — نقطة بداية للشغل الحقيقي */
+    public function generateMaster(Request $request)
+    {
+        $request->validate(['confirm' => ['required', 'in:أساسية']], [], ['confirm' => 'التأكيد']);
+
+        @set_time_limit(600);
+
+        $stats = (new DemoDataService())->generateMasterOnly();
+        ActivityLogger::log('master_generated', null, 'توليد بيانات أساسية');
+
+        return back()->with('info',
+            '<b>تم تجهيز البيانات الأساسية.</b> مفيش أي طلبات ولا أحواض ولا أوامر — '
+            . 'ابدأ من <a href="' . route('purchase-orders.index') . '">طلبات الشراء</a> وامشِ الدورة بنفسك.'
+            . '<br><span class="hint">' . e(collect($stats)->map(fn ($v, $k) => "{$k}: {$v}")->implode(' · ')) . '</span>');
     }
 
     public function reset(Request $request)

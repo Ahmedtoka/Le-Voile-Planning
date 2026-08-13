@@ -193,6 +193,122 @@
   </div>
 </div>
 
+
+{{-- ══ تحليلات ══ --}}
+<div class="section-head">
+  <h2>التحليلات</h2>
+  <span class="hint">الاتجاه العام، توزيع القماش، وشرايح التغطية</span>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-graph-up" aria-hidden="true"></i> المبيعات مقابل الإنتاج — آخر 12 شهر</span>
+        <span class="hint">بننتج بقدر ما بنبيع ولا لأ؟</span>
+      </div>
+      <div class="card-body">
+        <div style="position:relative;height:280px">
+          <canvas id="chTrend" role="img"
+                  aria-label="رسم بياني يقارن المبيعات الشهرية بالإنتاج المستلم والفوركاست خلال آخر 12 شهر"></canvas>
+        </div>
+      </div>
+      <div class="card-footer bg-white hint">
+        الأعمدة = المبيعات الفعلية · الخط الكامل = الإنتاج المستلم من المصانع ·
+        الخط المتقطع = الفوركاست. لو الإنتاج تحت المبيعات باستمرار، المخزون بيتآكل.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-pie-chart" aria-hidden="true"></i> القماش واقف فين</div>
+      <div class="card-body">
+        <div style="position:relative;height:230px">
+          <canvas id="chStatus" role="img" aria-label="توزيع الأحواض على حالات الدورة"></canvas>
+        </div>
+        <table class="table table-sm mt-3 mb-0">
+          <thead><tr><th>الحالة</th><th>أحواض</th><th>كجم</th></tr></thead>
+          <tbody>
+          @forelse($statusMix['labels'] as $i => $lbl)
+            <tr>
+              <td>
+                <span style="display:inline-block;width:9px;height:9px;border-radius:2px;
+                      background:{{ $statusMix['colors'][$i] }}" aria-hidden="true"></span>
+                {{ $lbl }}
+              </td>
+              <td class="num">{{ $statusMix['data'][$i] }}</td>
+              <td class="num">{{ number_format($statusMix['kg'][$i]) }}</td>
+            </tr>
+          @empty
+            <tr><td colspan="3" class="text-center text-muted py-2">مفيش أحواض لسه.</td></tr>
+          @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart-steps" aria-hidden="true"></i> شرايح التغطية</div>
+      <div class="card-body">
+        <div style="position:relative;height:220px">
+          <canvas id="chCoverage" role="img" aria-label="عدد الموديلات في كل شريحة تغطية"></canvas>
+        </div>
+      </div>
+      <div class="card-footer bg-white hint">
+        خطر = تغطية {{ config('lvplanning.coverage.danger_days') }} يوم أو أقل ·
+        مراقبة = لحد {{ config('lvplanning.coverage.watch_days') }} يوم.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-calendar-event" aria-hidden="true"></i> المواعيد القادمة</span>
+        <span class="hint">45 يوم جايين — المتأخر الأول</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead><tr><th>التاريخ</th><th>النوع</th><th>المستند</th><th>الطرف</th><th>المتبقي</th></tr></thead>
+          <tbody>
+          @forelse($upcoming as $u)
+            @php
+              // Carbon 3 بيرجّع الفرق بإشارة — من غير true التواريخ الجاية بتطلع بالسالب
+              $late = $u['date']->isPast();
+              $days = (int) $u['date']->diffInDays(now(), true);
+            @endphp
+            <tr class="{{ $late ? 'table-warning' : '' }}">
+              <td class="num text-nowrap">
+                {{ $u['date']->format('Y-m-d') }}
+                <div class="hint">
+                  @if($late)
+                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> متأخر {{ $days }} يوم
+                  @else
+                    باقي {{ $days }} يوم
+                  @endif
+                </div>
+              </td>
+              <td><i class="bi {{ $u['icon'] }}" aria-hidden="true"></i> {{ $u['kind'] }}</td>
+              <td class="num"><a href="{{ $u['link'] }}">{{ $u['no'] }}</a></td>
+              <td>{{ $u['who'] }}</td>
+              <td class="hint">{{ $u['note'] }}</td>
+            </tr>
+          @empty
+            <tr><td colspan="5" class="text-center text-muted py-4">مفيش مواعيد قريبة.</td></tr>
+          @endforelse
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer bg-white hint">
+        توريدات من الموردين + تسليمات من المصانع في مكان واحد.
+      </div>
+    </div>
+  </div>
+</div>
+
 {{-- ══ الجداول ══ --}}
 <div class="row g-3">
   <div class="col-lg-7">
@@ -289,7 +405,7 @@
           <li class="list-group-item py-2">
             <a href="{{ route('work-orders.show', $w) }}" class="fw-bold num">{{ $w->wo_no }}</a>
             <div class="hint">
-              {{ $w->factory?->name }} · متأخر {{ (int) $w->due_date->diffInDays(now()) }} يوم ·
+              {{ $w->factory?->name }} · متأخر {{ (int) $w->due_date->diffInDays(now(), true) }} يوم ·
               متبقي {{ number_format($w->outstanding_pieces) }} قطعة
             </div>
           </li>
@@ -321,3 +437,85 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (typeof Chart === 'undefined') return;
+
+  Chart.defaults.font.family = "'Cairo', sans-serif";
+  Chart.defaults.font.size   = 11;
+  Chart.defaults.color       = '#6B606A';
+  Chart.defaults.plugins.legend.rtl = true;
+  Chart.defaults.plugins.tooltip.rtl = true;
+  Chart.defaults.plugins.tooltip.titleFont = {family: "'Cairo', sans-serif"};
+  Chart.defaults.plugins.tooltip.bodyFont  = {family: "'Cairo', sans-serif"};
+  Chart.defaults.animation = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? false : {duration: 260};
+
+  const nf = new Intl.NumberFormat('en-US');
+  const grid = {color: '#EFE7EC', drawBorder: false};
+
+  const trend = @json($trend);
+  const t = document.getElementById('chTrend');
+  if (t) new Chart(t, {
+    data: {
+      labels: trend.labels,
+      datasets: [
+        {type: 'bar',  label: 'مبيعات', data: trend.sales,
+         backgroundColor: '#ECD1E5', borderColor: '#9D197E', borderWidth: 1, order: 3},
+        {type: 'line', label: 'إنتاج مستلم', data: trend.produced,
+         borderColor: '#1B7A50', backgroundColor: '#1B7A50', tension: .35,
+         pointRadius: 3, pointHoverRadius: 6, borderWidth: 2, order: 1},
+        {type: 'line', label: 'فوركاست', data: trend.forecast,
+         borderColor: '#9A6410', borderDash: [5, 4], tension: .35,
+         pointRadius: 0, pointHoverRadius: 5, borderWidth: 2, order: 2}
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+      plugins: {
+        legend: {position: 'bottom', labels: {boxWidth: 12, padding: 14, usePointStyle: true}},
+        tooltip: {callbacks: {label: c => c.dataset.label + ': ' + nf.format(c.parsed.y) + ' قطعة'}}
+      },
+      scales: {
+        y: {beginAtZero: true, grid: grid, ticks: {callback: v => nf.format(v)}},
+        x: {grid: {display: false}}
+      }
+    }
+  });
+
+  const st = @json($statusMix);
+  const sEl = document.getElementById('chStatus');
+  if (sEl && st.data.length) new Chart(sEl, {
+    type: 'doughnut',
+    data: {labels: st.labels, datasets: [{data: st.data, backgroundColor: st.colors,
+           borderColor: '#fff', borderWidth: 2}]},
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '58%',
+      plugins: {
+        legend: {position: 'bottom', labels: {boxWidth: 10, padding: 10, usePointStyle: true, font: {size: 10}}},
+        tooltip: {callbacks: {label: c => c.label + ': ' + nf.format(c.parsed) + ' حوض'}}
+      }
+    }
+  });
+
+  const cv = @json($coverageMix);
+  const cEl = document.getElementById('chCoverage');
+  if (cEl && cv.data.length) new Chart(cEl, {
+    type: 'bar',
+    data: {labels: cv.labels, datasets: [{label: 'موديلات', data: cv.data,
+           backgroundColor: cv.colors, borderRadius: 5, maxBarThickness: 34}]},
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: {
+        legend: {display: false},
+        tooltip: {callbacks: {label: c => nf.format(c.parsed.x) + ' موديل'}}
+      },
+      scales: {x: {beginAtZero: true, grid: grid, ticks: {precision: 0}}, y: {grid: {display: false}}}
+    }
+  });
+})();
+</script>
+@endpush

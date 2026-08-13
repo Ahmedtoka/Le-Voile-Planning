@@ -18,12 +18,11 @@ use App\Models\WorkOrder;
 /**
  * كاونترات المنيو — «اللي مستني مني أنا».
  *
- * الرقم اللي جنب كل شاشة معناه: فيه شغل عليك دلوقتي في المكان ده.
- * كل دور بيشوف أرقامه هو — المشتريات بتشوف الطلبات المستنية تسعير،
- * والفاحص يشوف الأحواض المستنية فحص، وهكذا.
+ * ده الرقم الوحيد في المنيو، ومعناه واحد بس: <b>فيه حاجة محتاجة أكشن منك
+ * هنا دلوقتي</b>. مش عدد السجلات، ومش إحصائية.
  *
- * القاعدة: الرقم لازم يوصل صفر لما تخلّص شغلك. لو رقم مش بيقل،
- * يبقى فيه حاجة واقفة.
+ * القاعدة: الرقم لازم يوصل صفر لما تخلّص شغلك. لو رقم مش بيقل، يبقى فيه
+ * حاجة واقفة ومحتاجة تتفتح.
  */
 class MenuCounters
 {
@@ -83,9 +82,11 @@ class MenuCounters
                 ->count();
         }
 
-        // ── الأحواض: الجاهز للتشغيل ──
+        // ── الأحواض: مفرج عنها ولسه ما اتعملهاش أمر شغل ⇒ محتاجة أكشن ──
         if ($can('wo.manage')) {
-            $c['consignments.index'] = Consignment::readyForProduction()->count();
+            $c['consignments.index'] = Consignment::readyForProduction()
+                ->whereDoesntHave('workOrders', fn ($q) => $q->whereNotIn('status', ['cancelled']))
+                ->count();
         }
 
         // ── طلبات الماركر: المسند ليّا ──
@@ -94,7 +95,9 @@ class MenuCounters
                 ->where(fn ($q) => $q->where('assigned_to', $user->id)->orWhereNull('assigned_to'))
                 ->count();
 
-            $c['markers.index'] = Marker::whereIn('status', ['draft', 'rejected'])->count();
+            // مسوداتي أنا بس — مش مسودات الناس
+            $c['markers.index'] = Marker::whereIn('status', ['draft', 'rejected'])
+                ->where('created_by_patternist', $user->id)->count();
         }
 
         // ── أوامر الشغل: مسودات ومتأخرات ──

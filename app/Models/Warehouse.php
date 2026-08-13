@@ -24,7 +24,8 @@ class Warehouse extends Model
     /** الرصيد موثوق قد إيه؟ لو الجرد بقى له كتير، حذّر */
     public function getStockAgeDaysAttribute(): ?int
     {
-        return $this->last_stock_count_at?->diffInDays(now());
+        // absolute = true — Carbon 3 بيرجّع الفرق بإشارة
+        return $this->last_stock_count_at?->diffInDays(now(), true);
     }
 
     public function getLabelAttribute(): string

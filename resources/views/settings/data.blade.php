@@ -11,31 +11,58 @@
 <div class="row g-3">
   <div class="col-lg-5">
     <div class="card mb-3">
-      <div class="card-header text-success"><i class="bi bi-database-add"></i> توليد داتا ديمو كاملة</div>
+      <div class="card-header text-success">
+        <i class="bi bi-database-add"></i> ① ديمو كامل — السيستم وهو شغّال
+      </div>
       <form method="post" action="{{ route('data.generate') }}" class="card-body">@csrf
+        <p class="hint mb-2">
+          للفهم والتجربة. بيملا السيستم بمستندات في كل مرحلة، فكل دور يلاقي شغل مستني منه
+          وكل شاشة تبان وهي شغّالة.
+        </p>
         <ul class="small mb-3" style="line-height:1.9">
-          <li>12 مورد · 8 مصانع · 6 مخازن · 8 خامات</li>
-          <li>~250 كود لون (بنفس مشكلة التكرار والدمج الحقيقية)</li>
-          <li>~30 موديل بمقاساتهم وقائمة إكسسواراتهم</li>
+          <li>كل البيانات الأساسية</li>
           <li>45 طلب شراء موزّعين على كل المراحل</li>
-          <li>38 حوض في كل الحالات: تحت الفحص، متفحص، مفرج عنه</li>
-          <li>أوامر شغل من المسودة للمقفول، ببيانات قص واستلامات</li>
-          <li>18 شهر مبيعات + أرصدة + فوركاست + مخزون أمان</li>
-          <li>نقاشات على المستندات زي التيكيتات</li>
+          <li>38 حوض: تحت الفحص، متفحص، مفرج عنه</li>
+          <li>ماركرات وأوامر شغل ببيانات قص واستلامات</li>
+          <li>18 شهر مبيعات + أرصدة + فوركاست</li>
+          <li>نقاشات على المستندات</li>
         </ul>
-
         <div class="alert alert-warning py-2 small mb-3">
-          <b>التوليد بيمسح الموجود الأول.</b> أرقام المستندات متسلسلة، فمينفعش نولّد فوق داتا موجودة.
-          المستخدمون والأدوار ودورات الاعتماد بيفضلوا زي ما هم.
+          بيمسح الموجود الأول. المستخدمون والأدوار ودورات الاعتماد بيفضلوا.
         </div>
-
-        <label class="form-label req">اكتب كلمة «توليد» للتأكيد</label>
-        <input name="confirm" class="form-control form-control-sm mb-2" placeholder="توليد" required>
-        <button class="btn btn-success btn-sm w-100"
-                onclick="return confirm('هيتولّد داتا ديمو. متأكد؟')">
-          <i class="bi bi-magic"></i> ولّد الداتا
+        <label class="form-label req" for="c1">اكتب «توليد» للتأكيد</label>
+        <input id="c1" name="confirm" class="form-control form-control-sm mb-2" placeholder="توليد" required autocomplete="off">
+        <button class="btn btn-success btn-sm w-100" onclick="return confirm('هيتمسح الموجود ويتولّد ديمو كامل. متأكد؟')">
+          <i class="bi bi-magic"></i> ولّد الديمو الكامل
         </button>
-        <div class="hint mt-2">ممكن تاخد من 20 لـ 60 ثانية. متقفلش الصفحة.</div>
+        <div class="hint mt-2">ممكن تاخد من 30 لـ 90 ثانية. متقفلش الصفحة.</div>
+      </form>
+    </div>
+
+    <div class="card mb-3" style="border-color:var(--lv-soft)">
+      <div class="card-header" style="color:var(--lv-brand)">
+        <i class="bi bi-box-seam"></i> ② بيانات أساسية بس — للشغل الحقيقي
+      </div>
+      <form method="post" action="{{ route('data.master') }}" class="card-body">@csrf
+        <p class="hint mb-2">
+          نقطة البداية لما تحب تمشي الدورة بنفسك ببيانات حقيقية. بيجهّز الكتالوج
+          <b>من غير أي مستندات</b> — مفيش طلبات ولا مستحقات ولا أحواض ولا أوامر شغل.
+        </p>
+        <ul class="small mb-3" style="line-height:1.9">
+          <li>12 مورد · 8 مصانع · 6 مخازن</li>
+          <li>8 خامات بمواصفاتها المعتمدة</li>
+          <li>~250 كود لون (بمشكلة التكرار والدمج الحقيقية)</li>
+          <li>~30 موديل بمقاساتهم</li>
+          <li>18 إكسسوار + قائمة BOM لكل موديل</li>
+        </ul>
+        <div class="alert alert-warning py-2 small mb-3">
+          بيمسح أي مستندات موجودة عشان تبدأ نضيف. المستخدمون والأدوار بيفضلوا.
+        </div>
+        <label class="form-label req" for="c2">اكتب «أساسية» للتأكيد</label>
+        <input id="c2" name="confirm" class="form-control form-control-sm mb-2" placeholder="أساسية" required autocomplete="off">
+        <button class="btn btn-plum btn-sm w-100" onclick="return confirm('هيتمسح أي مستندات وتتجهز البيانات الأساسية. متأكد؟')">
+          <i class="bi bi-box-seam"></i> جهّز البيانات الأساسية
+        </button>
       </form>
     </div>
 
@@ -43,13 +70,12 @@
       <div class="card-header text-danger"><i class="bi bi-trash3"></i> مسح كل بيانات الشغل</div>
       <form method="post" action="{{ route('data.reset') }}" class="card-body">@csrf
         <div class="alert alert-danger py-2 small mb-3">
-          <b>مفيش رجوع.</b> كل الطلبات والأحواض والأوامر والتقارير والتعليقات هتتمسح.
-          المستخدمون والأدوار ودورات الاعتماد هيفضلوا.
+          <b>مفيش رجوع.</b> كل الطلبات والأحواض والأوامر والتقارير والتعليقات
+          <b>والبيانات الأساسية</b> هتتمسح. المستخدمون والأدوار ودورات الاعتماد هيفضلوا.
         </div>
-        <label class="form-label req">اكتب كلمة «مسح» للتأكيد</label>
-        <input name="confirm" class="form-control form-control-sm mb-2" placeholder="مسح" required>
-        <button class="btn btn-danger btn-sm w-100"
-                onclick="return confirm('هيتمسح كل بيانات الشغل نهائيًا. متأكد؟')">
+        <label class="form-label req" for="c3">اكتب «مسح» للتأكيد</label>
+        <input id="c3" name="confirm" class="form-control form-control-sm mb-2" placeholder="مسح" required autocomplete="off">
+        <button class="btn btn-danger btn-sm w-100" onclick="return confirm('هيتمسح كل شيء نهائيًا. متأكد؟')">
           <i class="bi bi-exclamation-octagon"></i> امسح كل شيء
         </button>
       </form>
@@ -72,9 +98,11 @@
         </div>
       </div>
       <div class="card-footer bg-white hint">
-        نفس الحاجة من التيرمنال:
-        <code style="direction:ltr;display:inline-block">php artisan lv:demo</code> ·
-        <code style="direction:ltr;display:inline-block">php artisan lv:reset</code>
+        من التيرمنال:
+        <code style="direction:ltr;display:inline-block">php artisan lv:demo</code> ديمو كامل ·
+        <code style="direction:ltr;display:inline-block">php artisan lv:master</code> بيانات أساسية ·
+        <code style="direction:ltr;display:inline-block">php artisan lv:reset</code> مسح ·
+        <code style="direction:ltr;display:inline-block">php artisan lv:doctor</code> فحص
       </div>
     </div>
   </div>
