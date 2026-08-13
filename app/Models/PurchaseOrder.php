@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use App\Support\HasApproval;
+use App\Support\HasComments;
 use App\Support\HasDocumentStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseOrder extends Model
 {
-    use HasApproval, HasDocumentStatus;
+    use HasApproval, HasDocumentStatus, HasComments;
 
     protected $guarded = [];
     protected $casts = [

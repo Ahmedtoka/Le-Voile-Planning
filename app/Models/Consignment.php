@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\HasApproval;
+use App\Support\HasComments;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Consignment extends Model
 {
-    use HasApproval;
+    use HasApproval, HasComments;
 
     protected $guarded = [];
     protected $casts = ['arrival_date' => 'date', 'color_match_ok' => 'boolean'];

@@ -75,6 +75,7 @@ class RolePermissionSeeder extends Seeder
             'settings.roles'  => 'إدارة الأدوار والصلاحيات',
             'settings.flows'  => 'إدارة دورات الاعتماد',
             'settings.audit'  => 'عرض سجل الحركة',
+            'settings.data'   => 'مسح وتوليد الداتا (خطر)',
         ],
     ];
 

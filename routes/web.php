@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ConsignmentController;
 use App\Http\Controllers\CutDeclarationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DemoDataController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\FabricInspectionController;
 use App\Http\Controllers\GoodsReceiptController;
@@ -209,6 +211,10 @@ Route::middleware('auth.user')->group(function () {
     Route::post('approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
     Route::post('approvals/{approval}/reject',  [ApprovalController::class, 'reject'])->name('approvals.reject');
 
+    // ── نقاش المستندات ───────────────────────────────────────────
+    Route::post('comments/{type}/{id}', [CommentController::class, 'store'])->name('comments.store');
+    Route::delete('comments/{comment}',  [CommentController::class, 'destroy'])->name('comments.destroy');
+
     // ── الإشعارات ────────────────────────────────────────────────
     Route::get('notifications',            [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
@@ -245,6 +251,13 @@ Route::middleware('auth.user')->group(function () {
             Route::post('approval-flows/{flow}/steps',          [SettingsController::class, 'addFlowStep'])->name('settings.flows.step.add');
             Route::delete('approval-flows/{flow}/steps/{step}', [SettingsController::class, 'deleteFlowStep'])->name('settings.flows.step.delete');
             Route::post('approval-flows/{flow}/toggle',         [SettingsController::class, 'toggleFlow'])->name('settings.flows.toggle');
+        });
+
+        // أدوات الداتا — للأدمن بس
+        Route::middleware('can.do:settings.data')->group(function () {
+            Route::get('data',           [DemoDataController::class, 'index'])->name('settings.data');
+            Route::post('data/generate', [DemoDataController::class, 'generate'])->name('data.generate');
+            Route::post('data/reset',    [DemoDataController::class, 'reset'])->name('data.reset');
         });
 
         Route::get('activity', [SettingsController::class, 'activity'])

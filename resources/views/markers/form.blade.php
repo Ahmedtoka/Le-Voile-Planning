@@ -83,5 +83,9 @@
 @endif
 
 <template id="lineTpl">@include('markers.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
+@if($mode === 'edit')
+  @include('partials.comments')
+@endif
+
 @include('partials.lines_js',['startIndex'=>max(count($lines),1)])
 @endsection

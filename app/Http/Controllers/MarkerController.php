@@ -12,6 +12,7 @@ use App\Models\Size;
 use App\Models\User;
 use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowMessage;
 use App\Services\Notifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -80,7 +81,7 @@ class MarkerController extends Controller
                 route('markers.requests'), 'info');
         }
 
-        return redirect()->route('markers.requests')->with('success', 'تم إنشاء الطلب ' . $req->doc_no);
+        return redirect()->route('markers.requests')->with(FlowMessage::flash('marker_request.created', null, ['no' => $req->doc_no]));
     }
 
     // ── الماركرات ──
@@ -182,7 +183,7 @@ class MarkerController extends Controller
         }
 
         ApprovalEngine::submit($marker);
-        return back()->with('success', 'تم الإرسال للاعتماد.');
+        return back()->with(FlowMessage::flash('marker.submitted', $marker));
     }
 
     public function destroy(Marker $marker)
@@ -233,9 +234,10 @@ class MarkerController extends Controller
         $lines = $v['lines'];
         unset($v['lines'], $v['marker_file']);
 
-        // لو المستخدم ما دخلش الإجمالي، بيتحسب من السطور
+        // لو المستخدم ما دخلش الإجمالي، بيتحسب من السطور.
+        // ?: مش ?? — لأن الحقل الفاضي بييجي null مش مفقود.
         $v['pieces_per_spread'] = $v['pieces_per_spread']
-            ?? array_sum(array_column($lines, 'qty_per_spread'));
+            ?: array_sum(array_column($lines, 'qty_per_spread'));
 
         return ['header' => $v, 'lines' => $lines];
     }

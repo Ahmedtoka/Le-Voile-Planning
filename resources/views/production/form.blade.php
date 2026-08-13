@@ -74,4 +74,8 @@
 @if($mode==='edit' && $row->isEditable())
   <form id="submitForm" method="post" action="{{ route('production-receipts.submit',$row) }}" class="d-none">@csrf</form>
 @endif
+@if($mode === 'edit')
+  @include('partials.comments')
+@endif
+
 @endsection

@@ -32,7 +32,7 @@
             <option value="">كل العائلات</option>
             @foreach($families as $f)<option value="{{ $f }}" @selected(request('family') === $f)>{{ $f }}</option>@endforeach
           </select>
-          <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+          <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
         </form>
         <a href="{{ route('io.export.colors') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download"></i></a>
       </div>

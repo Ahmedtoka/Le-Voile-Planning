@@ -46,7 +46,7 @@
                   <td><input type="number" step="0.001" name="ratios[{{ $i }}][ratio_pct]" value="{{ $r->ratio_pct }}"></td>
                   <td class="hint">{{ $r->source_name }}</td>
                   <td class="hint">{{ $r->updatedBy?->name }} {{ $r->updated_at?->format('Y-m-d') }}</td>
-                  <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="LV.remove(this,'lines')"><i class="bi bi-x"></i></button></td>
+                  <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0" aria-label="حذف السطر" onclick="LV.remove(this,'lines')"><i class="bi bi-x" aria-hidden="true"></i></button></td>
                 </tr>
               @endforeach
             </tbody>
@@ -66,7 +66,7 @@
         </select></td>
       <td><input type="number" step="0.001" name="ratios[__IDX__][ratio_pct]" value="0"></td>
       <td class="hint">يدوي</td><td></td>
-      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="LV.remove(this,'lines')"><i class="bi bi-x"></i></button></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0" aria-label="حذف السطر" onclick="LV.remove(this,'lines')"><i class="bi bi-x" aria-hidden="true"></i></button></td>
     </template>
     @include('partials.lines_js',['startIndex'=>max($rows->count(),1)])
   </div>

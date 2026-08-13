@@ -11,22 +11,47 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowMessage;
+use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /** تقرير انكماش قماش ومطابقة ألوان — مصدر متوسط البنشر للحسبة. */
 class LabReportController extends Controller
 {
+    use FiltersIndex;
+
     public function index(Request $request)
     {
-        $q = LabReport::with(['consignment', 'fabricType', 'color', 'technician'])->latest('id');
-        if ($s = $request->get('status')) $q->where('status', $s);
-        if ($term = trim((string) $request->get('q'))) {
-            $q->where(fn ($qq) => $qq->where('doc_no', 'like', "%{$term}%")
-                                     ->orWhere('paper_serial', 'like', "%{$term}%"));
-        }
+        $q = LabReport::with(['consignment', 'fabricType', 'color', 'technician']);
+        $this->applyFilters($q, $request,
+            ['doc_no', 'paper_serial', 'consignment.consignment_no'],
+            'doc_date',
+            ['status' => 'status', 'technician_id' => 'technician_id', 'fabric_type_id' => 'fabric_type_id']
+        );
 
-        return view('lab.index', ['title' => 'تقارير المعمل', 'rows' => $q->paginate(25)->withQueryString()]);
+        $base    = LabReport::query();
+        $waiting = Consignment::onHold()
+            ->whereDoesntHave('labReports', fn ($x) => $x->whereIn('status', ['pending','approved']))->count();
+
+        return view('lab.index', [
+            'title'   => 'تقارير المعمل',
+            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'filters' => [
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'fabric_type_id', 'label' => 'كل الخامات', 'options' => FabricType::orderBy('name')->pluck('name','id'), 'width' => 160],
+                ['name' => 'technician_id', 'label' => 'كل الفنيين', 'options' => User::orderBy('name')->pluck('name','id'), 'width' => 150],
+            ],
+            'summary' => [
+                ['label' => 'أحواض مستنية معمل', 'value' => $waiting, 'tone' => $waiting ? 'warn' : 'ok',
+                 'note' => 'من غير بنشر، حسبة أمر الشغل مش هتطلع.'],
+                ['label' => 'إجمالي التقارير', 'value' => $base->count(), 'note' => 'كل تقارير المعمل.'],
+                ['label' => 'ألوان غير مطابقة', 'value' => (clone $base)->where('color_match_ok', false)->count(),
+                 'tone' => 'danger', 'note' => 'اللون خرج عن العينة المعتمدة.'],
+                ['label' => 'متوسط البنشر', 'value' => round((float) (clone $base)->avg('avg_gsm'), 1) ?: '—',
+                 'sub' => 'جم/م²', 'note' => 'متوسط كل التقارير — مؤشر عام على الخامات.'],
+            ],
+        ]);
     }
 
     public function create(Request $request)
@@ -94,7 +119,7 @@ class LabReportController extends Controller
             return back()->withErrors(['msg' => 'مينفعش ترسل تقرير من غير قراءات بنشر.']);
         }
         ApprovalEngine::submit($lab_report);
-        return back()->with('success', 'تم الإرسال للاعتماد.');
+        return back()->with(FlowMessage::flash('lab.submitted', $lab_report));
     }
 
     public function print(LabReport $lab_report)

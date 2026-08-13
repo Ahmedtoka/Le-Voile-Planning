@@ -8,5 +8,5 @@
   <td><input type="number" name="rolls[{{ $i }}][defects_count]" value="{{ $l['defects_count'] ?? 0 }}"></td>
   <td><input name="rolls[{{ $i }}][defect_desc]" value="{{ $l['defect_desc'] ?? '' }}"></td>
   <td><input name="rolls[{{ $i }}][notes]" value="{{ $l['notes'] ?? '' }}"></td>
-  <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="LV.remove(this,'lines')"><i class="bi bi-x"></i></button></td>
+  <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0" aria-label="حذف السطر" onclick="LV.remove(this,'lines')"><i class="bi bi-x" aria-hidden="true"></i></button></td>
 @if(!$tpl)</tr>@endif

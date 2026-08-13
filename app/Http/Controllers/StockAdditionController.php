@@ -13,6 +13,8 @@ use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowMessage;
+use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -25,18 +27,39 @@ use Illuminate\Support\Facades\DB;
  */
 class StockAdditionController extends Controller
 {
+    use FiltersIndex;
+
     public function index(Request $request)
     {
-        $q = StockAddition::with(['supplier', 'warehouse', 'consignment'])->latest('id');
-        if ($s = $request->get('status')) $q->where('status', $s);
-        if ($term = trim((string) $request->get('q'))) {
-            $q->where(fn ($qq) => $qq->where('doc_no', 'like', "%{$term}%")
-                                     ->orWhere('paper_serial', 'like', "%{$term}%"));
-        }
+        $q = StockAddition::with(['supplier', 'warehouse', 'consignment']);
+        $this->applyFilters($q, $request,
+            ['doc_no', 'paper_serial', 'consignment_no', 'supplier.name'],
+            'doc_date',
+            ['status' => 'status', 'supplier_id' => 'supplier_id', 'warehouse_id' => 'warehouse_id']
+        );
+
+        $base = StockAddition::query();
 
         return view('additions.index', [
-            'title' => 'أذون الإضافة (تحت الفحص)',
-            'rows'  => $q->paginate(25)->withQueryString(),
+            'title'   => 'أذون الإضافة (تحت الفحص)',
+            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'filters' => [
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'supplier_id', 'label' => 'كل الموردين', 'options' => \App\Models\Supplier::orderBy('name')->pluck('name','id'), 'width' => 160],
+                ['name' => 'warehouse_id', 'label' => 'كل المخازن', 'options' => \App\Models\Warehouse::orderBy('name')->pluck('name','id'), 'width' => 150],
+            ],
+            'summary' => [
+                ['label' => 'إجمالي الأذون', 'value' => $base->count(),
+                 'note' => 'كل أذون الإضافة المسجلة.'],
+                ['label' => 'مستنية اعتماد', 'value' => (clone $base)->where('status','pending')->count(), 'tone' => 'warn',
+                 'note' => 'اتبعتت ولسه ما اتعمدتش.'],
+                ['label' => 'مسودات', 'value' => (clone $base)->where('status','draft')->count(), 'tone' => 'muted',
+                 'note' => 'لسه ما اتبعتتش للاعتماد.'],
+                ['label' => 'كجم داخلة', 'value' => number_format((float) (clone $base)->where('status','approved')->sum('total_qty'), 0), 'tone' => 'brand',
+                 'note' => 'إجمالي الكميات اللي دخلت المخزن بالأذون المعتمدة.'],
+                ['label' => 'أتواب داخلة', 'value' => number_format((int) (clone $base)->where('status','approved')->sum('total_rolls')),
+                 'note' => 'العدد اللي المورد قال عليه — الفحص هيجرده.'],
+            ],
         ]);
     }
 
@@ -101,7 +124,7 @@ class StockAdditionController extends Controller
             return back()->withErrors(['msg' => 'لازم تكتب عدد الأتواب لكل صنف قماش — الفحص هيجرد عليه.']);
         }
         ApprovalEngine::submit($stock_addition);
-        return back()->with('success', 'تم الإرسال للاعتماد.');
+        return back()->with(FlowMessage::flash('addition.submitted', $stock_addition));
     }
 
     public function print(StockAddition $stock_addition)

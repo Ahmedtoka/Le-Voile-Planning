@@ -1,6 +1,15 @@
 @extends('layouts.app')
 @section('content')
 
+<div class="note-box mb-3">
+  <i class="bi bi-info-circle"></i>
+  مستند واحد بيمر على تلات أيادي: <b>التخطيط</b> يكتب الأصناف والكميات، <b>المشتريات</b> تحدد المورد
+  والسعر وتاريخ التوريد، <b>الحسابات</b> تعلم بالمستحق. وبعدها الاعتماد.
+  كل مرحلة بتقفل اللي قبلها عن التعديل.
+</div>
+
+@include('partials.summary')
+
 <div class="d-flex gap-2 flex-wrap mb-3">
   <a href="{{ route('purchase-orders.index') }}"
      class="btn btn-sm {{ !request('stage') ? 'btn-plum' : 'btn-outline-plum' }}">
@@ -29,7 +38,13 @@
         <input class="form-check-input" type="checkbox" name="mine" value="1" id="mine" @checked(request('mine')) onchange="this.form.submit()">
         <label class="form-check-label small" for="mine">طلباتي</label>
       </div>
-      <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+            <div class="d-flex align-items-center gap-1">
+        <span class="hint">من</span>
+        <input type="date" name="from" value="{{ request('from') }}" class="form-control form-control-sm" style="width:132px">
+        <span class="hint">إلى</span>
+        <input type="date" name="to" value="{{ request('to') }}" class="form-control form-control-sm" style="width:132px">
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
     @if(auth()->user()->can2('po.request'))
       <a href="{{ route('purchase-orders.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> طلب شراء</a>
@@ -54,8 +69,8 @@
           <td><span class="badge bg-{{ $r->stage_color }}">{{ $r->stage_name }}</span></td>
           <td class="hint">{{ $r->requester?->name }}</td>
           <td class="text-nowrap">
-            <a href="{{ route('purchase-orders.edit',$r) }}" class="btn btn-sm btn-outline-plum py-0"><i class="bi bi-pencil"></i></a>
-            <a href="{{ route('purchase-orders.print',$r) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0"><i class="bi bi-printer"></i></a>
+            <a href="{{ route('purchase-orders.edit',$r) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="تعديل" title="تعديل"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+            <a href="{{ route('purchase-orders.print',$r) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0" aria-label="طباعة" title="طباعة"><i class="bi bi-printer" aria-hidden="true"></i></a>
           </td>
         </tr>
       @empty

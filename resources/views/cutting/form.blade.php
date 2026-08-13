@@ -96,4 +96,8 @@
 @if($mode==='edit' && $row->isEditable())
   <form id="submitForm" method="post" action="{{ route('cut-declarations.submit',$row) }}" class="d-none">@csrf</form>
 @endif
+@if($mode === 'edit')
+  @include('partials.comments')
+@endif
+
 @endsection

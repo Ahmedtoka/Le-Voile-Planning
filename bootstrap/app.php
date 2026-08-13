@@ -17,5 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // 419 = الجلسة انتهت أو الكوكي مش بيتحفظ — أشهر مصدر لصفحة بيضا
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            return redirect()->route('login')->withErrors(['username' =>
+                'انتهت الجلسة أو الكوكي مش بيتحفظ. جرّب تاني — ولو تكررت، شغّل php artisan lv:doctor']);
+        });
     })->create();

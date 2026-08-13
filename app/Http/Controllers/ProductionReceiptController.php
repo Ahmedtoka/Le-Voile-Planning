@@ -8,6 +8,8 @@ use App\Models\Warehouse;
 use App\Models\WorkOrder;
 use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowMessage;
+use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -19,12 +21,38 @@ use Illuminate\Support\Facades\DB;
  */
 class ProductionReceiptController extends Controller
 {
+    use FiltersIndex;
+
     public function index(Request $request)
     {
-        $q = ProductionReceipt::with(['workOrder', 'factory', 'warehouse'])->latest('id');
-        if ($s = $request->get('status')) $q->where('status', $s);
+        $q = ProductionReceipt::with(['workOrder', 'factory', 'warehouse']);
+        $this->applyFilters($q, $request,
+            ['doc_no', 'workOrder.wo_no'],
+            'doc_date',
+            ['status' => 'status', 'factory_id' => 'factory_id', 'warehouse_id' => 'warehouse_id']
+        );
 
-        return view('production.index', ['title' => 'استلامات الإنتاج', 'rows' => $q->paginate(25)->withQueryString()]);
+        $base    = ProductionReceipt::query();
+        $waiting = WorkOrder::open()->whereColumn('cut_pieces', '>', 'received_pieces')->count();
+
+        return view('production.index', [
+            'title'   => 'استلامات الإنتاج',
+            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'filters' => [
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'factory_id', 'label' => 'كل المصانع', 'options' => \App\Models\Factory::orderBy('name')->pluck('name','id'), 'width' => 150],
+                ['name' => 'warehouse_id', 'label' => 'كل المخازن', 'options' => Warehouse::orderBy('name')->pluck('name','id'), 'width' => 150],
+            ],
+            'summary' => [
+                ['label' => 'أوامر عليها متبقي', 'value' => $waiting, 'tone' => $waiting ? 'warn' : 'ok',
+                 'note' => 'مقصوص ولسه ما اتسلّمش كامل.'],
+                ['label' => 'إجمالي الاستلامات', 'value' => $base->count(), 'note' => 'كل أذون الاستلام من المصانع.'],
+                ['label' => 'قطع مستلمة', 'value' => number_format((int) (clone $base)->where('status','approved')->sum('total_pieces')),
+                 'tone' => 'ok', 'note' => 'منتج تام دخل المخزن.'],
+                ['label' => 'الشهر ده', 'value' => number_format((int) (clone $base)->where('status','approved')->whereMonth('doc_date', now()->month)->sum('total_pieces')),
+                 'tone' => 'brand', 'note' => 'المستلم خلال الشهر الحالي.'],
+            ],
+        ]);
     }
 
     public function create(Request $request)
@@ -114,7 +142,7 @@ class ProductionReceiptController extends Controller
         }
 
         ApprovalEngine::submit($production_receipt);
-        return back()->with('success', 'تم الإرسال للاعتماد.');
+        return back()->with(FlowMessage::flash('prod.submitted', $production_receipt));
     }
 
     public function destroy(ProductionReceipt $production_receipt)

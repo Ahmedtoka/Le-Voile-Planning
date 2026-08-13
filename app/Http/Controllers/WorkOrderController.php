@@ -10,6 +10,7 @@ use App\Models\WorkOrderLine;
 use App\Services\ActivityLogger;
 use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowMessage;
 use App\Services\PlanningEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,9 +33,26 @@ class WorkOrderController extends Controller
         if ($v = $request->get('variance_flag')) $q->where('variance_flag', $v);
         if ($term = trim((string) $request->get('q'))) $q->where('wo_no', 'like', "%{$term}%");
 
+        if ($from = $request->get('from')) $q->whereDate('wo_date', '>=', $from);
+        if ($to   = $request->get('to'))   $q->whereDate('wo_date', '<=', $to);
+
+        $out = 'SUM(GREATEST(CAST(cut_pieces AS SIGNED) - CAST(received_pieces AS SIGNED), 0)) as o';
+
         return view('workorders.index', [
             'title'     => 'أوامر الشغل',
             'rows'      => $q->paginate(25)->withQueryString(),
+            'summary'   => [
+                ['label' => 'مفتوحة', 'value' => WorkOrder::open()->count(), 'tone' => 'brand',
+                 'note' => 'لسه ما اتقفلتش ولا اتلغت.'],
+                ['label' => 'متأخرة', 'value' => WorkOrder::late()->count(), 'tone' => 'danger',
+                 'note' => 'فات تاريخ تسليمها.'],
+                ['label' => 'قطع على المصانع', 'value' => number_format((int) WorkOrder::open()->selectRaw($out)->value('o')),
+                 'note' => 'مقصوص ولسه ما اتسلّمش.'],
+                ['label' => 'انحراف خارج الحدود', 'value' => WorkOrder::open()->where('variance_flag','danger')->count(),
+                 'tone' => 'danger', 'note' => 'الفرق بين المتوقع والمقصوص تعدى الحد المسموح.'],
+                ['label' => 'مقفولة', 'value' => WorkOrder::where('status','closed')->count(), 'tone' => 'ok',
+                 'note' => 'اتسلّمت بالكامل.'],
+            ],
             'statuses'  => WorkOrder::STATUSES,
             'factories' => Factory::orderBy('name')->pluck('name', 'id'),
         ]);
@@ -82,7 +100,7 @@ class WorkOrderController extends Controller
         });
 
         ActivityLogger::log('created', $wo, 'إنشاء أمر شغل ' . $wo->wo_no);
-        return redirect()->route('work-orders.show', $wo)->with('success', 'تم إنشاء أمر الشغل ' . $wo->wo_no);
+        return redirect()->route('work-orders.show', $wo)->with(FlowMessage::flash('wo.created', $wo));
     }
 
     public function show(WorkOrder $work_order)
@@ -175,7 +193,7 @@ class WorkOrderController extends Controller
         }
 
         ApprovalEngine::submit($work_order);
-        return back()->with('success', 'تم الإرسال للاعتماد.');
+        return back()->with(FlowMessage::flash('wo.submitted', $work_order));
     }
 
     /** إرسال للمصنع بعد الاعتماد */
@@ -184,7 +202,7 @@ class WorkOrderController extends Controller
         abort_unless($work_order->status === 'approved', 403, 'لازم يتعمد الأول.');
         $work_order->update(['status' => 'sent_to_factory']);
         ActivityLogger::log('sent', $work_order, 'إرسال أمر شغل للمصنع ' . $work_order->wo_no);
-        return back()->with('success', 'تم الإرسال للمصنع.');
+        return back()->with(FlowMessage::flash('wo.sent', $work_order));
     }
 
     /** قفل يدوي مع سبب */

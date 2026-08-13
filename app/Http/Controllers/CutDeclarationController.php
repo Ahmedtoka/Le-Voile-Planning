@@ -7,7 +7,9 @@ use App\Models\CutDeclarationLine;
 use App\Models\WorkOrder;
 use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowMessage;
 use App\Services\PlanningEngine;
+use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -19,12 +21,39 @@ use Illuminate\Support\Facades\DB;
  */
 class CutDeclarationController extends Controller
 {
+    use FiltersIndex;
+
     public function index(Request $request)
     {
-        $q = CutDeclaration::with(['workOrder', 'factory'])->latest('id');
-        if ($s = $request->get('status')) $q->where('status', $s);
+        $q = CutDeclaration::with(['workOrder', 'factory']);
+        $this->applyFilters($q, $request,
+            ['doc_no', 'workOrder.wo_no'],
+            'doc_date',
+            ['status' => 'status', 'factory_id' => 'factory_id', 'variance_flag' => 'variance_flag']
+        );
 
-        return view('cutting.index', ['title' => 'بيانات القص', 'rows' => $q->paginate(25)->withQueryString()]);
+        $base    = CutDeclaration::query();
+        $waiting = WorkOrder::whereIn('status', ['sent_to_factory','cutting'])
+            ->whereDoesntHave('cutDeclarations', fn ($x) => $x->whereIn('status', ['pending','approved']))->count();
+
+        return view('cutting.index', [
+            'title'   => 'بيانات القص',
+            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'filters' => [
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'factory_id', 'label' => 'كل المصانع', 'options' => \App\Models\Factory::orderBy('name')->pluck('name','id'), 'width' => 150],
+                ['name' => 'variance_flag', 'label' => 'كل الانحرافات', 'options' => WorkOrder::VARIANCE_FLAGS, 'width' => 150],
+            ],
+            'summary' => [
+                ['label' => 'أوامر مستنية بيان', 'value' => $waiting, 'tone' => $waiting ? 'warn' : 'ok',
+                 'note' => 'اتبعتت للمصنع ولسه ما جاش منها بيان قص.'],
+                ['label' => 'إجمالي البيانات', 'value' => $base->count(), 'note' => 'كل بيانات القص المسجلة.'],
+                ['label' => 'انحراف خارج الحدود', 'value' => (clone $base)->where('variance_flag','danger')->count(),
+                 'tone' => 'danger', 'note' => 'الفرق تعدى ' . config('lvplanning.variance.warn_pct') . '% — لازم سبب مكتوب.'],
+                ['label' => 'إجمالي المقصوص', 'value' => number_format((int) (clone $base)->where('status','approved')->sum('total_pieces')),
+                 'tone' => 'brand', 'note' => 'قطع اتقصت فعليًا في المصانع.'],
+            ],
+        ]);
     }
 
     public function create(Request $request)
@@ -106,7 +135,7 @@ class CutDeclarationController extends Controller
         }
 
         ApprovalEngine::submit($cut_declaration);
-        return back()->with('success', 'تم الإرسال للاعتماد.');
+        return back()->with(FlowMessage::flash('cut.submitted', $cut_declaration));
     }
 
     public function destroy(CutDeclaration $cut_declaration)

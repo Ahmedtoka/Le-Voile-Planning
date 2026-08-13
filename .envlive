@@ -1,7 +1,7 @@
 # ══════════════════════════════════════════════════════════════════
-#  إعدادات السيرفر الحقيقي — planning.levoilestores.com
-#  الاستخدام على السيرفر:  cp .envlive .env  &&  php artisan key:generate
-#  ⚠ الملف ده فيه باسورد الداتابيز — متحطوش على Git أبدًا
+#  السيرفر الحقيقي — planning.levoilestores.com
+#  على السيرفر:  cp .envlive .env  &&  php artisan key:generate
+#  ⚠ فيه باسورد الداتابيز — متحطوش على Git أبدًا
 # ══════════════════════════════════════════════════════════════════
 
 APP_NAME="Le Voile — تخطيط الإنتاج"
@@ -17,9 +17,8 @@ LOG_CHANNEL=daily
 LOG_LEVEL=error
 
 # ── قاعدة البيانات ──
-# السيرفر: 167.172.251.28
-# الأبليكيشن والداتابيز على نفس السيرفر ⇒ 127.0.0.1
-# لو الداتابيز على سيرفر منفصل، غيّر DB_HOST للـ IP وافتح البورت 3306 له
+# لو الأبليكيشن والداتابيز على نفس السيرفر، 127.0.0.1 أسرع وأأمن.
+# لو الداتابيز على سيرفر منفصل، استخدم الـ IP: 167.172.251.28
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -28,15 +27,21 @@ DB_USERNAME=sjqdrzbznj
 DB_PASSWORD=yNxKAD9xZk
 
 # ── الجلسات ──
+# ⚠ أشهر سبب لمشكلة «الدخول مش راضي يشتغل»:
+#   SESSION_SECURE_COOKIE=true معناها المتصفح مش هيبعت الكوكي إلا على https.
+#   لو الموقع لسه بيفتح بـ http، الدخول هيفشل من غير أي رسالة خطأ.
+#   سيبها false لحد ما الـ SSL يشتغل فعلًا، وبعدها حوّلها true.
 SESSION_DRIVER=file
 SESSION_LIFETIME=480
-SESSION_SECURE_COOKIE=true
-SESSION_DOMAIN=.levoilestores.com
+SESSION_SECURE_COOKIE=false
+
+# سيبها متعلّقة. تفعيلها بدومين غلط بيمنع الدخول بصمت كمان.
+# SESSION_DOMAIN=.levoilestores.com
 
 CACHE_STORE=file
 QUEUE_CONNECTION=sync
 FILESYSTEM_DISK=public
 
-# ── معلومات السيرفر (للرجوع إليها) ──
+# ── للرجوع ──
 # SERVER_IP=167.172.251.28
 # DOMAIN=planning.levoilestores.com

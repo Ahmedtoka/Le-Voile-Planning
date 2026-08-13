@@ -22,9 +22,29 @@ class ConsignmentController extends Controller
         if ($request->boolean('ready'))     $q->readyForProduction();
         if ($term = trim((string) $request->get('q'))) $q->where('consignment_no', 'like', "%{$term}%");
 
+        if ($from = $request->get('from')) $q->whereDate('arrival_date', '>=', $from);
+        if ($to   = $request->get('to'))   $q->whereDate('arrival_date', '<=', $to);
+        if ($sup  = $request->get('supplier_id')) $q->where('supplier_id', $sup);
+
+        $b = fn () => Consignment::query();
+
         return view('consignments.index', [
             'title'       => 'الأحواض (الرسائل)',
             'rows'        => $q->paginate(25)->withQueryString(),
+            'suppliers'   => \App\Models\Supplier::orderBy('name')->pluck('name', 'id'),
+            'summary'     => [
+                ['label' => 'تحت الفحص', 'value' => $b()->where('status','under_inspection')->count(), 'tone' => 'warn',
+                 'note' => 'وصلت بإذن إضافة ومحجوزة — ممنوع تشغيلها.'],
+                ['label' => 'متفحصة/خلّصت معمل', 'value' => $b()->whereIn('status',['inspected','lab_done'])->count(), 'tone' => 'brand',
+                 'note' => 'ناقصها إذن استلام عشان تتفرج.'],
+                ['label' => 'جاهزة للتشغيل', 'value' => Consignment::readyForProduction()->count(), 'tone' => 'ok',
+                 'sub' => number_format((float) Consignment::readyForProduction()->sum('remaining_kg'), 0) . ' كجم',
+                 'note' => 'مفرج عنها وعندها عرض وبنشر.'],
+                ['label' => 'كجم محجوزة', 'value' => number_format((float) Consignment::onHold()->sum('total_kg'), 0), 'tone' => 'warn',
+                 'note' => 'قماش في المخزن ممنوع تشغيله.'],
+                ['label' => 'مرفوضة', 'value' => $b()->where('status','rejected')->count(), 'tone' => 'danger',
+                 'note' => 'اترفضت في الفحص.'],
+            ],
             'statuses'    => Consignment::STATUSES,
             'colors'      => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
             'fabricTypes' => FabricType::orderBy('name')->pluck('name', 'id'),

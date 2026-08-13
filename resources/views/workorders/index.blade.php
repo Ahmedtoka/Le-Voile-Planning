@@ -1,5 +1,13 @@
 @extends('layouts.app')
 @section('content')
+
+<div class="note-box mb-3">
+  <i class="bi bi-info-circle"></i>
+  أمر الشغل بيربط <b>حوض واحد + ماركر واحد + مصنع واحد</b>. الأرقام المتوقعة فيه محسوبة من أقل عرض
+  ومتوسط البنشر وطول الفرشة. الفعلي بييجي من بيان القص، والفرق الطبيعي 2-4%.
+</div>
+
+@include('partials.summary')
 <div class="card">
   <div class="card-header d-flex gap-2 flex-wrap align-items-center">
     <span>{{ $title }} <span class="hint">({{ $rows->total() }})</span></span>
@@ -17,7 +25,13 @@
         <input class="form-check-input" type="checkbox" name="late" value="1" id="lt" @checked(request('late')) onchange="this.form.submit()">
         <label class="form-check-label small" for="lt">المتأخر بس</label>
       </div>
-      <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+            <div class="d-flex align-items-center gap-1">
+        <span class="hint">من</span>
+        <input type="date" name="from" value="{{ request('from') }}" class="form-control form-control-sm" style="width:132px">
+        <span class="hint">إلى</span>
+        <input type="date" name="to" value="{{ request('to') }}" class="form-control form-control-sm" style="width:132px">
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
     <a href="{{ route('io.export.work-orders') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download"></i></a>
     <a href="{{ route('work-orders.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> أمر شغل</a>
@@ -48,7 +62,7 @@
           </td>
           <td class="num {{ $r->is_late ? 'text-danger fw-bold' : '' }}">{{ $r->due_date?->format('Y-m-d') ?? '—' }}</td>
           <td><span class="badge bg-{{ $r->status_color }}">{{ $r->status_name }}</span></td>
-          <td><a href="{{ route('work-orders.show',$r) }}" class="btn btn-sm btn-outline-plum py-0"><i class="bi bi-eye"></i></a></td>
+          <td><a href="{{ route('work-orders.show',$r) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="عرض" title="عرض"><i class="bi bi-eye" aria-hidden="true"></i></a></td>
         </tr>
       @empty
         <tr><td colspan="14" class="text-center text-muted py-4">مفيش أوامر شغل.</td></tr>

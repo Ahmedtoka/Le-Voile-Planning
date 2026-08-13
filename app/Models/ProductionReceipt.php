@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Support\HasApproval;
+use App\Support\HasComments;
 use App\Support\HasDocumentStatus;
 use Illuminate\Database\Eloquent\Model;
 
 /** استلام منتج تام — جزئي ومتكرر لحد ما أمر الشغل يتقفل. */
 class ProductionReceipt extends Model
 {
-    use HasApproval, HasDocumentStatus;
+    use HasApproval, HasDocumentStatus, HasComments;
 
     protected $guarded = [];
     protected $casts = ['doc_date' => 'date'];

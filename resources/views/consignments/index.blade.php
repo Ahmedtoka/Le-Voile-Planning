@@ -1,5 +1,14 @@
 @extends('layouts.app')
 @section('content')
+
+<div class="note-box mb-3">
+  <i class="bi bi-info-circle"></i>
+  <b>الحوض (الرسالة)</b> هو وحدة الشغل الأساسية: مجموعة أتواب اتنسجت واتصبغت مع بعض ⇒ نفس اللون
+  ونفس البنشر. ممنوع تخلط حوضين في قطعة واحدة. الحوض بيتولّد من إذن الإضافة، وبيفضل
+  <b>محجوز</b> لحد ما يتفحص وييجي له تقرير معمل ويتفرج عنه بإذن استلام.
+</div>
+
+@include('partials.summary')
 <div class="card">
   <div class="card-header d-flex gap-2 flex-wrap align-items-center">
     <span>{{ $title }} <span class="hint">({{ $rows->total() }})</span></span>
@@ -13,11 +22,21 @@
         <option value="">كل الألوان</option>
         @foreach($colors as $k=>$v)<option value="{{ $k }}" @selected(request('color_id')==$k)>{{ $v }}</option>@endforeach
       </select>
+      <select name="supplier_id" class="form-select form-select-sm" style="width:150px" onchange="this.form.submit()">
+        <option value="">كل الموردين</option>
+        @foreach($suppliers as $k=>$v)<option value="{{ $k }}" @selected(request('supplier_id')==$k)>{{ $v }}</option>@endforeach
+      </select>
       <div class="form-check align-self-center">
         <input class="form-check-input" type="checkbox" name="ready" value="1" id="rdy" @checked(request('ready')) onchange="this.form.submit()">
         <label class="form-check-label small" for="rdy">الجاهز للتشغيل بس</label>
       </div>
-      <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+            <div class="d-flex align-items-center gap-1">
+        <span class="hint">من</span>
+        <input type="date" name="from" value="{{ request('from') }}" class="form-control form-control-sm" style="width:132px">
+        <span class="hint">إلى</span>
+        <input type="date" name="to" value="{{ request('to') }}" class="form-control form-control-sm" style="width:132px">
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
     <a href="{{ route('io.export.consignments') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download"></i></a>
   </div>
@@ -43,7 +62,7 @@
           <td class="num {{ $r->remaining_kg > 0 ? 'fw-bold' : 'text-muted' }}">{{ number_format((float)$r->remaining_kg,1) }}</td>
           <td><span class="badge bg-{{ $r->status_color }}">{{ $r->status_name }}</span></td>
           <td class="text-nowrap">
-            <a href="{{ route('consignments.show',$r) }}" class="btn btn-sm btn-outline-plum py-0"><i class="bi bi-eye"></i></a>
+            <a href="{{ route('consignments.show',$r) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="عرض" title="عرض"><i class="bi bi-eye" aria-hidden="true"></i></a>
             @php $next = $r->nextStep(); @endphp
             @if($next === 'inspection')
               <a href="{{ route('inspections.create', ['consignment_id'=>$r->id]) }}" class="btn btn-sm btn-outline-warning py-0" title="محتاج فحص"><i class="bi bi-search"></i></a>

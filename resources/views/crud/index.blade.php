@@ -16,7 +16,7 @@
           </select>
         @endif
       @endforeach
-      <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+      <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
     <a href="{{ route($routeName.'.create') }}" class="btn btn-sm btn-plum">
       <i class="bi bi-plus-lg"></i> {{ $singular }} جديد
@@ -59,7 +59,7 @@
             @endif
           @endforeach
           <td class="text-nowrap">
-            <a href="{{ route($routeName.'.edit', $row->id) }}" class="btn btn-sm btn-outline-plum py-0"><i class="bi bi-pencil"></i></a>
+            <a href="{{ route($routeName.'.edit', $row->id) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="تعديل" title="تعديل"><i class="bi bi-pencil" aria-hidden="true"></i></a>
             @if($routeName === 'product-models')
               <a href="{{ route('product-models.sizes', $row->id) }}" class="btn btn-sm btn-outline-secondary py-0" title="المقاسات والإكسسوارات"><i class="bi bi-list-check"></i></a>
             @endif
@@ -67,7 +67,7 @@
               <form method="post" action="{{ route($routeName.'.destroy', $row->id) }}" class="d-inline"
                     onsubmit="return confirm('متأكد من الحذف؟')">
                 @csrf @method('DELETE')
-                <button class="btn btn-sm btn-outline-danger py-0"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-sm btn-outline-danger py-0" aria-label="حذف" title="حذف"><i class="bi bi-trash" aria-hidden="true"></i></button>
               </form>
             @endif
           </td>

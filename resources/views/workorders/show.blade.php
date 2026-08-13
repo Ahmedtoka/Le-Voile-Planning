@@ -205,4 +205,6 @@
     <div class="modal-footer"><button class="btn btn-dark btn-sm">تأكيد القفل</button></div>
   </form>
 </div></div></div>
+@include('partials.comments')
+
 @endsection

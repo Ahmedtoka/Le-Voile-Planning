@@ -8,14 +8,32 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    public function showLogin()
+    /** بصمة بنحطها في الجلسة عشان نتأكد إنها بتتحفظ فعلًا */
+    private const PROBE = 'lv_session_probe';
+
+    public function showLogin(Request $request)
     {
         if (auth()->check()) return redirect()->route('dashboard');
+
+        $request->session()->put(self::PROBE, 1);
+
         return view('auth.login');
     }
 
     public function login(Request $request)
     {
+        /*
+         | أشهر مشكلة بعد الرفع: الجلسة مش بتتحفظ (كوكي secure على http،
+         | أو SESSION_DOMAIN غلط، أو storage مش قابل للكتابة). النتيجة إن
+         | الصفحة بترجعك للوجين من غير أي رسالة. البصمة دي بتكشفها بالاسم.
+        */
+        if (!$request->session()->has(self::PROBE)) {
+            return back()->withInput($request->only('username'))->withErrors(['username' =>
+                'الجلسة مش بتتحفظ على السيرفر، فالدخول مش هيكمل. '
+                . 'غالبًا SESSION_SECURE_COOKIE=true والموقع بيفتح بـ http، '
+                . 'أو مجلد storage مش قابل للكتابة. شغّل: php artisan lv:doctor']);
+        }
+
         $data = $request->validate([
             'username' => ['required', 'string'],
             'password' => ['required', 'string'],
@@ -27,6 +45,7 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
+        $request->session()->forget(self::PROBE);
         ActivityLogger::log('login', auth()->user(), 'تسجيل دخول');
 
         return redirect()->intended(route('dashboard'));

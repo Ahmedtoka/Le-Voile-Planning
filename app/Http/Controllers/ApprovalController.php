@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Approval;
 use App\Services\ActivityLogger;
 use App\Services\ApprovalEngine;
+use App\Services\FlowMessage;
 use Illuminate\Http\Request;
 
 class ApprovalController extends Controller
@@ -38,7 +39,18 @@ class ApprovalController extends Controller
         }
 
         ActivityLogger::log('approved', $approval, 'اعتماد ' . $approval->subject_no);
-        return back()->with('success', 'تم الاعتماد.');
+
+        // لو المستند خلّص دورته، الرسالة بتقول الخطوة الجاية بتاعت نوعه هو
+        $approval->refresh();
+        $key = $approval->status === 'approved'
+            ? match ($approval->doc_type) {
+                'stock_addition' => 'addition.approved',
+                'goods_receipt'  => 'receipt.approved',
+                default          => 'approval.approved',
+            }
+            : 'approval.approved';
+
+        return back()->with(FlowMessage::flash($key, null, ['no' => $approval->subject_no]));
     }
 
     public function reject(Request $request, Approval $approval)
@@ -52,6 +64,6 @@ class ApprovalController extends Controller
         }
 
         ActivityLogger::log('rejected', $approval, 'رفض ' . $approval->subject_no);
-        return back()->with('success', 'تم الرفض.');
+        return back()->with(FlowMessage::flash('approval.rejected', null, ['no' => $approval->subject_no]));
     }
 }

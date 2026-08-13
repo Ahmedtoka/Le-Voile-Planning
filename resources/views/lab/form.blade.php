@@ -20,7 +20,7 @@
       <div class="d-flex gap-2">
         @if($mode==='edit')
           <span class="badge bg-{{ $row->status_color }} align-self-center">{{ $row->status_label }}</span>
-          <a href="{{ route('lab-reports.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0"><i class="bi bi-printer"></i></a>
+          <a href="{{ route('lab-reports.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0" aria-label="طباعة" title="طباعة"><i class="bi bi-printer" aria-hidden="true"></i></a>
         @endif
         <a href="{{ route('lab-reports.index') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
       </div>
@@ -125,5 +125,9 @@
 @endif
 
 <template id="lineTpl">@include('lab.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
+@if($mode === 'edit')
+  @include('partials.comments')
+@endif
+
 @include('partials.lines_js',['startIndex'=>max(count($readings),1)])
 @endsection

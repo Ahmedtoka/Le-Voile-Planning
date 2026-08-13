@@ -12,6 +12,7 @@ use App\Models\Warehouse;
 use App\Services\ActivityLogger;
 use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowMessage;
 use App\Services\Notifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,9 +38,28 @@ class PurchaseOrderController extends Controller
         if ($term = trim((string) $request->get('q'))) $q->where('po_no', 'like', "%{$term}%");
         if ($request->boolean('mine'))           $q->where('requested_by', auth()->id());
 
+        if ($from = $request->get('from')) $q->whereDate('po_date', '>=', $from);
+        if ($to   = $request->get('to'))   $q->whereDate('po_date', '<=', $to);
+
+        $b = fn () => PurchaseOrder::query();
+
         return view('po.index', [
             'title'     => 'طلبات الشراء',
             'rows'      => $q->paginate(25)->withQueryString(),
+            'summary'   => [
+                ['label' => 'مفتوحة', 'value' => $b()->whereNotIn('stage',['closed','cancelled'])->count(), 'tone' => 'brand',
+                 'note' => 'لسه ما اتقفلتش.'],
+                ['label' => 'عند المشتريات', 'value' => $b()->where('stage','purchasing')->count(), 'tone' => 'warn',
+                 'note' => 'مستنية مورد وسعر وتاريخ توريد.'],
+                ['label' => 'عند الحسابات', 'value' => $b()->where('stage','finance')->count(), 'tone' => 'warn',
+                 'note' => 'مستنية علم الحسابات بالمستحق.'],
+                ['label' => 'مستحق متوقع', 'value' => number_format((float) $b()->whereIn('stage',['finance','approval','approved','receiving'])->sum('total'), 0),
+                 'sub' => config('lvplanning.currency'), 'tone' => 'brand',
+                 'note' => 'إجمالي قيمة الطلبات اللي اتسعّرت ولسه ما اتقفلتش.'],
+                ['label' => 'توريد متأخر', 'value' => $b()->whereIn('stage',['approved','receiving'])
+                        ->whereNotNull('delivery_date')->whereDate('delivery_date','<',now())->count(),
+                 'tone' => 'danger', 'note' => 'فات تاريخ التوريد وما وصلش كامل.'],
+            ],
             'suppliers' => Supplier::orderBy('name')->pluck('name', 'id'),
             'stages'    => PurchaseOrder::STAGES,
             'counts'    => PurchaseOrder::query()
@@ -81,7 +101,7 @@ class PurchaseOrderController extends Controller
         });
 
         ActivityLogger::log('created', $po, 'طلب شراء جديد ' . $po->po_no);
-        return redirect()->route('purchase-orders.edit', $po)->with('success', 'تم إنشاء الطلب ' . $po->po_no);
+        return redirect()->route('purchase-orders.edit', $po)->with(FlowMessage::flash('po.created', $po));
     }
 
     public function edit(PurchaseOrder $purchase_order)
@@ -133,7 +153,7 @@ class PurchaseOrderController extends Controller
             route('purchase-orders.edit', $purchase_order), 'warning');
 
         ActivityLogger::log('sent', $purchase_order, 'تنزيل طلب شراء للمشتريات ' . $purchase_order->po_no);
-        return back()->with('success', 'الطلب نزل للمشتريات.');
+        return back()->with(FlowMessage::flash('po.to_purchasing', $purchase_order));
     }
 
     /** ② المشتريات: المورد والأسعار وتاريخ التوريد */
@@ -184,7 +204,7 @@ class PurchaseOrderController extends Controller
         });
 
         ActivityLogger::log('sourced', $purchase_order, 'تسعير طلب شراء ' . $purchase_order->po_no);
-        return back()->with('success', 'تم حفظ بيانات المورد والأسعار.');
+        return back()->with(FlowMessage::flash('po.sourced', $purchase_order));
     }
 
     /** ② ← ③ تنزيل الطلب للحسابات */
@@ -205,7 +225,7 @@ class PurchaseOrderController extends Controller
             route('finance.payables'), 'info');
 
         ActivityLogger::log('sent', $purchase_order, 'تنزيل طلب شراء للحسابات ' . $purchase_order->po_no);
-        return back()->with('success', 'الطلب نزل للحسابات.');
+        return back()->with(FlowMessage::flash('po.to_finance', $purchase_order));
     }
 
     /** ③ الحسابات: علم ومتابعة — مش بتوقف الطلب */
@@ -225,7 +245,7 @@ class PurchaseOrderController extends Controller
         ApprovalEngine::submit($purchase_order->refresh(), auth()->user());
 
         ActivityLogger::log('acknowledged', $purchase_order, 'علم الحسابات بطلب الشراء ' . $purchase_order->po_no);
-        return back()->with('success', 'تم التسجيل — الطلب راح لدورة الاعتماد.');
+        return back()->with(FlowMessage::flash('po.finance_ack', $purchase_order));
     }
 
     public function print(PurchaseOrder $purchase_order)

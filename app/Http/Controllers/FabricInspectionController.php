@@ -11,6 +11,8 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowMessage;
+use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -29,20 +31,42 @@ use Illuminate\Support\Facades\DB;
  */
 class FabricInspectionController extends Controller
 {
+    use FiltersIndex;
+
     public function index(Request $request)
     {
-        $q = FabricInspection::with(['consignment', 'fabricType', 'color', 'inspector'])->latest('id');
-        if ($s = $request->get('status')) $q->where('status', $s);
-        if ($r = $request->get('result')) $q->where('result', $r);
-        if ($term = trim((string) $request->get('q'))) {
-            $q->where(fn ($qq) => $qq->where('doc_no', 'like', "%{$term}%")
-                                     ->orWhere('paper_serial', 'like', "%{$term}%"));
-        }
+        $q = FabricInspection::with(['consignment', 'fabricType', 'color', 'inspector']);
+        $this->applyFilters($q, $request,
+            ['doc_no', 'paper_serial', 'consignment.consignment_no'],
+            'doc_date',
+            ['status' => 'status', 'result' => 'result', 'inspector_id' => 'inspector_id']
+        );
+        if ($request->boolean('variance')) $q->where('rolls_variance', '!=', 0);
+
+        $base    = FabricInspection::query();
+        $waiting = Consignment::where('status', 'under_inspection')
+            ->whereDoesntHave('inspections', fn ($x) => $x->whereIn('status', ['pending','approved']))->count();
 
         return view('inspections.index', [
             'title'   => 'تقارير فحص القماش',
-            'rows'    => $q->paginate(25)->withQueryString(),
+            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
             'results' => FabricInspection::RESULTS,
+            'filters' => [
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'result', 'label' => 'كل النتائج', 'options' => FabricInspection::RESULTS, 'width' => 160],
+                ['name' => 'inspector_id', 'label' => 'كل الفاحصين', 'options' => \App\Models\User::orderBy('name')->pluck('name','id'), 'width' => 150],
+            ],
+            'summary' => [
+                ['label' => 'أحواض مستنية فحص', 'value' => $waiting, 'tone' => $waiting ? 'warn' : 'ok',
+                 'note' => 'وصلت بإذن إضافة ولسه ما اتفحصتش.'],
+                ['label' => 'إجمالي التقارير', 'value' => $base->count(), 'note' => 'كل تقارير الفحص.'],
+                ['label' => 'فروق جرد', 'value' => (clone $base)->where('rolls_variance','!=',0)->count(),
+                 'tone' => 'danger', 'note' => 'عدد أتواب مختلف عن اللي المورد قال عليه.'],
+                ['label' => 'تنبيهات عرض', 'value' => (clone $base)->where('width_alert', true)->count(),
+                 'tone' => 'danger', 'note' => 'فرق عرض كبير بين أتواب حوض واحد.'],
+                ['label' => 'مرفوض', 'value' => (clone $base)->where('result','rejected')->count(), 'tone' => 'danger',
+                 'note' => 'قماش اترفض في الفحص.'],
+            ],
         ]);
     }
 
@@ -125,7 +149,7 @@ class FabricInspectionController extends Controller
         }
 
         ApprovalEngine::submit($inspection);
-        return back()->with('success', 'تم الإرسال للاعتماد.');
+        return back()->with(FlowMessage::flash('inspection.submitted', $inspection));
     }
 
     public function print(FabricInspection $inspection)

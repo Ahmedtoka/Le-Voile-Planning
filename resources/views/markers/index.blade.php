@@ -11,7 +11,7 @@
         @foreach(['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض'] as $k=>$v)
           <option value="{{ $k }}" @selected(request('status')===$k)>{{ $v }}</option>@endforeach
       </select>
-      <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+      <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
     <a href="{{ route('markers.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> ماركر</a>
   </div>
@@ -35,7 +35,7 @@
           </td>
           <td>{{ $r->patternist?->name ?? '—' }}</td>
           <td><span class="badge bg-{{ $r->status_color }}">{{ $r->status_label }}</span></td>
-          <td><a href="{{ route('markers.edit',$r) }}" class="btn btn-sm btn-outline-plum py-0"><i class="bi bi-pencil"></i></a></td>
+          <td><a href="{{ route('markers.edit',$r) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="تعديل" title="تعديل"><i class="bi bi-pencil" aria-hidden="true"></i></a></td>
         </tr>
       @empty
         <tr><td colspan="10" class="text-center text-muted py-4">مفيش ماركرات.</td></tr>

@@ -30,7 +30,7 @@
             </div>
             <form method="post" action="{{ route('settings.flows.step.delete',[$f,$s]) }}" onsubmit="return confirm('حذف الخطوة؟')">
               @csrf @method('DELETE')
-              <button class="btn btn-sm btn-outline-danger py-0"><i class="bi bi-trash"></i></button>
+              <button class="btn btn-sm btn-outline-danger py-0" aria-label="حذف" title="حذف"><i class="bi bi-trash" aria-hidden="true"></i></button>
             </form>
           </li>
         @empty

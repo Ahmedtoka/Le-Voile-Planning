@@ -246,9 +246,16 @@ class DocumentEffects
         ];
 
         // الجرد بيصحّح عدد الأتواب والوزن لو فيه فرق عن اللي المورد قال عليه
-        if ($insp->counted_rolls > 0)  $payload['rolls_count']    = $insp->counted_rolls;
-        if ($insp->total_length_m > 0) $payload['total_length_m'] = $insp->total_length_m;
-        if ($insp->counted_kg > 0)     $payload['total_kg']       = $insp->counted_kg;
+        if ($insp->counted_rolls > 0) $payload['rolls_count'] = $insp->counted_rolls;
+        if ($insp->counted_kg > 0)    $payload['total_kg']    = $insp->counted_kg;
+
+        // ⚠ الطول: الفحص عيّنة، فمجموع أطوال الأتواب المفحوصة مش طول الحوض كله.
+        // منستبدلش إلا لو الفحص كان 100%، وإلا بنقدّر الباقي بالمتوسط.
+        if ($insp->total_length_m > 0 && $insp->sampled_rolls > 0) {
+            $payload['total_length_m'] = $insp->sampled_rolls >= $insp->counted_rolls
+                ? $insp->total_length_m
+                : round(($insp->total_length_m / $insp->sampled_rolls) * $insp->counted_rolls, 2);
+        }
 
         $payload['status'] = $insp->result === 'rejected'
             ? 'rejected'

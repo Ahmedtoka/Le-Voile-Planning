@@ -14,6 +14,8 @@ use App\Models\Warehouse;
 use App\Services\ActivityLogger;
 use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowMessage;
+use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -26,18 +28,41 @@ use Illuminate\Support\Facades\DB;
  */
 class GoodsReceiptController extends Controller
 {
+    use FiltersIndex;
+
     public function index(Request $request)
     {
-        $q = GoodsReceipt::with(['supplier', 'warehouse', 'consignment'])->latest('id');
-        if ($s = $request->get('status')) $q->where('status', $s);
-        if ($term = trim((string) $request->get('q'))) {
-            $q->where(fn ($qq) => $qq->where('doc_no', 'like', "%{$term}%")
-                                     ->orWhere('paper_serial', 'like', "%{$term}%"));
-        }
+        $q = GoodsReceipt::with(['supplier', 'warehouse', 'consignment']);
+        $this->applyFilters($q, $request,
+            ['doc_no', 'paper_serial', 'supplier.name'],
+            'doc_date',
+            ['status' => 'status', 'supplier_id' => 'supplier_id']
+        );
+
+        $base    = GoodsReceipt::query();
+        $waiting = Consignment::whereIn('status', ['inspected','lab_done'])
+            ->whereHas('inspections', fn ($x) => $x->where('status','approved'))
+            ->whereHas('labReports',  fn ($x) => $x->where('status','approved'))
+            ->whereDoesntHave('goodsReceipts', fn ($x) => $x->where('status','approved'))
+            ->count();
 
         return view('receipts.index', [
-            'title' => 'أذون استلام الخام',
-            'rows'  => $q->paginate(25)->withQueryString(),
+            'title'   => 'أذون استلام الخام (الإفراج)',
+            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'filters' => [
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'supplier_id', 'label' => 'كل الموردين', 'options' => \App\Models\Supplier::orderBy('name')->pluck('name','id'), 'width' => 160],
+            ],
+            'summary' => [
+                ['label' => 'أحواض مستنية إفراج', 'value' => $waiting, 'tone' => $waiting ? 'warn' : 'ok',
+                 'note' => 'اتفحصت وخلّصت معمل — ناقصها إذن استلام.',
+                 'link' => [route('consignments.index'), 'شوف الأحواض']],
+                ['label' => 'إجمالي الأذون', 'value' => $base->count(), 'note' => 'كل أذون الاستلام المسجلة.'],
+                ['label' => 'مستنية اعتماد', 'value' => (clone $base)->where('status','pending')->count(), 'tone' => 'warn',
+                 'note' => 'الاعتماد هو اللي بيفرج عن القماش.'],
+                ['label' => 'كجم مفرج عنها', 'value' => number_format((float) (clone $base)->where('status','approved')->sum('total_qty'), 0), 'tone' => 'ok',
+                 'note' => 'قماش بقى متاح فعليًا لأوامر الشغل.'],
+            ],
         ]);
     }
 
@@ -147,7 +172,7 @@ class GoodsReceiptController extends Controller
         }
 
         ApprovalEngine::submit($goods_receipt);
-        return back()->with('success', 'تم الإرسال للاعتماد.');
+        return back()->with(FlowMessage::flash('receipt.submitted', $goods_receipt));
     }
 
     public function print(GoodsReceipt $goods_receipt)

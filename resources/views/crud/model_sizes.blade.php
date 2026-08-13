@@ -34,7 +34,7 @@
               <td>
                 <form method="post" action="{{ route('product-models.bom.delete', [$model->id, $b->id]) }}"
                       onsubmit="return confirm('حذف؟')">@csrf @method('DELETE')
-                  <button class="btn btn-sm btn-outline-danger py-0"><i class="bi bi-trash"></i></button>
+                  <button class="btn btn-sm btn-outline-danger py-0" aria-label="حذف" title="حذف"><i class="bi bi-trash" aria-hidden="true"></i></button>
                 </form>
               </td>
             </tr>
