@@ -11,7 +11,13 @@ class PurchaseOrder extends Model
     use HasApproval, HasDocumentStatus;
 
     protected $guarded = [];
-    protected $casts = ['po_date' => 'date', 'delivery_date' => 'date'];
+    protected $casts = [
+        'po_date'       => 'date',
+        'delivery_date' => 'date',
+        'requested_at'  => 'datetime',
+        'sourced_at'    => 'datetime',
+        'finance_at'    => 'datetime',
+    ];
 
     public const DOC_TYPE = 'purchase_order';
 
@@ -26,9 +32,81 @@ class PurchaseOrder extends Model
         'cancelled'          => 'ملغي',
     ];
 
+    /**
+     * مراحل الطلب — نفس الورقة، بس بتمر على تلات أيادي.
+     * كل مرحلة بتقفل اللي قبلها عن التعديل.
+     */
+    public const STAGES = [
+        'planning'   => 'عند التخطيط',
+        'purchasing' => 'عند المشتريات',
+        'finance'    => 'عند الحسابات',
+        'approval'   => 'تحت الاعتماد',
+        'approved'   => 'معتمد ومُرسل للمورد',
+        'receiving'  => 'جاري الاستلام',
+        'closed'     => 'مقفول',
+        'cancelled'  => 'ملغي',
+    ];
+
+    public const STAGE_COLORS = [
+        'planning'   => 'secondary',
+        'purchasing' => 'info',
+        'finance'    => 'warning',
+        'approval'   => 'warning',
+        'approved'   => 'success',
+        'receiving'  => 'primary',
+        'closed'     => 'dark',
+        'cancelled'  => 'danger',
+    ];
+
+    public function getStageNameAttribute(): string
+    {
+        return self::STAGES[$this->stage] ?? (string) $this->stage;
+    }
+
+    public function getStageColorAttribute(): string
+    {
+        return self::STAGE_COLORS[$this->stage] ?? 'secondary';
+    }
+
+    /** الأصناف والكميات — التخطيط بس اللي يعدّلها، وقبل ما تنزل للمشتريات */
+    public function planningEditable(): bool
+    {
+        return $this->stage === 'planning';
+    }
+
+    /** المورد والأسعار والتوريد — المشتريات */
+    public function purchasingEditable(): bool
+    {
+        return $this->stage === 'purchasing';
+    }
+
+    /** جاهز ينزل للمشتريات؟ */
+    public function readyForPurchasing(): bool
+    {
+        return $this->stage === 'planning' && $this->lines()->count() > 0;
+    }
+
+    /** جاهز ينزل للحسابات؟ لازم مورد وتاريخ توريد */
+    public function readyForFinance(): bool
+    {
+        return $this->stage === 'purchasing'
+            && $this->supplier_id
+            && $this->delivery_date;
+    }
+
+    /** المستحق المتوقع للمورد من الطلب ده */
+    public function getExpectedPayableAttribute(): float
+    {
+        return (float) $this->total;
+    }
+
     public function supplier()  { return $this->belongsTo(Supplier::class); }
     public function warehouse() { return $this->belongsTo(Warehouse::class); }
     public function employee()  { return $this->belongsTo(User::class, 'employee_id'); }
+    public function requester() { return $this->belongsTo(User::class, 'requested_by'); }
+    public function sourcer()   { return $this->belongsTo(User::class, 'sourced_by'); }
+    public function financer()  { return $this->belongsTo(User::class, 'finance_by'); }
+    public function stockAdditions() { return $this->hasMany(StockAddition::class); }
     public function creator()   { return $this->belongsTo(User::class, 'created_by'); }
     public function lines()     { return $this->hasMany(PurchaseOrderLine::class)->orderBy('line_no'); }
     public function receipts()  { return $this->hasMany(GoodsReceipt::class); }

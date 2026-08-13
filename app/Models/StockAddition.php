@@ -6,6 +6,13 @@ use App\Support\HasApproval;
 use App\Support\HasDocumentStatus;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * إذن الإضافة — أول مستند لما القماش يوصل.
+ *
+ * ده اللي بيولّد الحوض (الرسالة) وبيدخّله المخزن **محجوز تحت الفحص**.
+ * القماش مش متاح للتشغيل من هنا — الإفراج بيحصل بإذن الاستلام الخام
+ * بعد ما الفحص والمعمل يخلّصوا.
+ */
 class StockAddition extends Model
 {
     use HasApproval, HasDocumentStatus;
@@ -15,16 +22,20 @@ class StockAddition extends Model
 
     public const DOC_TYPE = 'stock_addition';
 
-    public function supplier()     { return $this->belongsTo(Supplier::class); }
-    public function warehouse()    { return $this->belongsTo(Warehouse::class); }
-    public function goodsReceipt() { return $this->belongsTo(GoodsReceipt::class); }
-    public function consignment()  { return $this->belongsTo(Consignment::class); }
-    public function creator()      { return $this->belongsTo(User::class, 'created_by'); }
-    public function lines()        { return $this->hasMany(StockAdditionLine::class); }
+    public function supplier()      { return $this->belongsTo(Supplier::class); }
+    public function warehouse()     { return $this->belongsTo(Warehouse::class); }
+    public function purchaseOrder() { return $this->belongsTo(PurchaseOrder::class); }
+    public function consignment()   { return $this->belongsTo(Consignment::class); }
+    public function goodsReceipts() { return $this->hasMany(GoodsReceipt::class); }
+    public function creator()       { return $this->belongsTo(User::class, 'created_by'); }
+    public function lines()         { return $this->hasMany(StockAdditionLine::class); }
 
     public function recalcTotals(): void
     {
         $this->loadMissing('lines');
-        $this->forceFill(['total_qty' => (float) $this->lines->sum('qty')])->saveQuietly();
+        $this->forceFill([
+            'total_qty'   => (float) $this->lines->sum('qty'),
+            'total_rolls' => (int) $this->lines->sum('rolls_count'),
+        ])->saveQuietly();
     }
 }

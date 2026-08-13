@@ -1,7 +1,7 @@
 @extends('layouts.print')
 @section('doc')
 <div class="doc-head">
-  <div class="logo">Le Voile<small>LOVE OF HIJAB</small></div>
+  <div class="logo"><img src="{{ asset('assets/logo.png') }}" alt="Le Voile"><small>FASHION FORWARD</small></div>
   <div class="doc-title">اذن استلام خام</div>
   <div style="width:170px;text-align:left">
     <span class="serial">{{ $gr->paper_serial ?: $gr->doc_no }}</span>

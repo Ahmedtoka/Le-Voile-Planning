@@ -1,7 +1,7 @@
 @extends('layouts.print')
 @section('doc')
 <div class="doc-head">
-  <div class="logo">Le Voile<small>FASHION FORWARD</small></div>
+  <div class="logo"><img src="{{ asset('assets/logo.png') }}" alt="Le Voile"><small>FASHION FORWARD</small></div>
   <div class="doc-title">أمر شغل</div>
   <div style="width:150px;text-align:left"><span class="serial">{{ $wo->wo_no }}</span></div>
 </div>

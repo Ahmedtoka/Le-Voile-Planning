@@ -52,7 +52,8 @@ class ConsignmentController extends Controller
             'total_kg'       => ['required', 'numeric', 'min:0'],
             'rolls_count'    => ['required', 'integer', 'min:0'],
             'total_length_m' => ['nullable', 'numeric', 'min:0'],
-            'status'         => ['required', 'in:' . implode(',', array_keys(Consignment::STATUSES))],
+            // الحالة بتتحرك بالمستندات — التعديل اليدوي للرفض/القفل بس
+            'status'         => ['required', 'in:rejected,closed,' . $consignment->status],
             'notes'          => ['nullable', 'string'],
         ], [], ['total_kg' => 'إجمالي الوزن', 'rolls_count' => 'عدد الأتواب']);
 

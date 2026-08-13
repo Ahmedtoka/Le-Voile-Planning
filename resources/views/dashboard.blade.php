@@ -11,9 +11,13 @@
   </div>
   <div class="col-6 col-lg-3">
     <div class="stat">
-      <div class="v text-warning">{{ $consignments['awaiting_inspection'] + $consignments['awaiting_lab'] }}</div>
-      <div class="l">أحواض مستنية فحص أو معمل</div>
-      <div class="hint mt-1">{{ $consignments['awaiting_inspection'] }} فحص · {{ $consignments['awaiting_lab'] }} معمل</div>
+      <div class="v text-warning">{{ number_format($consignments['hold_kg'], 0) }}</div>
+      <div class="l">كجم محجوزة تحت الفحص</div>
+      <div class="hint mt-1">
+        {{ $consignments['awaiting_inspection'] }} مستني فحص ·
+        {{ $consignments['awaiting_lab'] }} معمل ·
+        {{ $consignments['awaiting_release'] }} إفراج
+      </div>
     </div>
   </div>
   <div class="col-6 col-lg-3">

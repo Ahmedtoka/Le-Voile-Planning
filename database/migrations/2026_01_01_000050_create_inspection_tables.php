@@ -25,9 +25,14 @@ return new class extends Migration
                 $t->foreignId('work_order_id')->nullable();      // أمر التشغيل (لو الفحص بعد التخصيص)
                 $t->foreignId('inspector_id')->nullable();       // الفاحص
 
-                $t->unsignedInteger('total_rolls')->default(0);   // إجمالي أتواب الحوض
-                $t->unsignedInteger('sampled_rolls')->default(0); // عدد الأتواب المفحوصة ★
+                // الجرد: كام توب موجود فعلًا مقابل اللي المورد قال عليه
+                $t->unsignedInteger('declared_rolls')->default(0); // اللي جه في إذن الإضافة
+                $t->unsignedInteger('counted_rolls')->default(0);  // اللي اتجرد فعليًا ★
+                $t->integer('rolls_variance')->default(0);         // الفرق (ناقص/زيادة)
+                $t->unsignedInteger('total_rolls')->default(0);    // = counted_rolls
+                $t->unsignedInteger('sampled_rolls')->default(0);  // عدد الأتواب المفحوصة ★
                 $t->decimal('sample_pct', 6, 2)->default(0);
+                $t->decimal('counted_kg', 15, 3)->nullable();      // الوزن المجرود
 
                 $t->decimal('total_length_m', 15, 2)->default(0); // إجمالي الكمية
                 $t->decimal('min_width_cm', 8, 2)->nullable();    // ★ يغذّي الماركر

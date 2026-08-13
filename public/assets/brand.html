@@ -1,0 +1,93 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<title>هوية Le Voile — نظام تخطيط الإنتاج</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--brand:#9D197E;--dark:#7A1362;--deep:#560D45;--ink:#3B092F;
+      --tint:#F7E8F3;--soft:#ECD1E5;--white:#FFF;--offwhite:#F8F4F1;--line:#EAE2E7}
+*{font-family:'Cairo',sans-serif;box-sizing:border-box}
+body{background:var(--offwhite);margin:0;padding:40px;color:#2B2028}
+.wrap{max-width:900px;margin:auto}
+h2{color:var(--ink);font-size:1.1rem;margin:34px 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.hero{background:#fff;border:1px solid var(--line);border-radius:14px;padding:40px;text-align:center}
+.hero img{width:280px}
+.hero .sub{color:#9C8E97;font-size:.8rem;letter-spacing:2px;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.sw{border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#fff}
+.sw .c{height:78px}
+.sw .t{padding:8px 10px;font-size:.75rem}
+.sw .t b{display:block;font-size:.8rem}
+.sw .t code{color:#857A81;font-size:.72rem;direction:ltr;display:inline-block}
+.row{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;flex:1;min-width:230px}
+.onDark{background:linear-gradient(180deg,var(--deep),var(--ink));border-radius:10px;padding:26px;text-align:center}
+.onDark img{width:170px}
+.btn{display:inline-block;padding:7px 16px;border-radius:6px;font-size:.85rem;font-weight:600;margin:3px}
+.b1{background:var(--brand);color:#fff}
+.b2{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+table{width:100%;border-collapse:collapse;font-size:.85rem;background:#fff;border-radius:10px;overflow:hidden}
+th{background:var(--tint);color:var(--ink);padding:8px;text-align:right;font-size:.8rem}
+td{padding:8px;border-top:1px solid var(--line)}
+.note{background:var(--tint);border:1px solid var(--soft);border-radius:8px;padding:12px;font-size:.82rem;color:#4A3A44}
+</style></head><body><div class="wrap">
+
+<div class="hero">
+  <img src="logo.png" alt="Le Voile">
+  <div class="sub">FASHION FORWARD</div>
+</div>
+
+<h2>الباليت الرسمي</h2>
+<div class="note">
+  اللون الأساسي مأخوذ حرفيًا من ملف اللوجو بقياس البكسل: <b>#9D197E</b>.
+  باقي الدرجات مشتقة منه. الباليت كلها = البراند + الأبيض + الأوف وايت، ومفيش أي لون تاني في السيستم.
+</div>
+<div class="grid" style="margin-top:12px">
+  <div class="sw"><div class="c" style="background:#9D197E"></div><div class="t"><b>البراند</b><code>#9D197E</code></div></div>
+  <div class="sw"><div class="c" style="background:#7A1362"></div><div class="t"><b>غامق — hover</b><code>#7A1362</code></div></div>
+  <div class="sw"><div class="c" style="background:#560D45"></div><div class="t"><b>القايمة الجانبية</b><code>#560D45</code></div></div>
+  <div class="sw"><div class="c" style="background:#3B092F"></div><div class="t"><b>الأغمق — العناوين</b><code>#3B092F</code></div></div>
+  <div class="sw"><div class="c" style="background:#ECD1E5"></div><div class="t"><b>فاتح — حدود</b><code>#ECD1E5</code></div></div>
+  <div class="sw"><div class="c" style="background:#F7E8F3"></div><div class="t"><b>تِنت — رؤوس الجداول</b><code>#F7E8F3</code></div></div>
+  <div class="sw"><div class="c" style="background:#FFFFFF;border-bottom:1px solid #EAE2E7"></div><div class="t"><b>أبيض — الكروت</b><code>#FFFFFF</code></div></div>
+  <div class="sw"><div class="c" style="background:#F8F4F1"></div><div class="t"><b>أوف وايت — الخلفية</b><code>#F8F4F1</code></div></div>
+</div>
+
+<h2>اللوجو على الخلفيات</h2>
+<div class="row">
+  <div class="card" style="text-align:center"><img src="logo.png" style="width:170px"><div style="font-size:.75rem;color:#857A81;margin-top:8px">logo.png — على الأبيض والأوف وايت</div></div>
+  <div class="card" style="padding:0;border:0"><div class="onDark"><img src="logo-white.png"><div style="color:#D6AFC9;font-size:.72rem;margin-top:8px">logo-white.png — على الغامق</div></div></div>
+</div>
+
+<h2>العناصر</h2>
+<div class="row">
+  <div class="card">
+    <div style="font-size:.8rem;color:#857A81;margin-bottom:8px">الأزرار</div>
+    <span class="btn b1">حفظ</span><span class="btn b2">إلغاء</span>
+  </div>
+  <div class="card">
+    <div style="font-size:.8rem;color:#857A81;margin-bottom:8px">الأيقونة</div>
+    <img src="favicon-64.png" width="48" height="48" style="border-radius:10px;vertical-align:middle">
+    <img src="favicon-32.png" width="32" height="32" style="border-radius:7px;vertical-align:middle;margin-inline-start:8px">
+  </div>
+</div>
+
+<h2>الجداول</h2>
+<table>
+  <tr><th>رقم الرسالة</th><th>اللون</th><th>أقل عرض</th><th>البنشر</th><th>الحالة</th></tr>
+  <tr><td>SL30-090826-196-00</td><td>أسود</td><td>183</td><td>196.29</td><td><span style="background:#F7E8F3;color:#3B092F;padding:2px 8px;border-radius:20px;font-size:.75rem">معتمد</span></td></tr>
+  <tr><td>SL30-120826-196-01</td><td>أوف وايت</td><td>—</td><td>—</td><td><span style="background:#F8F4F1;color:#857A81;padding:2px 8px;border-radius:20px;font-size:.75rem">مستلم</span></td></tr>
+</table>
+
+<h2>ملفات الأصول</h2>
+<table>
+  <tr><th>الملف</th><th>الاستخدام</th></tr>
+  <tr><td><code>logo.png</code></td><td>اللوجو بلون البراند وخلفية شفافة — اللوجين، الطباعة، أي خلفية فاتحة</td></tr>
+  <tr><td><code>logo-white.png</code></td><td>نسخة بيضاء — القايمة الجانبية وأي خلفية غامقة</td></tr>
+  <tr><td><code>logo-offwhite.png</code></td><td>نسخة أوف وايت — خلفيات غامقة بلمسة أدفى</td></tr>
+  <tr><td><code>favicon.ico</code> · <code>favicon-32/64/180.png</code></td><td>أيقونة المتصفح وشاشة الموبايل</td></tr>
+  <tr><td><code>LevoileLogo.jpg</code></td><td>الملف الأصلي كما هو — محفوظ للرجوع إليه</td></tr>
+</table>
+
+<div style="text-align:center;color:#B79FAF;font-size:.75rem;margin:36px 0 0">
+  Le Voile · نظام تخطيط الإنتاج
+</div>
+</div></body></html>

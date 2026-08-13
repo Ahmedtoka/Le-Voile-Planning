@@ -39,19 +39,27 @@ return new class extends Migration
                 $t->decimal('shrink_width_pct', 6, 2)->nullable();
                 $t->boolean('color_match_ok')->nullable();
 
+                $t->decimal('hold_kg', 15, 3)->default(0);       // محجوز تحت الفحص
+                $t->decimal('released_kg', 15, 3)->default(0);   // مفرج عنه بإذن الاستلام
                 $t->decimal('allocated_kg', 15, 3)->default(0);  // المخصص لأوامر شغل
-                $t->decimal('remaining_kg', 15, 3)->default(0);  // المتبقي
+                $t->decimal('remaining_kg', 15, 3)->default(0);  // المتاح فعليًا للتشغيل
 
+                /* ── حالة الحوض ───────────────────────────────────
+                 | الترتيب الفعلي للشغل:
+                 |   إذن إضافة  ⇒ under_inspection (مخزون محجوز، ممنوع التشغيل)
+                 |   تقرير فحص  ⇒ inspected
+                 |   تقرير معمل ⇒ lab_done
+                 |   إذن استلام ⇒ released  (الإفراج — دلوقتي بس ينفع يتشغّل)
+                */
                 $t->enum('status', [
-                    'received',     // مستلم
-                    'inspecting',   // تحت الفحص
-                    'inspected',    // اتفحص
-                    'lab_pending',  // مستني المعمل
-                    'approved',     // معتمد وجاهز للتشغيل
-                    'rejected',     // مرفوض
-                    'in_production',// دخل تشغيل
-                    'closed',       // اتقفل
-                ])->default('received');
+                    'under_inspection', // وصل بإذن إضافة — محجوز
+                    'inspected',        // اتفحص
+                    'lab_done',         // خلّص معمل
+                    'released',         // مفرج عنه بإذن الاستلام ⇒ جاهز للتشغيل
+                    'rejected',         // مرفوض
+                    'in_production',    // دخل تشغيل
+                    'closed',
+                ])->default('under_inspection');
 
                 $t->text('notes')->nullable();
                 $t->foreignId('created_by')->nullable();

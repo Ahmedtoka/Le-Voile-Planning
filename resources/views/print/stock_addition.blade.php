@@ -1,7 +1,7 @@
 @extends('layouts.print')
 @section('doc')
 <div class="doc-head">
-  <div class="logo">Le Voile<small>FASHION FORWARD</small></div>
+  <div class="logo"><img src="{{ asset('assets/logo.png') }}" alt="Le Voile"><small>FASHION FORWARD</small></div>
   <div class="doc-title">إذن إضافة</div>
   <div style="width:150px;text-align:left"><span class="serial">{{ $sa->paper_serial ?: $sa->doc_no }}</span></div>
 </div>
@@ -13,14 +13,16 @@
     <td class="k">إسم المخزن</td><td style="width:140px">{{ $sa->warehouse?->code }} — {{ $sa->warehouse?->name }}</td>
   </tr>
   <tr>
-    <td class="k">رقم الرسالة</td><td colspan="5">{{ $sa->consignment_no ?: $sa->consignment?->consignment_no }}</td>
+    <td class="k">رقم الرسالة</td><td colspan="3">{{ $sa->consignment_no ?: $sa->consignment?->consignment_no }}</td>
+    <td class="k">الحالة</td><td>تحت الفحص</td>
   </tr>
 </table>
 
 <table class="grid">
   <thead><tr>
-    <th style="width:35px">م</th><th style="width:110px">كــود الصنــف</th><th>اســم الصنف</th>
-    <th style="width:90px">الكميــة</th><th style="width:70px">الوحــدة</th><th style="width:180px">ملاحظات</th>
+    <th style="width:35px">م</th><th style="width:105px">كــود الصنــف</th><th>اســم الصنف</th>
+    <th style="width:65px">ع.أتواب</th><th style="width:85px">الكميــة</th>
+    <th style="width:65px">الوحــدة</th><th style="width:160px">ملاحظات</th>
   </tr></thead>
   <tbody>
     @foreach($sa->lines as $i => $l)
@@ -29,15 +31,17 @@
         <td>{{ $l->item_code }}</td>
         <td class="r">{{ $l->item_name ?: ($l->fabricType?->name ?? $l->accessory?->name) }}
           @if($l->color) — {{ $l->color->name }} @endif</td>
+        <td>{{ $l->rolls_count ?: '' }}</td>
         <td>{{ rtrim(rtrim(number_format((float)$l->qty, 3), '0'), '.') }}</td>
         <td>{{ $l->unit }}</td>
         <td class="r">{{ $l->notes }}</td>
       </tr>
     @endforeach
     @for($i = $sa->lines->count(); $i < 20; $i++)
-      <tr><td>{{ $i + 1 }}</td><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td>{{ $i + 1 }}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
     @endfor
     <tr><td colspan="3"><b>الإجمالى</b></td>
+        <td><b>{{ $sa->total_rolls }}</b></td>
         <td><b>{{ rtrim(rtrim(number_format((float)$sa->total_qty, 3), '0'), '.') }}</b></td>
         <td colspan="2"></td></tr>
   </tbody>

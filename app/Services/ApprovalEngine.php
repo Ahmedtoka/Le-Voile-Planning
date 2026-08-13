@@ -166,6 +166,9 @@ class ApprovalEngine
 
         if ($result === 'approved') {
             DocumentEffects::onApproved($doc);
+        } elseif ($doc instanceof \App\Models\PurchaseOrder) {
+            // الرفض بيرجّع الطلب للمشتريات عشان يتراجع — مش يفضل معلّق
+            $doc->forceFill(['stage' => 'purchasing'])->save();
         }
 
         Notifier::send(

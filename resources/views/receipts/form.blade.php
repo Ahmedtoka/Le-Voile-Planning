@@ -4,6 +4,12 @@
 
 @include('partials.approval_box')
 
+<div class="note-box mb-3">
+  <b>ده الإفراج.</b> بيتعمل بعد ما الحوض يوصل بإذن إضافة، ويتفحص، وييجي له تقرير معمل.
+  اعتماد الإذن ده هو اللي بيخلّي القماش متاح فعليًا لأوامر الشغل، وبيحدّث الكمية
+  المستلمة في أمر الشراء.
+</div>
+
 <form method="post" action="{{ $mode==='create' ? route('goods-receipts.store') : route('goods-receipts.update',$row) }}">
   @csrf @if($mode==='edit') @method('PUT') @endif
 
@@ -40,10 +46,22 @@
             <option value="">— بدون —</option>
             @foreach($pos as $k=>$v)<option value="{{ $k }}" @selected(old('purchase_order_id',$row->purchase_order_id)==$k)>{{ $v }}</option>@endforeach
           </select></div>
-        <div class="col-md-3"><label class="form-label">رقم الرسالة</label>
-          <input name="consignment_no" class="form-control form-control-sm"
-                 value="{{ old('consignment_no', $row->consignment?->consignment_no) }}" placeholder="سيبه فاضي والسيستم هيولّده">
-          <div class="hint">النمط: SL30-090826-196-00</div></div>
+        <div class="col-md-5"><label class="form-label req">الحوض المتفحص (الرسالة)</label>
+          <select name="consignment_id" class="form-select form-select-sm" required>
+            <option value="">— اختر حوض اتفحص —</option>
+            @foreach($consignments as $c)
+              <option value="{{ $c->id }}" @selected(old('consignment_id',$row->consignment_id)==$c->id)>
+                {{ $c->consignment_no }} — {{ $c->color?->code }} · {{ number_format((float)$c->total_kg,0) }} كجم
+                · {{ $c->rolls_count }} توب @if($c->min_width_cm)· أقل عرض {{ $c->min_width_cm }}@endif
+              </option>
+            @endforeach
+          </select>
+          @if(!count($consignments))
+            <div class="hint text-danger">مفيش أحواض متفحصة. لازم إذن إضافة ⇐ تقرير فحص الأول.</div>
+          @endif
+        </div>
+        <input type="hidden" name="stock_addition_id" value="{{ old('stock_addition_id',$row->stock_addition_id) }}">
+        <input type="hidden" name="fabric_inspection_id" value="{{ old('fabric_inspection_id',$row->fabric_inspection_id) }}">
         <div class="col-md-3"><label class="form-label">مندوب المورد</label>
           <input name="supplier_rep" class="form-control form-control-sm" value="{{ old('supplier_rep',$row->supplier_rep) }}"></div>
         <div class="col-md-6"><label class="form-label">ملاحظات</label>
@@ -73,7 +91,7 @@
     </div>
     <div class="card-footer bg-white hint">
       <i class="bi bi-info-circle"></i>
-      الحوض بيتعمل تلقائيًا من الإذن ده، ومعاه سجل لكل توب. العرض هنا مبدئي — العرض الفعلي بييجي من الفحص.
+      الأرقام هنا هي اللي طلعت من الجرد والفحص — مش اللي المورد قال عليها.
     </div>
   </div>
 

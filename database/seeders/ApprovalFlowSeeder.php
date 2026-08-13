@@ -16,16 +16,19 @@ use Illuminate\Database\Seeder;
 class ApprovalFlowSeeder extends Seeder
 {
     public const FLOWS = [
+        // الحسابات بتعلم في المرحلة اللي قبل الاعتماد، فما فيش داعي تعتمد تاني
         'purchase_order' => ['طلب شراء', [
             ['اعتماد مدير المشتريات', 'purchasing_mgr'],
-            ['اعتماد الإدارة المالية', 'finance'],
+            ['اعتماد المدير العام', 'gm'],
         ]],
-        'goods_receipt' => ['إذن استلام خام', [
-            ['اعتماد مدير المخزن', 'stock_controller'],
-        ]],
-        'stock_addition' => ['إذن إضافة', [
-            ['اعتماد أمين المخزن', 'storekeeper'],
+        // ① أول مستند: وصول القماش وحجزه
+        'stock_addition' => ['إذن إضافة (تحت الفحص)', [
             ['مراجعة مراقب المخزون', 'stock_controller'],
+        ]],
+        // ④ آخر مستند: الإفراج بعد الفحص — محتاج توقيعين
+        'goods_receipt' => ['إذن استلام خام (الإفراج)', [
+            ['اعتماد مراقب المخزون', 'stock_controller'],
+            ['اعتماد التخطيط', 'planner'],
         ]],
         'fabric_inspection' => ['تقرير فحص قماش', [
             ['اعتماد الجودة', 'stock_controller'],

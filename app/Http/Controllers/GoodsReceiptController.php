@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Color;
 use App\Models\Consignment;
-use App\Models\FabricRoll;
+use App\Models\FabricInspection;
 use App\Models\FabricType;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptLine;
@@ -18,11 +18,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * إذن استلام خام.
+ * إذن استلام خام — آخر خطوة في دورة وصول القماش.
  *
- * ده المستند اللي بيولّد "الحوض/الرسالة" — وحدة الشغل الأساسية.
- * لو المستخدم ما دخلش رقم رسالة، السيستم بيولّده بنمط الشركة:
- * SL30-090826-196-00
+ * الترتيب: إذن إضافة (الحوض بيتولّد ويتحجز) ⇒ تقرير فحص ⇒ تقرير معمل
+ * ⇒ **إذن استلام خام** = الإفراج. اعتماد الإذن ده هو اللي بيخلّي
+ * القماش متاح فعليًا لأوامر الشغل.
  */
 class GoodsReceiptController extends Controller
 {
@@ -41,12 +41,23 @@ class GoodsReceiptController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return view('receipts.form', $this->formData([
-            'row'  => new GoodsReceipt(['doc_date' => now()->toDateString(), 'status' => 'draft']),
-            'mode' => 'create',
-        ]));
+        $row = new GoodsReceipt(['doc_date' => now()->toDateString(), 'status' => 'draft']);
+
+        // بنملا الإذن من الحوض المتفحص — الأرقام بتيجي من الفحص، مش من المورد
+        if ($cid = $request->get('consignment_id')) {
+            if ($c = Consignment::with(['inspections' => fn ($q) => $q->where('status', 'approved')->latest('id')])->find($cid)) {
+                $row->consignment_id      = $c->id;
+                $row->supplier_id         = $c->supplier_id;
+                $row->warehouse_id        = $c->warehouse_id;
+                $row->purchase_order_id   = $c->purchase_order_id;
+                $row->stock_addition_id   = $c->stockAdditions()->latest('id')->value('id');
+                $row->fabric_inspection_id = $c->inspections->first()?->id;
+            }
+        }
+
+        return view('receipts.form', $this->formData(['row' => $row, 'mode' => 'create']));
     }
 
     public function store(Request $request)
@@ -62,7 +73,7 @@ class GoodsReceiptController extends Controller
 
             $this->syncLines($gr, $data['lines']);
             $gr->refresh()->recalcTotals();
-            $this->buildConsignment($gr, $request);
+            $this->stampConsignment($gr->refresh());
 
             return $gr;
         });
@@ -90,7 +101,7 @@ class GoodsReceiptController extends Controller
             $goods_receipt->update($data['header']);
             $this->syncLines($goods_receipt, $data['lines'], true);
             $goods_receipt->refresh()->recalcTotals();
-            $this->buildConsignment($goods_receipt, $request);
+            $this->stampConsignment($goods_receipt->refresh());
         });
 
         return back()->with('success', 'تم الحفظ.');
@@ -104,6 +115,20 @@ class GoodsReceiptController extends Controller
             return back()->withErrors(['msg' => 'مينفعش ترسل إذن فاضي.']);
         }
 
+        // الإفراج مالوش معنى قبل الفحص — ده جوهر الدورة
+        $c = $goods_receipt->consignment;
+        if (!$c) {
+            return back()->withErrors(['msg' => 'لازم تحدد الحوض.']);
+        }
+        if (!$c->inspections()->where('status', 'approved')->exists()) {
+            return back()->withErrors(['msg' =>
+                'الحوض ' . $c->consignment_no . ' لسه ما اتفحصش. مينفعش تفرج عن قماش من غير تقرير فحص معتمد.']);
+        }
+        if (!$c->labReports()->where('status', 'approved')->exists()) {
+            return back()->withErrors(['msg' =>
+                'الحوض ' . $c->consignment_no . ' لسه مالوش تقرير معمل معتمد — مفيش بنشر نحسب عليه.']);
+        }
+
         // تحذير تجاوز نسبة الزيادة المسموح بها في أمر الشراء
         if ($po = $goods_receipt->purchaseOrder) {
             $po->load('lines');
@@ -112,8 +137,8 @@ class GoodsReceiptController extends Controller
                     $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $line->color_id);
                 if (!$poLine) continue;
 
-                $qtyTon = strtolower($line->unit) === 'طن' ? (float) $line->qty : (float) $line->qty / 1000;
-                if ((float) $poLine->received_qty + $qtyTon > $poLine->max_allowed_qty + 0.0001) {
+                $qty = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
+                if ((float) $poLine->received_qty + $qty > $poLine->max_allowed_qty + 0.0001) {
                     return back()->withErrors(['msg' =>
                         'الكمية المستلمة بتتعدى نسبة الزيادة المسموح بها ('
                         . $poLine->tolerance_pct . '%) في أمر الشراء. راجع الكمية أو عدّل أمر الشراء.']);
@@ -148,8 +173,12 @@ class GoodsReceiptController extends Controller
             'warehouses'  => Warehouse::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
             'colors'      => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
             'fabricTypes' => FabricType::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
-            'pos'         => PurchaseOrder::whereIn('status', ['approved','partially_received'])
+            'pos'         => PurchaseOrder::whereIn('stage', ['approved','receiving'])
                                 ->latest('id')->pluck('po_no', 'id'),
+            // الأحواض المتفحصة بس — مينفعش تفرج عن حوض ما اتفحصش
+            'consignments' => Consignment::with(['color','fabricType','inspections'])
+                                ->whereIn('status', ['inspected','lab_done'])
+                                ->latest('id')->get(),
         ], $extra);
     }
 
@@ -158,12 +187,14 @@ class GoodsReceiptController extends Controller
         $v = $request->validate([
             'doc_date'          => ['required', 'date'],
             'paper_serial'      => ['nullable', 'string', 'max:40'],
-            'warehouse_id'      => ['required', 'exists:warehouses,id'],
-            'supplier_id'       => ['required', 'exists:suppliers,id'],
-            'purchase_order_id' => ['nullable', 'exists:purchase_orders,id'],
-            'supplier_rep'      => ['nullable', 'string', 'max:191'],
-            'consignment_no'    => ['nullable', 'string', 'max:60'],
-            'notes'             => ['nullable', 'string'],
+            'warehouse_id'         => ['required', 'exists:warehouses,id'],
+            'supplier_id'          => ['required', 'exists:suppliers,id'],
+            'purchase_order_id'    => ['nullable', 'exists:purchase_orders,id'],
+            'consignment_id'       => ['required', 'exists:consignments,id'],
+            'stock_addition_id'    => ['nullable', 'exists:stock_additions,id'],
+            'fabric_inspection_id' => ['nullable', 'exists:fabric_inspections,id'],
+            'supplier_rep'         => ['nullable', 'string', 'max:191'],
+            'notes'                => ['nullable', 'string'],
 
             'lines'                  => ['required', 'array', 'min:1'],
             'lines.*.item_code'      => ['nullable', 'string', 'max:40'],
@@ -177,17 +208,15 @@ class GoodsReceiptController extends Controller
         ], [], [
             'warehouse_id'        => 'المخزن',
             'supplier_id'         => 'المورد',
+            'consignment_id'      => 'الحوض',
             'lines.*.rolls_count' => 'عدد الأتواب',
             'lines.*.qty'         => 'الكمية',
         ]);
 
-        $consignmentNo = $v['consignment_no'] ?? null;
-        unset($v['consignment_no']);
-
         $lines = $v['lines'];
         unset($v['lines']);
 
-        return ['header' => $v, 'lines' => $lines, 'consignment_no' => $consignmentNo];
+        return ['header' => $v, 'lines' => $lines];
     }
 
     private function syncLines(GoodsReceipt $gr, array $lines, bool $replace = false): void
@@ -210,63 +239,11 @@ class GoodsReceiptController extends Controller
         }
     }
 
-    /**
-     * توليد/تحديث الحوض من الإذن + إنشاء سجل لكل توب.
-     * الحوض بيتعمل لكل (خامة + لون) في الإذن — لأن الحوض بالتعريف
-     * لون واحد وخامة واحدة.
-     */
-    private function buildConsignment(GoodsReceipt $gr, Request $request): void
+    /** ربط سطور الإذن برقم الرسالة بتاع الحوض */
+    private function stampConsignment(GoodsReceipt $gr): void
     {
-        $gr->load('lines');
-        if ($gr->lines->isEmpty()) return;
-
-        $first = $gr->lines->first();
-
-        $no = trim((string) $request->input('consignment_no'));
-        if ($no === '') {
-            $prefix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $gr->supplier?->code ?? 'CN'), 0, 4)) ?: 'CN';
-            $seq = Consignment::whereDate('arrival_date', $gr->doc_date)->count();
-            $no = DocNumber::consignmentNo($prefix, $gr->doc_date, $gr->purchaseOrder?->po_no, $seq);
-        }
-
-        $totalKg   = (float) $gr->lines->sum('qty');
-        $totalRoll = (int) $gr->lines->sum('rolls_count');
-
-        $consignment = Consignment::updateOrCreate(
-            ['consignment_no' => $no],
-            [
-                'arrival_date'      => $gr->doc_date,
-                'purchase_order_id' => $gr->purchase_order_id,
-                'supplier_id'       => $gr->supplier_id,
-                'fabric_type_id'    => $first->fabric_type_id,
-                'color_id'          => $first->color_id,
-                'warehouse_id'      => $gr->warehouse_id,
-                'total_kg'          => $totalKg,
-                'rolls_count'       => $totalRoll,
-                'remaining_kg'      => $totalKg,
-                'status'            => 'received',
-                'created_by'        => auth()->id(),
-            ]
-        );
-
-        $gr->forceFill(['consignment_id' => $consignment->id])->save();
-        $gr->lines()->update(['consignment_no' => $no]);
-
-        // سجل لكل توب — لو مش موجود
-        if ($consignment->rolls()->count() === 0 && $totalRoll > 0) {
-            $avgLen = null; // الطول الفعلي بييجي من الفحص
-            $avgKg  = round($totalKg / $totalRoll, 3);
-
-            for ($i = 1; $i <= $totalRoll; $i++) {
-                FabricRoll::create([
-                    'consignment_id' => $consignment->id,
-                    'roll_no'        => str_pad((string) $i, 3, '0', STR_PAD_LEFT),
-                    'width_cm'       => $first->width_cm,
-                    'net_kg'         => $avgKg,
-                    'length_m'       => $avgLen,
-                    'status'         => 'in_stock',
-                ]);
-            }
+        if ($no = $gr->consignment?->consignment_no) {
+            $gr->lines()->update(['consignment_no' => $no]);
         }
     }
 }

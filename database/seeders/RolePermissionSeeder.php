@@ -31,9 +31,12 @@ class RolePermissionSeeder extends Seeder
             'master.manage' => 'إدارة البيانات الأساسية',
             'colors.merge'  => 'دمج أكواد الألوان',
         ],
-        'المشتريات' => [
+        'دورة الشراء' => [
             'po.view'    => 'عرض طلبات الشراء',
-            'po.manage'  => 'إنشاء وتعديل طلبات الشراء',
+            'po.request' => 'إنشاء طلب شراء (التخطيط)',
+            'po.source'  => 'تحديد المورد والأسعار (المشتريات)',
+            'po.finance' => 'علم الحسابات والمستحقات',
+            'po.manage'  => 'تعديل إداري على الطلبات',
             'po.approve' => 'اعتماد طلبات الشراء',
         ],
         'المخازن' => [
@@ -77,18 +80,20 @@ class RolePermissionSeeder extends Seeder
 
     /** الصلاحيات الافتراضية لكل دور */
     public const ROLE_PERMISSIONS = [
-        'planner' => ['master.view','po.view','receipt.view','qc.view','marker.view','marker.manage',
+        // التخطيط هو اللي بيبدأ طلب الشراء
+        'planner' => ['master.view','po.view','po.request','receipt.view','qc.view','marker.view','marker.manage',
                       'wo.view','wo.manage','wo.close','cut.view','forecast.view','forecast.manage','import.manage'],
-        'purchasing' => ['master.view','po.view','po.manage','receipt.view'],
-        'purchasing_mgr' => ['master.view','po.view','po.manage','po.approve','receipt.view','receipt.approve'],
+        // المشتريات بتسعّر وتحدد المورد — مش بتنشئ الطلب
+        'purchasing' => ['master.view','po.view','po.source','receipt.view'],
+        'purchasing_mgr' => ['master.view','po.view','po.source','po.manage','po.approve','receipt.view','receipt.approve'],
         'storekeeper' => ['master.view','receipt.view','receipt.manage','prod.manage','qc.view'],
         'stock_controller' => ['master.view','receipt.view','receipt.approve','prod.approve','qc.view'],
         'lab_tech' => ['qc.view','qc.manage','master.view'],
         'inspector' => ['qc.view','qc.manage','master.view'],
         'patternist' => ['marker.view','marker.manage','master.view','wo.view'],
         'factory_follow' => ['wo.view','cut.view','cut.manage','prod.manage','master.view'],
-        'finance' => ['po.view','po.approve','forecast.view'],
-        'gm' => ['master.view','po.view','po.approve','receipt.view','qc.view','marker.view',
+        'finance' => ['po.view','po.finance','po.approve','forecast.view'],
+        'gm' => ['master.view','po.view','po.approve','po.finance','receipt.view','qc.view','marker.view',
                  'wo.view','wo.approve','cut.view','cut.approve','forecast.view','settings.audit'],
     ];
 

@@ -6,7 +6,7 @@ use App\Models\Accessory;
 use App\Models\Color;
 use App\Models\Consignment;
 use App\Models\FabricType;
-use App\Models\GoodsReceipt;
+use App\Models\PurchaseOrder;
 use App\Models\StockAddition;
 use App\Models\StockAdditionLine;
 use App\Models\Supplier;
@@ -16,19 +16,28 @@ use App\Services\DocNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-/** إذن إضافة — الإضافة الفعلية للمخزون بعد الاستلام. */
+/**
+ * إذن الإضافة — أول مستند في دورة القماش.
+ *
+ * لما القماش يوصل، بيتسجّل هنا وبيتولّد منه الحوض (الرسالة) بحالة
+ * «تحت الفحص». الكمية بتدخل المخزن **محجوزة** — ممنوع تشغيلها.
+ * الإفراج بيحصل بإذن الاستلام الخام بعد ما الفحص والمعمل يخلّصوا.
+ */
 class StockAdditionController extends Controller
 {
     public function index(Request $request)
     {
-        $q = StockAddition::with(['supplier', 'warehouse'])->latest('id');
+        $q = StockAddition::with(['supplier', 'warehouse', 'consignment'])->latest('id');
         if ($s = $request->get('status')) $q->where('status', $s);
         if ($term = trim((string) $request->get('q'))) {
             $q->where(fn ($qq) => $qq->where('doc_no', 'like', "%{$term}%")
                                      ->orWhere('paper_serial', 'like', "%{$term}%"));
         }
 
-        return view('additions.index', ['title' => 'أذون الإضافة', 'rows' => $q->paginate(25)->withQueryString()]);
+        return view('additions.index', [
+            'title' => 'أذون الإضافة (تحت الفحص)',
+            'rows'  => $q->paginate(25)->withQueryString(),
+        ]);
     }
 
     public function create()
@@ -59,7 +68,7 @@ class StockAdditionController extends Controller
 
     public function edit(StockAddition $stock_addition)
     {
-        $stock_addition->load(['lines.color', 'lines.fabricType', 'lines.accessory', 'approval.steps']);
+        $stock_addition->load(['lines.color', 'lines.fabricType', 'lines.accessory', 'approval.steps', 'consignment']);
         return view('additions.form', $this->formData(['row' => $stock_addition, 'mode' => 'edit']));
     }
 
@@ -82,6 +91,14 @@ class StockAdditionController extends Controller
         abort_unless($stock_addition->isEditable(), 403);
         if (!$stock_addition->lines()->count()) {
             return back()->withErrors(['msg' => 'مينفعش ترسل إذن فاضي.']);
+        }
+
+        // لازم عدد أتواب على كل سطر قماش — الفحص هيجرد عليه
+        $missing = $stock_addition->lines()
+            ->whereNotNull('fabric_type_id')->where('rolls_count', '<=', 0)->count();
+
+        if ($missing) {
+            return back()->withErrors(['msg' => 'لازم تكتب عدد الأتواب لكل صنف قماش — الفحص هيجرد عليه.']);
         }
         ApprovalEngine::submit($stock_addition);
         return back()->with('success', 'تم الإرسال للاعتماد.');
@@ -109,8 +126,8 @@ class StockAdditionController extends Controller
             'colors'       => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
             'fabricTypes'  => FabricType::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'accessories'  => Accessory::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
-            'receipts'     => GoodsReceipt::where('status', 'approved')->latest('id')->pluck('doc_no', 'id'),
-            'consignments' => Consignment::latest('id')->limit(200)->pluck('consignment_no', 'id'),
+            'pos'          => PurchaseOrder::whereIn('stage', ['approved', 'receiving'])
+                                  ->latest('id')->pluck('po_no', 'id'),
         ], $extra);
     }
 
@@ -119,12 +136,11 @@ class StockAdditionController extends Controller
         $v = $request->validate([
             'doc_date'         => ['required', 'date'],
             'paper_serial'     => ['nullable', 'string', 'max:40'],
-            'supplier_id'      => ['nullable', 'exists:suppliers,id'],
-            'warehouse_id'     => ['required', 'exists:warehouses,id'],
-            'goods_receipt_id' => ['nullable', 'exists:goods_receipts,id'],
-            'consignment_id'   => ['nullable', 'exists:consignments,id'],
-            'consignment_no'   => ['nullable', 'string', 'max:60'],
-            'notes'            => ['nullable', 'string'],
+            'supplier_id'       => ['required', 'exists:suppliers,id'],
+            'warehouse_id'      => ['required', 'exists:warehouses,id'],
+            'purchase_order_id' => ['nullable', 'exists:purchase_orders,id'],
+            'consignment_no'    => ['nullable', 'string', 'max:60'],
+            'notes'             => ['nullable', 'string'],
 
             'lines'                  => ['required', 'array', 'min:1'],
             'lines.*.item_code'      => ['nullable', 'string', 'max:40'],
@@ -132,10 +148,16 @@ class StockAdditionController extends Controller
             'lines.*.fabric_type_id' => ['nullable', 'exists:fabric_types,id'],
             'lines.*.color_id'       => ['nullable', 'exists:colors,id'],
             'lines.*.accessory_id'   => ['nullable', 'exists:accessories,id'],
+            'lines.*.rolls_count'    => ['nullable', 'integer', 'min:0'],
             'lines.*.qty'            => ['required', 'numeric', 'min:0.001'],
             'lines.*.unit'           => ['required', 'string', 'max:20'],
             'lines.*.notes'          => ['nullable', 'string'],
-        ], [], ['warehouse_id' => 'المخزن', 'lines.*.qty' => 'الكمية']);
+        ], [], [
+            'warehouse_id'        => 'المخزن',
+            'supplier_id'         => 'المورد',
+            'lines.*.qty'         => 'الكمية',
+            'lines.*.rolls_count' => 'عدد الأتواب',
+        ]);
 
         $lines = $v['lines'];
         unset($v['lines']);
@@ -148,6 +170,7 @@ class StockAdditionController extends Controller
         if ($replace) $sa->lines()->delete();
 
         foreach ($lines as $l) {
+            $l['rolls_count'] = $l['rolls_count'] ?? 0;
             StockAdditionLine::create(['stock_addition_id' => $sa->id] + $l);
         }
     }

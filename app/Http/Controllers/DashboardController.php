@@ -17,8 +17,17 @@ class DashboardController extends Controller
 
         // ── الحوض والتشغيل ──
         $consignments = [
-            'awaiting_inspection' => Consignment::whereIn('status', ['received','inspecting'])->count(),
-            'awaiting_lab'        => Consignment::where('status', 'lab_pending')->count(),
+            // تحت الفحص = وصل بإذن إضافة ولسه ما اتفحصش
+            'awaiting_inspection' => Consignment::where('status', 'under_inspection')->count(),
+            // مستني معمل = محجوز ومالوش تقرير معمل معتمد
+            'awaiting_lab'        => Consignment::onHold()
+                                        ->whereDoesntHave('labReports', fn ($q) => $q->where('status', 'approved'))
+                                        ->count(),
+            // مستني إفراج = اتفحص وخلّص معمل ومالوش إذن استلام
+            'awaiting_release'    => Consignment::whereIn('status', ['inspected', 'lab_done'])
+                                        ->whereDoesntHave('goodsReceipts', fn ($q) => $q->where('status', 'approved'))
+                                        ->count(),
+            'hold_kg'             => (float) Consignment::onHold()->sum('total_kg'),
             'ready'               => Consignment::readyForProduction()->count(),
             'ready_kg'            => (float) Consignment::readyForProduction()->sum('remaining_kg'),
         ];
@@ -27,7 +36,11 @@ class DashboardController extends Controller
             'open'   => WorkOrder::open()->count(),
             'late'   => WorkOrder::late()->count(),
             'danger' => WorkOrder::open()->where('variance_flag', 'danger')->count(),
-            'outstanding' => (int) WorkOrder::open()->selectRaw('SUM(cut_pieces - received_pieces) as o')->value('o'),
+            // cut_pieces و received_pieces أعمدة unsigned — الطرح المباشر بيرمي
+            // خطأ في MySQL لو الاستلام زاد. CAST + GREATEST بيأمّنوا الحسبة.
+            'outstanding' => (int) WorkOrder::open()
+                ->selectRaw('SUM(GREATEST(CAST(cut_pieces AS SIGNED) - CAST(received_pieces AS SIGNED), 0)) as o')
+                ->value('o'),
         ];
 
         // ── تحميل المصانع ──
@@ -37,7 +50,9 @@ class DashboardController extends Controller
                 'factory'     => $f,
                 'open'        => (clone $open)->count(),
                 'late'        => (clone $open)->whereNotNull('due_date')->whereDate('due_date','<',now())->count(),
-                'outstanding' => (int) (clone $open)->selectRaw('SUM(cut_pieces - received_pieces) as o')->value('o'),
+                'outstanding' => (int) (clone $open)
+                    ->selectRaw('SUM(GREATEST(CAST(cut_pieces AS SIGNED) - CAST(received_pieces AS SIGNED), 0)) as o')
+                    ->value('o'),
             ];
         })->filter(fn ($r) => $r['open'] > 0)->values();
 
@@ -50,7 +65,9 @@ class DashboardController extends Controller
             'workOrders'   => $workOrders,
             'factoryLoad'  => $factoryLoad,
             'coverage'     => $coverage,
-            'pendingPOs'   => PurchaseOrder::where('status', 'pending')->count(),
+            'poStages'     => PurchaseOrder::query()->selectRaw('stage, COUNT(*) c')
+                                  ->whereIn('stage', ['planning','purchasing','finance','approval'])
+                                  ->groupBy('stage')->pluck('c', 'stage'),
             'myApprovals'  => $user ? ApprovalEngine::pendingFor($user)->limit(8)->get() : collect(),
             'lateOrders'   => WorkOrder::late()->with(['factory','consignment'])->limit(8)->get(),
         ]);

@@ -12,7 +12,8 @@
   <div class="col-6 col-lg-2"><div class="stat"><div class="v num">{{ $row->rolls_count }}</div><div class="l">عدد الأتواب</div></div></div>
   <div class="col-6 col-lg-2"><div class="stat"><div class="v num text-danger">{{ $row->min_width_cm ?? '—' }}</div><div class="l">أقل عرض (سم) ★</div></div></div>
   <div class="col-6 col-lg-2"><div class="stat"><div class="v num text-danger">{{ $row->avg_gsm ?? '—' }}</div><div class="l">متوسط البنشر ★</div></div></div>
-  <div class="col-6 col-lg-2"><div class="stat"><div class="v num">{{ number_format((float)$row->remaining_kg,1) }}</div><div class="l">المتبقي (كجم)</div></div></div>
+  <div class="col-6 col-lg-2"><div class="stat"><div class="v num {{ $row->hold_kg > 0 ? 'text-warning' : '' }}">{{ number_format((float)$row->hold_kg,1) }}</div><div class="l">محجوز تحت الفحص</div></div></div>
+  <div class="col-6 col-lg-2"><div class="stat"><div class="v num">{{ number_format((float)$row->remaining_kg,1) }}</div><div class="l">متاح للتشغيل (كجم)</div></div></div>
   <div class="col-6 col-lg-2"><div class="stat"><div class="v num">{{ $row->defect_pct ?? '—' }}</div><div class="l">نسبة العيوب %</div></div></div>
 </div>
 
@@ -21,7 +22,7 @@
     <div class="card mb-3">
       <div class="card-header d-flex justify-content-between">
         <span>بيانات الحوض</span>
-        <span class="badge bg-{{ $row->is_ready ? 'success' : 'secondary' }}">{{ $row->status_name }}</span>
+        <span class="badge bg-{{ $row->status_color }}">{{ $row->status_name }}</span>
       </div>
       <table class="table table-sm mb-0">
         <tr><th style="width:140px">رقم الرسالة</th><td class="num fw-bold">{{ $row->consignment_no }}</td></tr>
@@ -39,13 +40,17 @@
         </td></tr>
       </table>
       <div class="card-footer bg-white d-flex gap-2 flex-wrap">
-        @if(!$row->inspections->count())
-          <a href="{{ route('inspections.create', ['consignment_id'=>$row->id]) }}" class="btn btn-sm btn-outline-plum">تقرير فحص</a>
+        @php $next = $row->nextStep(); @endphp
+        @if($next === 'inspection')
+          <a href="{{ route('inspections.create', ['consignment_id'=>$row->id]) }}" class="btn btn-sm btn-plum">② تقرير فحص</a>
         @endif
-        @if(!$row->labReports->count())
-          <a href="{{ route('lab-reports.create', ['consignment_id'=>$row->id]) }}" class="btn btn-sm btn-outline-plum">تقرير معمل</a>
+        @if($next === 'lab' || !$row->labReports->count())
+          <a href="{{ route('lab-reports.create', ['consignment_id'=>$row->id]) }}" class="btn btn-sm btn-outline-plum">③ تقرير معمل</a>
         @endif
-        @if($row->min_width_cm)
+        @if($next === 'receipt')
+          <a href="{{ route('goods-receipts.create', ['consignment_id'=>$row->id]) }}" class="btn btn-sm btn-plum">④ إذن استلام (إفراج)</a>
+        @endif
+        @if($row->is_ready)
           <a href="{{ route('markers.requests.create') }}" class="btn btn-sm btn-outline-plum">طلب ماركر</a>
         @endif
         @if($row->is_ready)

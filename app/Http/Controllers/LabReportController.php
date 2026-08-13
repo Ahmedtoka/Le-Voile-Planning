@@ -114,8 +114,7 @@ class LabReportController extends Controller
     {
         return array_merge([
             'title'        => 'تقرير انكماش ومطابقة ألوان',
-            'consignments' => Consignment::whereIn('status', ['received','inspecting','inspected','lab_pending'])
-                                ->latest('id')->pluck('consignment_no', 'id'),
+            'consignments' => Consignment::onHold()->latest('id')->pluck('consignment_no', 'id'),
             'fabricTypes'  => FabricType::orderBy('name')->pluck('name', 'id'),
             'colors'       => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
             'suppliers'    => Supplier::orderBy('name')->pluck('name', 'id'),

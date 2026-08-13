@@ -14,6 +14,28 @@ return new class extends Migration
                 $t->id();
                 $t->string('po_no', 40)->unique();            // رقم أمر الشراء
                 $t->date('po_date');                           // التاريخ
+
+                /* ── المراحل ──────────────────────────────────────
+                 | المستند واحد زي الورقة بالظبط، بس بيمر بثلاث أيادي:
+                 |   planning   التخطيط بيكتب الأصناف والكميات ونسبة الزيادة
+                 |   purchasing المشتريات بتحدد المورد والأسعار وتاريخ التوريد
+                 |   finance    الحسابات بتعلم بالمستحق المتوقع للمورد
+                 |   approval   دورة الاعتماد
+                 | كل مرحلة ليها صلاحية مختلفة وبتقفل اللي قبلها عن التعديل.
+                */
+                $t->enum('stage', [
+                    'planning', 'purchasing', 'finance', 'approval',
+                    'approved', 'receiving', 'closed', 'cancelled',
+                ])->default('planning');
+
+                $t->foreignId('requested_by')->nullable();   // المخطط
+                $t->timestamp('requested_at')->nullable();
+                $t->foreignId('sourced_by')->nullable();     // المشتريات
+                $t->timestamp('sourced_at')->nullable();
+                $t->foreignId('finance_by')->nullable();     // الحسابات
+                $t->timestamp('finance_at')->nullable();
+                $t->text('finance_note')->nullable();
+                $t->text('planning_note')->nullable();       // سبب الطلب من التخطيط
                 $t->foreignId('supplier_id')->nullable();
                 $t->foreignId('warehouse_id')->nullable();     // مكان التسليم
                 $t->foreignId('employee_id')->nullable();      // اسم الموظف (إدارة المشتريات)
@@ -35,6 +57,7 @@ return new class extends Migration
                 $t->foreignId('created_by')->nullable();
                 $t->timestamps();
                 $t->index('status');
+                $t->index('stage');
             });
         }
 

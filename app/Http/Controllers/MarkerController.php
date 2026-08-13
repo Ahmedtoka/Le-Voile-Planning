@@ -44,8 +44,8 @@ class MarkerController extends Controller
         return view('markers.request_form', [
             'title'        => 'طلب ماركر جديد',
             'row'          => new MarkerRequest(['doc_date' => now()->toDateString()]),
-            'consignments' => Consignment::readyForProduction()->orWhere('status', 'inspected')
-                                ->latest('id')->get(),
+            // الأحواض اللي اتفرج عنها — دي بس اللي ينفع نطلب لها ماركر بعرض مؤكد
+            'consignments' => Consignment::with('color')->readyForProduction()->latest('id')->get(),
             'factories'    => Factory::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'patternists'  => User::whereHas('roles', fn ($q) => $q->where('key', 'patternist'))
                                 ->where('is_active', true)->pluck('name', 'id'),

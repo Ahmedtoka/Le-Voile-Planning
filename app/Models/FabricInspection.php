@@ -46,6 +46,14 @@ class FabricInspection extends Model
      * إعادة حساب ملخص الفحص من سطور الأتواب.
      * ★ أقل عرض هو اللي بيتبني عليه الماركر — مش المتوسط.
      */
+    /** فرق الجرد: المعدود مقابل اللي المورد قال عليه في إذن الإضافة */
+    public function getRollsVarianceLabelAttribute(): string
+    {
+        $v = (int) $this->rolls_variance;
+        if ($v === 0) return 'مطابق';
+        return $v > 0 ? "زيادة {$v} توب" : 'ناقص ' . abs($v) . ' توب';
+    }
+
     public function recalc(): void
     {
         $rows = $this->rolls()->get();
@@ -62,10 +70,16 @@ class FabricInspection extends Model
         // نسبة العيوب: عيب لكل 100 متر
         $defectPct = $totalLen > 0 ? round(($totalDefects / $totalLen) * 100, 3) : 0;
 
-        $total   = (int) ($this->total_rolls ?: $this->consignment?->rolls_count ?: $rows->count());
-        $sampled = $rows->count();
+        // الجرد: عدد الأتواب الفعلي هو المرجع، مش اللي جه من المورد
+        $declared = (int) ($this->declared_rolls ?: $this->consignment?->rolls_count ?: 0);
+        $counted  = (int) ($this->counted_rolls ?: $declared ?: $rows->count());
+        $total    = $counted;
+        $sampled  = $rows->count();
 
         $this->forceFill([
+            'declared_rolls'  => $declared,
+            'counted_rolls'   => $counted,
+            'rolls_variance'  => $counted - $declared,
             'total_rolls'     => $total,
             'sampled_rolls'   => $sampled,
             'sample_pct'      => $total > 0 ? round(($sampled / $total) * 100, 2) : 0,

@@ -21,15 +21,30 @@ class Consignment extends Model
 
     public const DOC_TYPE = 'consignment';
 
+    /**
+     * حالة الحوض بتمشي مع دورة الورق بالظبط:
+     *   إذن إضافة ⇒ under_inspection (محجوز، ممنوع التشغيل)
+     *   تقرير فحص ⇒ inspected  ·  تقرير معمل ⇒ lab_done
+     *   إذن استلام خام ⇒ released (الإفراج الفعلي)
+     */
     public const STATUSES = [
-        'received'      => 'مستلم',
-        'inspecting'    => 'تحت الفحص',
-        'inspected'     => 'تم الفحص',
-        'lab_pending'   => 'مستني المعمل',
-        'approved'      => 'معتمد للتشغيل',
-        'rejected'      => 'مرفوض',
-        'in_production' => 'في التشغيل',
-        'closed'        => 'مقفول',
+        'under_inspection' => 'تحت الفحص (محجوز)',
+        'inspected'        => 'تم الفحص',
+        'lab_done'         => 'تم المعمل',
+        'released'         => 'مفرج عنه — جاهز للتشغيل',
+        'rejected'         => 'مرفوض',
+        'in_production'    => 'في التشغيل',
+        'closed'           => 'مقفول',
+    ];
+
+    public const STATUS_COLORS = [
+        'under_inspection' => 'warning',
+        'inspected'        => 'info',
+        'lab_done'         => 'info',
+        'released'         => 'success',
+        'rejected'         => 'danger',
+        'in_production'    => 'primary',
+        'closed'           => 'dark',
     ];
 
     public function purchaseOrder() { return $this->belongsTo(PurchaseOrder::class); }
@@ -48,18 +63,50 @@ class Consignment extends Model
         return self::STATUSES[$this->status] ?? $this->status;
     }
 
-    public function scopeReadyForProduction($q)
+    public function stockAdditions()  { return $this->hasMany(StockAddition::class); }
+
+    public function getStatusColorAttribute(): string
     {
-        return $q->whereIn('status', ['approved', 'in_production'])->where('remaining_kg', '>', 0);
+        return self::STATUS_COLORS[$this->status] ?? 'secondary';
     }
 
-    /** جاهز للتشغيل؟ لازم يكون متفحص ومعتمد وفيه رصيد */
+    /** الجاهز للتشغيل = المفرج عنه بإذن الاستلام بس */
+    public function scopeReadyForProduction($q)
+    {
+        return $q->whereIn('status', ['released', 'in_production'])->where('remaining_kg', '>', 0);
+    }
+
+    /** لسه محجوز تحت الفحص */
+    public function scopeOnHold($q)
+    {
+        return $q->whereIn('status', ['under_inspection', 'inspected', 'lab_done']);
+    }
+
+    /**
+     * جاهز للتشغيل؟
+     * لازم يكون اتفرج عنه بإذن استلام + عنده أقل عرض من الفحص + بنشر من المعمل.
+     */
     public function getIsReadyAttribute(): bool
     {
-        return in_array($this->status, ['approved', 'in_production'], true)
+        return in_array($this->status, ['released', 'in_production'], true)
             && $this->min_width_cm > 0
             && $this->avg_gsm > 0
             && $this->remaining_kg > 0;
+    }
+
+    /** الخطوة الجاية المطلوبة على الحوض ده — بتغذّي كاونترات المنيو */
+    public function nextStep(): ?string
+    {
+        return match (true) {
+            $this->status === 'under_inspection' && !$this->inspections()->where('status','approved')->exists()
+                => 'inspection',
+            in_array($this->status, ['under_inspection','inspected'], true)
+                && !$this->labReports()->where('status','approved')->exists()
+                => 'lab',
+            in_array($this->status, ['inspected','lab_done'], true)
+                => 'receipt',
+            default => null,
+        };
     }
 
     /** نسبة العينة المفحوصة — كل الأرقام اللي بعديها متوقّعة مش مؤكدة */
@@ -69,15 +116,30 @@ class Consignment extends Model
         return $insp ? (float) $insp->sample_pct : 0;
     }
 
+    /**
+     * إعادة حساب الأرصدة.
+     * المتاح للتشغيل = المفرج عنه − المخصص لأوامر الشغل.
+     * طول ما الحوض تحت الفحص، المفرج عنه = صفر ⇒ مفيش تشغيل.
+     */
     public function recalcRemaining(): void
     {
         $allocated = (float) $this->workOrders()
             ->whereNotIn('status', ['cancelled', 'draft'])
             ->sum('allocated_kg');
 
+        $released = in_array($this->status, ['released', 'in_production', 'closed'], true)
+            ? (float) ($this->released_kg ?: $this->total_kg)
+            : 0.0;
+
+        $hold = in_array($this->status, ['under_inspection', 'inspected', 'lab_done'], true)
+            ? (float) $this->total_kg
+            : 0.0;
+
         $this->forceFill([
+            'hold_kg'      => $hold,
+            'released_kg'  => $released,
             'allocated_kg' => $allocated,
-            'remaining_kg' => max(0, (float) $this->total_kg - $allocated),
+            'remaining_kg' => max(0, $released - $allocated),
         ])->saveQuietly();
     }
 }

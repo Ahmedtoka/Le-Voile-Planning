@@ -44,8 +44,9 @@ use Illuminate\Database\Seeder;
 /**
  * داتا ديمو بتمشي الفلو كامل من أوله لآخره:
  *
- *   طلب شراء → إذن استلام (بيولّد الحوض والأتواب) → إذن إضافة
- *   → تقرير فحص → تقرير معمل → طلب ماركر → ماركر
+ *   طلب شراء (تخطيط ← مشتريات ← حسابات ← اعتماد)
+ *   → إذن إضافة (بيولّد الحوض ويحجزه) → تقرير فحص → تقرير معمل
+ *   → إذن استلام خام (الإفراج) → طلب ماركر → ماركر
  *   → أمر شغل (بالحسبة) → بيان قص → استلامات إنتاج → قفل
  *
  * وكمان: مبيعات وأرصدة ونسب ألوان وفوركاست ومخزون أمان،
@@ -71,7 +72,7 @@ class DemoFlowSeeder extends Seeder
         $offWhite = Color::where('code', 'OFW-001')->first();
         $factory  = Factory::where('code', 'SIN')->first();
 
-        // ═══ 1) طلب الشراء ═══════════════════════════════════════
+        // ═══ ① طلب الشراء — عدّى المراحل التلاتة ═══════════════
         $po = PurchaseOrder::firstOrCreate(['po_no' => 'PO-2026-00100'], [
             'po_date'        => now()->subDays(60)->toDateString(),
             'supplier_id'    => $supplier->id,
@@ -79,20 +80,30 @@ class DemoFlowSeeder extends Seeder
             'employee_id'    => $purch?->id,
             'delivery_place' => 'العبور',
             'delivery_date'  => now()->subDays(35)->toDateString(),
+            'payment_method' => 'آجل 60 يوم',
             'discount_pct'   => 0,
             'tax_pct'        => 14,
+            'stage'          => 'receiving',
             'status'         => 'approved',
-            'created_by'     => $purch?->id,
+            'planning_note'  => 'تغطية فوركاست الربع — الأساسيات (أبيض/أسود/أوف وايت)',
+            'created_by'     => $planner?->id,
+            'requested_by'   => $planner?->id,
+            'requested_at'   => now()->subDays(62),
+            'sourced_by'     => $purch?->id,
+            'sourced_at'     => now()->subDays(61),
+            'finance_by'     => User::where('username', 'finance')->value('id'),
+            'finance_at'     => now()->subDays(60),
+            'finance_note'   => 'المستحق هيتصرف على دفعتين — الأولى مع التوريد.',
         ]);
 
         if ($po->lines()->count() === 0) {
             $rows = [
-                [$whiteId = Color::where('code','WHT-001')->value('id'), 20, 'أبيض'],
-                [$offWhite->id, 30, 'أوف وايت'],
-                [$black->id,    40, 'أسود'],
-                [Color::where('code','BEG-010')->value('id'), 25, 'ألوان'],
+                [Color::where('code', 'WHT-001')->value('id'), 20, 145000, null],
+                [$offWhite->id, 30, 145000, 'وزن المقطع من 190 جرام الى 210 جرام'],
+                [$black->id,    40, 148000, null],
+                [Color::where('code', 'BEG-010')->value('id'), 25, 152000, null],
             ];
-            foreach ($rows as $i => [$colorId, $qty, $label]) {
+            foreach ($rows as $i => [$colorId, $qty, $price, $note]) {
                 PurchaseOrderLine::create([
                     'purchase_order_id' => $po->id,
                     'line_no'        => $i + 1,
@@ -100,108 +111,65 @@ class DemoFlowSeeder extends Seeder
                     'fabric_type_id' => $fabric->id,
                     'qty'            => $qty,
                     'unit'           => 'طن',
-                    'unit_price'     => 0,
-                    'line_total'     => 0,
+                    'unit_price'     => $price,
+                    'line_total'     => $qty * $price,
                     'tolerance_pct'  => 5,
-                    'notes'          => $i === 1 ? 'وزن المقطع من 190 جرام الى 210 جرام' : null,
+                    'notes'          => $note,
                 ]);
             }
             $po->refresh()->recalcTotals();
         }
 
-        // ═══ 2) إذن استلام خام ⇒ بيولّد الحوض والأتواب ═══════════
-        $gr = GoodsReceipt::firstOrCreate(['doc_no' => 'GR-2026-00001'], [
-            'paper_serial'      => '1001546',
+        // ═══ ② إذن الإضافة ⇒ الحوض بيتولّد ويتحجز تحت الفحص ═══════
+        $sa = StockAddition::firstOrCreate(['doc_no' => 'SA-2026-00001'], [
+            'paper_serial'      => '41456',
             'doc_date'          => now()->subDays(30)->toDateString(),
-            'warehouse_id'      => $whOubour->id,
             'supplier_id'       => $supplier->id,
+            'warehouse_id'      => $whOubour->id,
             'purchase_order_id' => $po->id,
-            'supplier_rep'      => 'مندوب مالك الدملشي',
+            'consignment_no'    => 'SL30-090826-196-00',
             'status'            => 'approved',
             'created_by'        => $store?->id,
         ]);
 
-        $consignment = Consignment::firstOrCreate(['consignment_no' => 'SL30-090826-196-00'], [
-            'arrival_date'      => $gr->doc_date,
-            'purchase_order_id' => $po->id,
-            'supplier_id'       => $supplier->id,
-            'fabric_type_id'    => $fabric->id,
-            'color_id'          => $black->id,
-            'warehouse_id'      => $whOubour->id,
-            'total_kg'          => 1180,
-            'rolls_count'       => 7,
-            'total_length_m'    => 6174,       // من تقرير الفحص الفعلي
-            'remaining_kg'      => 1180,
-            'status'            => 'received',
-            'created_by'        => $store?->id,
-        ]);
-
-        if ($gr->lines()->count() === 0) {
-            GoodsReceiptLine::create([
-                'goods_receipt_id' => $gr->id,
-                'item_code'        => '17910297',
-                'fabric_type_id'   => $fabric->id,
-                'color_id'         => $black->id,
-                'unit'             => 'كجم',
-                'width_cm'         => 185,
-                'rolls_count'      => 7,
-                'qty'              => 1180,
-                'consignment_no'   => $consignment->consignment_no,
-            ]);
-            $gr->refresh()->recalcTotals();
-            $gr->forceFill(['consignment_id' => $consignment->id])->save();
-        }
-
-        // الأتواب — من تقرير الفحص: 7 أتواب، الإجمالي 6174 متر
-        if ($consignment->rolls()->count() === 0) {
-            $lengths = [885, 885, 885, 885, 885, 885, 864];
-            foreach ($lengths as $i => $len) {
-                FabricRoll::create([
-                    'consignment_id' => $consignment->id,
-                    'roll_no'        => str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
-                    'length_m'       => $len,
-                    'width_cm'       => 185,
-                    'net_kg'         => round(1180 / 7, 3),
-                    'is_inspected'   => true,
-                    'status'         => 'in_stock',
-                ]);
-            }
-        }
-
-        // ═══ 3) إذن إضافة ════════════════════════════════════════
-        $sa = StockAddition::firstOrCreate(['doc_no' => 'SA-2026-00001'], [
-            'paper_serial'     => '41456',
-            'doc_date'         => now()->subDays(29)->toDateString(),
-            'supplier_id'      => $supplier->id,
-            'warehouse_id'     => Warehouse::where('code','043')->value('id'),
-            'goods_receipt_id' => $gr->id,
-            'consignment_id'   => $consignment->id,
-            'consignment_no'   => 'BUPL-090826-043-00',
-            'status'           => 'approved',
-            'created_by'       => $store?->id,
-        ]);
         if ($sa->lines()->count() === 0) {
             StockAdditionLine::create([
                 'stock_addition_id' => $sa->id,
                 'item_code'      => '17910297',
-                'item_name'      => 'سنجل ليكرا أسود',
+                'item_name'      => 'سنجل ليكرا أسود 1/30',
                 'fabric_type_id' => $fabric->id,
                 'color_id'       => $black->id,
+                'rolls_count'    => 7,
                 'qty'            => 1180,
                 'unit'           => 'كجم',
             ]);
             $sa->refresh()->recalcTotals();
+            DocumentEffects::onApproved($sa->refresh());   // ⇐ بيعمل الحوض والأتواب
         }
 
-        // ═══ 4) تقرير فحص القماش ═════════════════════════════════
+        $consignment = Consignment::where('consignment_no', 'SL30-090826-196-00')->first();
+
+        // الأطوال الحقيقية بتتسجّل في الفحص
+        if ($consignment && $consignment->rolls()->whereNull('length_m')->exists()) {
+            $lengths = [885, 885, 885, 885, 885, 885, 864];
+            foreach ($consignment->rolls()->orderBy('roll_no')->get() as $i => $roll) {
+                $roll->update(['length_m' => $lengths[$i] ?? 880, 'width_cm' => 185, 'is_inspected' => true]);
+            }
+            $consignment->forceFill(['total_length_m' => array_sum($lengths)])->save();
+        }
+
+        // ═══ ③ تقرير فحص القماش — الجرد + أقل عرض ════════════════
         $insp = FabricInspection::firstOrCreate(['doc_no' => 'FI-2026-00001'], [
             'paper_serial'   => '04619',
             'doc_date'       => now()->subDays(28)->toDateString(),
-            'consignment_id' => $consignment->id,
+            'consignment_id' => $consignment?->id,
             'fabric_type_id' => $fabric->id,
             'color_id'       => $black->id,
             'supplier_id'    => $marchelo?->id ?? $supplier->id,
             'inspector_id'   => $qc?->id,
+            'declared_rolls' => 7,
+            'counted_rolls'  => 7,
+            'counted_kg'     => 1180,
             'total_rolls'    => 7,
             'result'         => 'accepted',
             'status'         => 'approved',
@@ -209,12 +177,12 @@ class DemoFlowSeeder extends Seeder
         ]);
 
         if ($insp->rolls()->count() === 0) {
-            // الأعراض الفعلية من الورقة: كلها 185 تقريبًا مع فروق بسيطة
+            // الأرقام الحقيقية من الورقة: كلهم حوالي 185 بفروق بسيطة
             $data = [
                 ['001', 885, 185, 195, 2, 'بوجرسو + برادة خفيفة'],
-                ['002', 885, 184, 193, 1, ''],
+                ['002', 885, 184, 192, 1, ''],
                 ['003', 885, 185, 197, 0, ''],
-                ['004', 885, 183, 204, 1, ''],
+                ['004', 885, 183, 203, 1, ''],
                 ['005', 885, 185, 195, 0, ''],
                 ['006', 885, 184, 197, 1, ''],
                 ['007', 864, 185, 195, 0, ''],
@@ -232,14 +200,14 @@ class DemoFlowSeeder extends Seeder
                 ]);
             }
             $insp->refresh()->recalc();
+            DocumentEffects::onApproved($insp->refresh());
         }
-        DocumentEffects::onApproved($insp->refresh());
 
-        // ═══ 5) تقرير المعمل ═════════════════════════════════════
+        // ═══ ④ تقرير المعمل — البنشر والانكماش ═══════════════════
         $labRep = LabReport::firstOrCreate(['doc_no' => 'LB-2026-00001'], [
             'paper_serial'        => '002192',
             'doc_date'            => now()->subDays(27)->toDateString(),
-            'consignment_id'      => $consignment->id,
+            'consignment_id'      => $consignment?->id,
             'supplier_id'         => $marchelo?->id ?? $supplier->id,
             'fabric_type_id'      => $fabric->id,
             'color_id'            => $black->id,
@@ -254,7 +222,6 @@ class DemoFlowSeeder extends Seeder
         ]);
 
         if ($labRep->readings()->count() === 0) {
-            // قراءات البنشر الفعلية من الورقة
             foreach ([195, 192, 197, 203, 195, 197, 195] as $i => $gsm) {
                 LabGsmReading::create([
                     'lab_report_id' => $labRep->id,
@@ -263,10 +230,41 @@ class DemoFlowSeeder extends Seeder
                 ]);
             }
             $labRep->refresh()->recalc();
+            DocumentEffects::onApproved($labRep->refresh());
         }
-        DocumentEffects::onApproved($labRep->refresh());
 
-        $consignment->refresh()->forceFill(['status' => 'approved'])->save();
+        // ═══ ⑤ إذن استلام خام — الإفراج ══════════════════════════
+        $gr = GoodsReceipt::firstOrCreate(['doc_no' => 'GR-2026-00001'], [
+            'paper_serial'         => '1001546',
+            'doc_date'             => now()->subDays(26)->toDateString(),
+            'warehouse_id'         => $whOubour->id,
+            'supplier_id'          => $supplier->id,
+            'purchase_order_id'    => $po->id,
+            'consignment_id'       => $consignment?->id,
+            'stock_addition_id'    => $sa->id,
+            'fabric_inspection_id' => $insp->id,
+            'supplier_rep'         => 'مندوب مالك الدملشي',
+            'status'               => 'approved',
+            'created_by'           => $store?->id,
+        ]);
+
+        if ($gr->lines()->count() === 0) {
+            GoodsReceiptLine::create([
+                'goods_receipt_id' => $gr->id,
+                'item_code'        => '17910297',
+                'fabric_type_id'   => $fabric->id,
+                'color_id'         => $black->id,
+                'unit'             => 'كجم',
+                'width_cm'         => 183,          // أقل عرض من الفحص
+                'rolls_count'      => 7,
+                'qty'              => 1180,
+                'consignment_no'   => 'SL30-090826-196-00',
+            ]);
+            $gr->refresh()->recalcTotals();
+            DocumentEffects::onApproved($gr->refresh());   // ⇐ الإفراج
+        }
+
+        $consignment?->refresh();
 
         // ═══ 6) طلب ماركر + الماركر ══════════════════════════════
         $mr = MarkerRequest::firstOrCreate(['doc_no' => 'MR-2026-00001'], [
@@ -318,7 +316,19 @@ class DemoFlowSeeder extends Seeder
         }
         $marker->refresh();
 
-        // ═══ 7) أمر الشغل + الحسبة ═══════════════════════════════
+        // ربط الماركر بطلبه — زي ما بيحصل في الشاشة
+        if ($mr && !$mr->marker_id) {
+            $mr->forceFill(['marker_id' => $marker->id, 'status' => 'delivered'])->save();
+        }
+
+        // ═══ ⑦ أمر الشغل + الحسبة ═══════════════════════════════
+        if (!$consignment) {
+            $this->command?->warn('مفيش حوض — تم تخطي أوامر الشغل في الداتا الديمو.');
+            $this->seedSalesAndStock();
+            $this->seedForecast($planner?->id);
+            return;
+        }
+
         $allocated = 800.0;
 
         $wo = WorkOrder::firstOrCreate(['wo_no' => 'WO-2026-00001'], [
@@ -454,54 +464,81 @@ class DemoFlowSeeder extends Seeder
             DocumentEffects::onApproved($pr2->refresh());
         }
 
-        // ═══ 10) حوض تاني لسه في المنتصف — عشان الشاشات ما تبقاش فاضية ═══
-        $c2 = Consignment::firstOrCreate(['consignment_no' => 'SL30-120826-196-01'], [
-            'arrival_date'   => now()->subDays(6)->toDateString(),
-            'supplier_id'    => $supplier->id,
-            'fabric_type_id' => $fabric->id,
-            'color_id'       => $offWhite->id,
-            'warehouse_id'   => $whOubour->id,
-            'total_kg'       => 940,
-            'rolls_count'    => 6,
-            'total_length_m' => 5100,
-            'remaining_kg'   => 940,
-            'status'         => 'received',
-            'created_by'     => $store?->id,
+        // ═══ أحواض في مراحل مختلفة — عشان كل دور يلاقي شغل ═══════
+        // (أ) حوض لسه تحت الفحص ⇒ يظهر كاونتر عند الفاحص
+        $sa2 = StockAddition::firstOrCreate(['doc_no' => 'SA-2026-00002'], [
+            'paper_serial'      => '41457',
+            'doc_date'          => now()->subDays(6)->toDateString(),
+            'supplier_id'       => $supplier->id,
+            'warehouse_id'      => $whOubour->id,
+            'purchase_order_id' => $po->id,
+            'consignment_no'    => 'SL30-120826-196-01',
+            'status'            => 'approved',
+            'created_by'        => $store?->id,
         ]);
-        if ($c2->rolls()->count() === 0) {
-            for ($i = 1; $i <= 6; $i++) {
-                FabricRoll::create([
-                    'consignment_id' => $c2->id,
-                    'roll_no'        => str_pad((string) $i, 3, '0', STR_PAD_LEFT),
-                    'length_m'       => 850,
-                    'net_kg'         => round(940 / 6, 3),
-                    'status'         => 'in_stock',
-                ]);
-            }
+        if ($sa2->lines()->count() === 0) {
+            StockAdditionLine::create([
+                'stock_addition_id' => $sa2->id,
+                'item_code'      => '17910298',
+                'item_name'      => 'سنجل ليكرا أوف وايت 1/30',
+                'fabric_type_id' => $fabric->id,
+                'color_id'       => $offWhite->id,
+                'rolls_count'    => 6,
+                'qty'            => 940,
+                'unit'           => 'كجم',
+            ]);
+            $sa2->refresh()->recalcTotals();
+            DocumentEffects::onApproved($sa2->refresh());
         }
 
-        // ═══ 11) مستند مستني اعتماد فعلي — عشان صندوق الاعتمادات يشتغل ═══
+        // (ب) طلب شراء مستني تسعير المشتريات
         $po2 = PurchaseOrder::firstOrCreate(['po_no' => 'PO-2026-00101'], [
-            'po_date'        => now()->subDays(2)->toDateString(),
-            'supplier_id'    => $marchelo?->id ?? $supplier->id,
-            'warehouse_id'   => $whOubour->id,
-            'employee_id'    => $purch?->id,
-            'delivery_place' => 'العبور',
-            'tax_pct'        => 14,
-            'status'         => 'draft',
-            'created_by'     => $purch?->id,
+            'po_date'       => now()->subDays(3)->toDateString(),
+            'employee_id'   => $planner?->id,
+            'tax_pct'       => 14,
+            'stage'         => 'purchasing',
+            'status'        => 'draft',
+            'planning_note' => 'تعويض سحب عالي على الأسود — مطلوب سريع',
+            'created_by'    => $planner?->id,
+            'requested_by'  => $planner?->id,
+            'requested_at'  => now()->subDays(3),
         ]);
         if ($po2->lines()->count() === 0) {
             PurchaseOrderLine::create([
                 'purchase_order_id' => $po2->id, 'line_no' => 1,
-                'color_id' => $offWhite->id, 'fabric_type_id' => $fabric->id,
+                'color_id' => $black->id, 'fabric_type_id' => $fabric->id,
                 'qty' => 15, 'unit' => 'طن', 'unit_price' => 0, 'line_total' => 0, 'tolerance_pct' => 5,
+                'notes' => 'نفس مواصفة الرسالة اللي فاتت',
             ]);
             $po2->refresh()->recalcTotals();
+        }
 
-            if ($purch) {
-                ApprovalEngine::submit($po2->refresh(), $purch);
-            }
+        // (ج) طلب شراء مستني علم الحسابات
+        $po3 = PurchaseOrder::firstOrCreate(['po_no' => 'PO-2026-00102'], [
+            'po_date'        => now()->subDays(2)->toDateString(),
+            'supplier_id'    => $marchelo?->id ?? $supplier->id,
+            'warehouse_id'   => $whOubour->id,
+            'employee_id'    => $planner?->id,
+            'delivery_place' => 'العبور',
+            'delivery_date'  => now()->addDays(20)->toDateString(),
+            'payment_method' => 'نقدي',
+            'tax_pct'        => 14,
+            'stage'          => 'finance',
+            'status'         => 'draft',
+            'created_by'     => $planner?->id,
+            'requested_by'   => $planner?->id,
+            'requested_at'   => now()->subDays(4),
+            'sourced_by'     => $purch?->id,
+            'sourced_at'     => now()->subDays(2),
+        ]);
+        if ($po3->lines()->count() === 0) {
+            PurchaseOrderLine::create([
+                'purchase_order_id' => $po3->id, 'line_no' => 1,
+                'color_id' => $offWhite->id, 'fabric_type_id' => $fabric->id,
+                'qty' => 12, 'unit' => 'طن', 'unit_price' => 150000, 'line_total' => 1800000,
+                'tolerance_pct' => 5,
+            ]);
+            $po3->refresh()->recalcTotals();
         }
 
         // ═══ 12) مبيعات وأرصدة ونسب وفوركاست ═════════════════════

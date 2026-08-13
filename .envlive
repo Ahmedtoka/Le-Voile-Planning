@@ -1,0 +1,42 @@
+# ══════════════════════════════════════════════════════════════════
+#  إعدادات السيرفر الحقيقي — planning.levoilestores.com
+#  الاستخدام على السيرفر:  cp .envlive .env  &&  php artisan key:generate
+#  ⚠ الملف ده فيه باسورد الداتابيز — متحطوش على Git أبدًا
+# ══════════════════════════════════════════════════════════════════
+
+APP_NAME="Le Voile — تخطيط الإنتاج"
+APP_ENV=production
+APP_KEY=
+APP_DEBUG=false
+APP_TIMEZONE=Africa/Cairo
+APP_URL=https://planning.levoilestores.com
+APP_LOCALE=ar
+APP_FALLBACK_LOCALE=ar
+
+LOG_CHANNEL=daily
+LOG_LEVEL=error
+
+# ── قاعدة البيانات ──
+# السيرفر: 167.172.251.28
+# الأبليكيشن والداتابيز على نفس السيرفر ⇒ 127.0.0.1
+# لو الداتابيز على سيرفر منفصل، غيّر DB_HOST للـ IP وافتح البورت 3306 له
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sjqdrzbznj
+DB_USERNAME=sjqdrzbznj
+DB_PASSWORD=yNxKAD9xZk
+
+# ── الجلسات ──
+SESSION_DRIVER=file
+SESSION_LIFETIME=480
+SESSION_SECURE_COOKIE=true
+SESSION_DOMAIN=.levoilestores.com
+
+CACHE_STORE=file
+QUEUE_CONNECTION=sync
+FILESYSTEM_DISK=public
+
+# ── معلومات السيرفر (للرجوع إليها) ──
+# SERVER_IP=167.172.251.28
+# DOMAIN=planning.levoilestores.com

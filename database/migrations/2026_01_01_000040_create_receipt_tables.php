@@ -18,7 +18,9 @@ return new class extends Migration
                 $t->foreignId('warehouse_id')->nullable();   // مخزن العبور
                 $t->foreignId('supplier_id')->nullable();    // وارد من
                 $t->foreignId('purchase_order_id')->nullable(); // أمر المشتريات (196)
-                $t->foreignId('consignment_id')->nullable();    // الرسالة اللي اتكوّنت
+                $t->foreignId('consignment_id')->nullable();    // الرسالة (اتعملت في إذن الإضافة)
+                $t->foreignId('stock_addition_id')->nullable(); // إذن الإضافة الأصلي
+                $t->foreignId('fabric_inspection_id')->nullable(); // تقرير الفحص اللي بنفرج بناءً عليه
                 $t->string('supplier_rep')->nullable();      // مندوب المورد
                 $t->decimal('total_qty', 15, 3)->default(0);
                 $t->unsignedInteger('total_rolls')->default(0);
@@ -55,9 +57,10 @@ return new class extends Migration
                 $t->date('doc_date');
                 $t->foreignId('supplier_id')->nullable();     // اسم المورد
                 $t->foreignId('warehouse_id')->nullable();    // إسم/كود المخزن (043)
-                $t->foreignId('goods_receipt_id')->nullable();
                 $t->foreignId('consignment_id')->nullable();
                 $t->string('consignment_no', 60)->nullable(); // BUPL-090826-043-00
+                $t->foreignId('purchase_order_id')->nullable();
+                $t->unsignedInteger('total_rolls')->default(0);
                 $t->decimal('total_qty', 15, 3)->default(0);
                 $t->enum('status', ['draft','pending','approved','rejected'])->default('draft');
                 $t->text('notes')->nullable();
@@ -75,6 +78,7 @@ return new class extends Migration
                 $t->foreignId('fabric_type_id')->nullable();
                 $t->foreignId('color_id')->nullable();
                 $t->foreignId('accessory_id')->nullable();
+                $t->unsignedInteger('rolls_count')->default(0);  // ع. أتواب — الفحص هيجرد عليه
                 $t->decimal('qty', 15, 3)->default(0);
                 $t->string('unit', 20)->default('كجم');
                 $t->text('notes')->nullable();
@@ -96,6 +100,8 @@ return new class extends Migration
                 $t->foreignId('size_id')->nullable();
                 $t->foreignId('consignment_id')->nullable();
                 $t->enum('direction', ['in', 'out'])->default('in');
+                // hold = دخل بإذن إضافة وتحت الفحص · released = اتفرج عنه بإذن الاستلام
+                $t->enum('quality_state', ['hold', 'released', 'rejected', 'n/a'])->default('n/a');
                 $t->decimal('qty', 15, 3)->default(0);
                 $t->string('unit', 20)->default('كجم');
                 $t->string('source_type')->nullable();   // المستند المصدر

@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConsignmentController;
 use App\Http\Controllers\CutDeclarationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\FabricInspectionController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\ImportExportController;
@@ -68,14 +69,34 @@ Route::middleware('auth.user')->group(function () {
             ->middleware('can.do:colors.merge')->name('colors.merge');
     });
 
-    // ── طلبات الشراء ─────────────────────────────────────────────
-    Route::middleware('can.do:po.view')->group(function () {
+    /* ── دورة طلب الشراء ──────────────────────────────────────────
+     | مستند واحد بيمر على تلات أيادي، وكل يد ليها صلاحيتها:
+     |   po.request  التخطيط    ينشئ ويعدّل الأصناف
+     |   po.source   المشتريات  تحدد المورد والأسعار والتوريد
+     |   po.finance  الحسابات   تعلم بالمستحق
+    */
+    Route::middleware('can.do:po.view,po.request,po.source,po.finance')->group(function () {
         Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
+        Route::get('purchase-orders/{purchase_order}/edit', [PurchaseOrderController::class, 'edit'])->name('purchase-orders.edit');
         Route::get('purchase-orders/{purchase_order}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
     });
-    Route::middleware('can.do:po.manage')->group(function () {
-        Route::resource('purchase-orders', PurchaseOrderController::class)->except(['show', 'index']);
-        Route::post('purchase-orders/{purchase_order}/submit', [PurchaseOrderController::class, 'submit'])->name('purchase-orders.submit');
+
+    Route::middleware('can.do:po.request')->group(function () {
+        Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->name('purchase-orders.create');
+        Route::post('purchase-orders',       [PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
+        Route::put('purchase-orders/{purchase_order}',    [PurchaseOrderController::class, 'update'])->name('purchase-orders.update');
+        Route::delete('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'destroy'])->name('purchase-orders.destroy');
+        Route::post('purchase-orders/{purchase_order}/to-purchasing', [PurchaseOrderController::class, 'toPurchasing'])->name('purchase-orders.to-purchasing');
+    });
+
+    Route::middleware('can.do:po.source')->group(function () {
+        Route::post('purchase-orders/{purchase_order}/sourcing',   [PurchaseOrderController::class, 'saveSourcing'])->name('purchase-orders.sourcing');
+        Route::post('purchase-orders/{purchase_order}/to-finance', [PurchaseOrderController::class, 'toFinance'])->name('purchase-orders.to-finance');
+    });
+
+    Route::middleware('can.do:po.finance')->group(function () {
+        Route::post('purchase-orders/{purchase_order}/finance-ack', [PurchaseOrderController::class, 'financeAck'])->name('purchase-orders.finance-ack');
+        Route::get('finance/payables', [FinanceController::class, 'payables'])->name('finance.payables');
     });
 
     // ── أذون المخازن والأحواض ────────────────────────────────────

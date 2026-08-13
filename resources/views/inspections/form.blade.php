@@ -5,10 +5,11 @@
 @include('partials.approval_box')
 
 <div class="note-box mb-3">
-  <b>الفحص عيّنة مش 100%.</b>
-  السيستم بياخد من التقرير ده <b>أقل عرض</b> (مش المتوسط) عشان يبني عليه الماركر —
-  لأن الماركر لو طلع أوسع من القماش هنحرق الجنب ونرميه. سجّل إجمالي أتواب الحوض صح
-  عشان نسبة العيّنة تطلع مظبوطة.
+  التقرير ده بيعمل حاجتين:
+  <b>① الجرد</b> — كام توب موجود فعلًا مقابل اللي جه في إذن الإضافة. أي فرق بيتسجّل ويتبعت تنبيه.
+  <b>② القياس</b> — طول وعرض وعيوب كل توب مفحوص. السيستم بياخد <b>أقل عرض</b> (مش المتوسط)
+  عشان يبني عليه الماركر — لأن الماركر لو طلع أوسع من القماش هنحرق الجنب ونرميه.
+  <br>والفحص عيّنة مش 100%، فنسبة العيّنة بتفضل ظاهرة على كل رقم مبني عليه.
 </div>
 
 <form method="post" action="{{ $mode==='create' ? route('inspections.store') : route('inspections.update',$row) }}">
@@ -51,9 +52,17 @@
           <select name="inspector_id" class="form-select form-select-sm"><option value="">—</option>
             @foreach($inspectors as $k=>$v)<option value="{{ $k }}" @selected(old('inspector_id',$row->inspector_id ?? auth()->id())==$k)>{{ $v }}</option>@endforeach
           </select></div>
-        <div class="col-md-2"><label class="form-label req">إجمالي أتواب الحوض</label>
-          <input type="number" name="total_rolls" class="form-control form-control-sm" value="{{ old('total_rolls',$row->total_rolls) }}" required>
-          <div class="hint">مش المفحوص — الإجمالي</div></div>
+        <div class="col-md-2"><label class="form-label">أتواب حسب إذن الإضافة</label>
+          <input type="number" name="declared_rolls" class="form-control form-control-sm"
+                 value="{{ old('declared_rolls',$row->declared_rolls) }}" readonly style="background:#F8F4F1">
+          <div class="hint">اللي المورد قال عليه</div></div>
+        <div class="col-md-2"><label class="form-label req">الأتواب المجرودة فعليًا</label>
+          <input type="number" name="counted_rolls" class="form-control form-control-sm"
+                 value="{{ old('counted_rolls',$row->counted_rolls) }}" required>
+          <div class="hint">الجرد الحقيقي</div></div>
+        <div class="col-md-2"><label class="form-label">الوزن المجرود (كجم)</label>
+          <input type="number" step="0.001" name="counted_kg" class="form-control form-control-sm"
+                 value="{{ old('counted_kg',$row->counted_kg) }}"></div>
         <div class="col-md-2"><label class="form-label req">النتيجة</label>
           <select name="result" class="form-select form-select-sm" required>
             @foreach($results as $k=>$v)<option value="{{ $k }}" @selected(old('result',$row->result)===$k)>{{ $v }}</option>@endforeach
@@ -66,6 +75,9 @@
     @if($mode==='edit')
       <div class="card-footer bg-white">
         <div class="row text-center g-2">
+          <div class="col"><div class="hint">الجرد</div>
+            <b class="num {{ $row->rolls_variance != 0 ? 'text-danger' : '' }}">
+              {{ $row->counted_rolls }}/{{ $row->declared_rolls }} — {{ $row->rolls_variance_label }}</b></div>
           <div class="col"><div class="hint">العيّنة</div><b class="num">{{ $row->sampled_rolls }}/{{ $row->total_rolls }} ({{ $row->sample_pct }}%)</b></div>
           <div class="col"><div class="hint">أقل عرض</div><b class="num text-danger">{{ $row->min_width_cm ?? '—' }}</b></div>
           <div class="col"><div class="hint">متوسط العرض</div><b class="num">{{ $row->avg_width_cm ?? '—' }}</b></div>
@@ -74,6 +86,12 @@
           <div class="col"><div class="hint">إجمالي الطول</div><b class="num">{{ number_format((float)$row->total_length_m,1) }} م</b></div>
           <div class="col"><div class="hint">نسبة العيوب</div><b class="num">{{ $row->defect_pct }}%</b></div>
         </div>
+        @if($row->rolls_variance != 0)
+          <div class="alert alert-danger py-2 mt-2 mb-0 small">
+            فرق في الجرد: المورد قال {{ $row->declared_rolls }} توب، والمجرود {{ $row->counted_rolls }}.
+            راجع مع المورد قبل الإفراج.
+          </div>
+        @endif
         @if($row->width_alert)
           <div class="alert alert-danger py-2 mt-2 mb-0 small">
             فرق العرض بين الأتواب {{ $row->width_spread_cm }} سم — مش طبيعي لقماش حوض واحد.
