@@ -67,24 +67,33 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * تاب المشتريات — كل الطلبات اللي نزلت من التخطيط ومستنية
-     * تحديد مورد وسعر ووحدة وتاريخ توريد.
+     * تاب المشتريات — كل الطلبات، بفلتر: مستنية تسعير / اتسعّرت.
+     * الأحدث فوق. اللي اتسعّر بيفضل ظاهر بحالته «اتسعّر — مستني الاستلام».
      */
     public function purchasingQueue(Request $request)
     {
-        $q = PurchaseOrder::with(['requester', 'lines.color', 'lines.fabricType'])
-            ->where('stage', 'purchasing');
+        $q = PurchaseOrder::with(['requester', 'supplier', 'lines.color', 'lines.fabricType'])
+            ->whereNotIn('stage', ['planning', 'cancelled']);
+
+        // الفلتر: مستني / اتسعّر / الكل
+        $state = $request->get('state', 'pending');
+        if ($state === 'pending') $q->where('stage', 'purchasing');
+        if ($state === 'priced')  $q->whereNotIn('stage', ['purchasing']);
 
         if ($term = trim((string) $request->get('q'))) $q->where('po_no', 'like', "%{$term}%");
         if ($u = $request->get('requested_by'))        $q->where('requested_by', $u);
 
-        $sourcedToday = PurchaseOrder::whereDate('sourced_at', now()->toDateString())->count();
-
         return view('po.purchasing', [
-            'title'      => 'المشتريات — طلبات مستنية تسعير',
-            'rows'       => $q->oldest('requested_at')->paginate(25)->withQueryString(),
+            'title'      => 'المشتريات',
+            'state'      => $state,
+            // الأحدث فوق — آخر طلب معمول هو أول واحد
+            'rows'       => $q->latest('id')->paginate(25)->withQueryString(),
             'requesters' => User::whereIn('id', PurchaseOrder::whereNotNull('requested_by')
                                 ->pluck('requested_by')->unique())->pluck('name', 'id'),
+            'counts'     => [
+                'pending' => PurchaseOrder::where('stage', 'purchasing')->count(),
+                'priced'  => PurchaseOrder::whereNotIn('stage', ['planning', 'purchasing', 'cancelled'])->count(),
+            ],
             'summary'    => [
                 ['label' => 'مستنية تسعير', 'value' => PurchaseOrder::where('stage', 'purchasing')->count(),
                  'tone' => 'warn', 'note' => 'نزلت من التخطيط ولسه مالهاش مورد ولا سعر.'],
@@ -92,8 +101,9 @@ class PurchaseOrderController extends Controller
                  'value' => ($old = PurchaseOrder::where('stage', 'purchasing')->oldest('requested_at')->first())
                              ? (int) $old->requested_at?->diffInDays(now(), true) . ' يوم' : '—',
                  'tone' => 'muted', 'note' => 'من ساعة ما التخطيط طلبه.'],
-                ['label' => 'اتسعّرت النهارده', 'value' => $sourcedToday, 'tone' => 'ok',
-                 'note' => 'طلبات خلّصت تسعير ونزلت للحسابات.'],
+                ['label' => 'اتسعّرت النهارده',
+                 'value' => PurchaseOrder::whereDate('sourced_at', now()->toDateString())->count(),
+                 'tone' => 'ok', 'note' => 'خلّصت تسعير ونزلت للحسابات والمخزن.'],
                 ['label' => 'مستنية الاستلام', 'value' => PurchaseOrder::where('stage', 'approved')->count(),
                  'tone' => 'brand', 'note' => 'اتسعّرت ومستنية القماش يوصل المخزن.',
                  'link' => [route('stock-additions.index'), 'أذون الإضافة']],

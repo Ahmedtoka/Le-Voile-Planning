@@ -1,5 +1,22 @@
 @extends('partials.doc_index')
 @php
+  // الطلبات اللي اتسعّرت ومستنية القماش يوصل — زرار «استلم» بيفتح إذن إضافة متملي
+  $topTable = [
+    'title' => 'طلبات شراء مستنية الاستلام — دوس «استلم» والإذن يتملى من الطلب',
+    'cols'  => ['رقم الطلب','المورد','توريد متوقع','الإجمالي',''],
+    'empty' => 'مفيش طلبات مستنية استلام.',
+    'rows'  => ($awaitingPos ?? collect())->map(function ($p) {
+        $eta  = $p->delivery_date;
+        $late = $eta && $eta->isPast();
+        return '<td class="num fw-bold">'.e($p->po_no).'</td>'
+             . '<td>'.e($p->supplier?->name ?? '—').'</td>'
+             . '<td class="num'.($late ? ' text-danger fw-bold' : '').'">'
+                 .($eta ? $eta->format('Y-m-d').($late ? ' — متأخر' : '') : '—').'</td>'
+             . '<td class="num">'.number_format((float)$p->total, 0).'</td>'
+             . '<td><a href="'.route('stock-additions.create', ['purchase_order_id' => $p->id]).'"'
+                 .' class="btn btn-sm btn-plum py-0">استلم</a></td>';
+    })->all(),
+  ];
   $intro = 'أول مستند في دورة القماش. اعتماده بيولّد <b>الحوض (الرسالة)</b> ويدخّل الكمية المخزن '
          . '<b>محجوزة تحت الفحص</b> — ممنوع تشغيلها. الإفراج بيحصل بإذن الاستلام الخام بعد الفحص والمعمل.';
   $searchHint = 'رقم الإذن أو المسلسل أو الرسالة…';

@@ -1,8 +1,23 @@
 @extends('layouts.app')
 @section('content')
-@php $lines = old('lines', $row->lines?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
+@php
+  $lines = old('lines', ($preset ?? null) ?: ($row->lines?->toArray() ?? []));
+  $editable = $row->isEditable() || $mode==='create';
+@endphp
 
 @include('partials.approval_box')
+
+@if(($poInfo ?? null))
+  <div class="card mb-3" style="border-color:var(--lv-soft)">
+    <div class="card-body py-2 d-flex gap-4 flex-wrap align-items-center">
+      <span><b>طلب الشراء:</b> <span class="num">{{ $poInfo->po_no }}</span></span>
+      <span><b>المورد:</b> {{ $poInfo->supplier?->name ?? '—' }}</span>
+      <span><b>توريد متوقع:</b> <span class="num">{{ $poInfo->delivery_date?->format('Y-m-d') ?? '—' }}</span></span>
+      <span><b>طريقة الدفع:</b> {{ $poInfo->payment_method ?? '—' }}</span>
+      <span class="hint ms-auto">السطور اتملت بالكميات المتبقية — عدّل الفعلي اللي وصل وكمّل عدد الأتواب</span>
+    </div>
+  </div>
+@endif
 
 <div class="note-box mb-3">
   <b>ده أول مستند في دورة القماش.</b>
@@ -39,10 +54,16 @@
           <select name="warehouse_id" class="form-select form-select-sm" required><option value="">—</option>
             @foreach($warehouses as $k=>$v)<option value="{{ $k }}" @selected(old('warehouse_id',$row->warehouse_id)==$k)>{{ $v }}</option>@endforeach
           </select></div>
-        <div class="col-md-2"><label class="form-label">أمر الشراء</label>
-          <select name="purchase_order_id" class="form-select form-select-sm"><option value="">— بدون —</option>
+        <div class="col-md-4"><label class="form-label">طلب الشراء</label>
+          <select name="purchase_order_id" class="form-select form-select-sm"
+                  @if($mode==='create')
+                    onchange="if(this.value) location='{{ route('stock-additions.create') }}?purchase_order_id='+this.value"
+                  @endif>
+            <option value="">— بدون طلب —</option>
             @foreach($pos as $k=>$v)<option value="{{ $k }}" @selected(old('purchase_order_id',$row->purchase_order_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
+          </select>
+          @if($mode==='create')<div class="hint">اختار الطلب والسطور هتتملى لوحدها</div>@endif
+        </div>
         <div class="col-md-3"><label class="form-label">رقم الرسالة</label>
           <input name="consignment_no" class="form-control form-control-sm" value="{{ old('consignment_no',$row->consignment_no) }}"
                  placeholder="سيبه فاضي والسيستم هيولّده">

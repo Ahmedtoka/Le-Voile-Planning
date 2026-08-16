@@ -42,6 +42,9 @@ class StockAdditionController extends Controller
 
         return view('additions.index', [
             'title'   => 'أذون الإضافة (تحت الفحص)',
+            'awaitingPos' => PurchaseOrder::with('supplier')
+                ->where('stage', 'approved')
+                ->orderBy('delivery_date')->limit(8)->get(),
             'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
@@ -63,11 +66,53 @@ class StockAdditionController extends Controller
         ]);
     }
 
-    public function create()
+    /**
+     * إذن إضافة جديد.
+     * لو جاي بطلب شراء (?purchase_order_id=)، السطور بتتملى تلقائيًا من
+     * أصناف الطلب بالكميات المتبقية — أمين المخزن يكمّل عدد الأتواب
+     * والكميات الفعلية اللي وصلت وخلاص.
+     */
+    public function create(Request $request)
     {
+        $row    = new StockAddition(['doc_date' => now()->toDateString(), 'status' => 'draft']);
+        $preset = [];
+        $po     = null;
+
+        if ($poId = $request->get('purchase_order_id')) {
+            $po = PurchaseOrder::with(['lines.color', 'lines.fabricType', 'supplier'])->find($poId);
+        }
+
+        if ($po) {
+            $row->purchase_order_id = $po->id;
+            $row->supplier_id       = $po->supplier_id;
+            $row->warehouse_id      = $po->warehouse_id
+                ?: Warehouse::where('type', 'fabric')->value('id');
+
+            foreach ($po->lines as $l) {
+                $remaining = max(0, (float) $l->qty - (float) $l->received_qty);
+                if ($remaining <= 0) continue;
+
+                // الطلب ممكن يكون بالطن — الاستلام الفعلي بالكيلو
+                $isMeter = $l->unit === 'متر';
+                $qty     = $l->unit === 'طن' ? $remaining * 1000 : $remaining;
+
+                $preset[] = [
+                    'item_code'      => null,
+                    'item_name'      => trim(($l->fabricType?->name ?? '') . ' ' . ($l->color?->name ?? '')),
+                    'fabric_type_id' => $l->fabric_type_id,
+                    'color_id'       => $l->color_id,
+                    'rolls_count'    => '',
+                    'qty'            => $qty,
+                    'unit'           => $isMeter ? 'متر' : 'كجم',
+                ];
+            }
+        }
+
         return view('additions.form', $this->formData([
-            'row'  => new StockAddition(['doc_date' => now()->toDateString(), 'status' => 'draft']),
-            'mode' => 'create',
+            'row'    => $row,
+            'mode'   => 'create',
+            'preset' => $preset,
+            'poInfo' => $po,
         ]));
     }
 
@@ -149,8 +194,12 @@ class StockAdditionController extends Controller
             'colors'       => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
             'fabricTypes'  => FabricType::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'accessories'  => Accessory::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
-            'pos'          => PurchaseOrder::whereIn('stage', ['approved', 'receiving'])
-                                  ->latest('id')->pluck('po_no', 'id'),
+            'pos'          => PurchaseOrder::with('supplier')
+                                  ->whereIn('stage', ['approved', 'receiving'])
+                                  ->latest('id')->get()
+                                  ->mapWithKeys(fn ($p) => [$p->id =>
+                                      $p->po_no . ' — ' . ($p->supplier?->name ?? '')
+                                      . ' · توريد ' . ($p->delivery_date?->format('Y-m-d') ?? '—')]),
         ], $extra);
     }
 

@@ -7,6 +7,25 @@
 
 @include('partials.summary')
 
+{{-- جدول علوي اختياري — زي «طلبات مستنية استلام» في أذون الإضافة --}}
+@if(!empty($topTable))
+  <div class="card mb-3" style="border-color:var(--lv-soft)">
+    <div class="card-header py-2">{{ $topTable['title'] }}</div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr>@foreach($topTable['cols'] as $c)<th>{{ $c }}</th>@endforeach</tr></thead>
+        <tbody>
+          @forelse($topTable['rows'] as $tr)
+            <tr>{!! $tr !!}</tr>
+          @empty
+            <tr><td colspan="10" class="text-center text-muted py-3">{{ $topTable['empty'] ?? '—' }}</td></tr>
+          @endforelse
+        </tbody>
+      </table>
+    </div>
+  </div>
+@endif
+
 <div class="card">
   <div class="card-header d-flex gap-2 flex-wrap align-items-center">
     <span>{{ $title }} <span class="hint">({{ $rows->total() }})</span></span>
