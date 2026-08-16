@@ -101,18 +101,15 @@ class PurchaseOrderController extends Controller
         ]);
     }
 
+    /** صفحة الطلب — بند التخطيط بس، مفيش أي حاجة تانية */
     public function create()
     {
-        return view('po.form', $this->formData([
-            'row'  => new PurchaseOrder([
-                'po_date'      => now()->toDateString(),
-                'stage'        => 'planning',
-                'status'       => 'draft',
-                'tax_pct'      => 14,
-                'discount_pct' => 0,
-            ]),
-            'mode' => 'create',
-        ]));
+        return view('po.create', [
+            'title'            => 'طلب شراء جديد',
+            'colors'           => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
+            'fabricTypes'      => FabricType::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
+            'defaultTolerance' => config('lvplanning.default_po_tolerance_pct', 5),
+        ]);
     }
 
     /**
@@ -148,59 +145,43 @@ class PurchaseOrderController extends Controller
             route('purchase-orders.edit', $po), 'warning');
 
         ActivityLogger::log('created', $po, 'طلب شراء جديد ' . $po->po_no . ' — نزل للمشتريات');
-        return redirect()->route('purchase-orders.edit', $po)->with(FlowMessage::flash('po.created', $po));
+
+        // «اطلب» ⇒ رجوع لقايمة طلبات الشراء — الطلب بقى عند المشتريات
+        return redirect()->route('purchase-orders.index')->with(FlowMessage::flash('po.created', $po));
     }
 
+    /** صفحة عرض الطلب — قراءة بس، بتوجّهك لصفحة الدور المناسب */
     public function edit(PurchaseOrder $purchase_order)
     {
         $purchase_order->load([
             'lines.color', 'lines.fabricType', 'supplier',
             'requester', 'sourcer', 'financer',
-            'approval.steps.user', 'approval.steps.role',
         ]);
 
-        return view('po.form', $this->formData([
-            'row'  => $purchase_order,
-            'mode' => 'edit',
-        ]));
+        return view('po.show', [
+            'title' => 'طلب شراء ' . $purchase_order->po_no,
+            'row'   => $purchase_order,
+        ]);
     }
 
-    /** تعديل بند التخطيط — متاح في مرحلة التخطيط بس */
-    public function update(Request $request, PurchaseOrder $purchase_order)
+
+
+    /** صفحة التسعير — بند المشتريات بس */
+    public function sourceForm(PurchaseOrder $purchase_order)
     {
-        abort_unless($purchase_order->planningEditable(), 403, 'الطلب خرج من مرحلة التخطيط — مينفعش تعدّل الأصناف.');
-
-        $data = $this->validatePlanning($request);
-
-        DB::transaction(function () use ($purchase_order, $data) {
-            $purchase_order->update($data['header']);
-            $this->syncLines($purchase_order, $data['lines'], true);
-            $purchase_order->refresh()->recalcTotals();
-        });
-
-        ActivityLogger::log('updated', $purchase_order, 'تعديل طلب شراء ' . $purchase_order->po_no);
-        return back()->with('success', 'تم الحفظ.');
-    }
-
-    /** ① ← ② تنزيل الطلب للمشتريات */
-    public function toPurchasing(PurchaseOrder $purchase_order)
-    {
-        abort_unless($purchase_order->stage === 'planning', 403);
-
-        if (!$purchase_order->readyForPurchasing()) {
-            return back()->withErrors(['msg' => 'مينفعش تنزّل طلب من غير أصناف.']);
+        // لو الطلب عدى مرحلة المشتريات، افتح صفحة العرض
+        if ($purchase_order->stage !== 'purchasing') {
+            return redirect()->route('purchase-orders.edit', $purchase_order);
         }
 
-        $purchase_order->forceFill(['stage' => 'purchasing'])->save();
+        $purchase_order->load(['lines.color', 'lines.fabricType', 'requester', 'supplier']);
 
-        Notifier::broadcastToRole('purchasing', 'po_sourcing',
-            'طلب شراء محتاج تسعير ومورد',
-            $purchase_order->po_no . ' — ' . $purchase_order->lines()->count() . ' صنف · '
-                . rtrim(rtrim(number_format((float) $purchase_order->total_qty, 3), '0'), '.') . ' إجمالي',
-            route('purchase-orders.edit', $purchase_order), 'warning');
-
-        ActivityLogger::log('sent', $purchase_order, 'تنزيل طلب شراء للمشتريات ' . $purchase_order->po_no);
-        return back()->with(FlowMessage::flash('po.to_purchasing', $purchase_order));
+        return view('po.source', [
+            'title'      => 'تسعير الطلب ' . $purchase_order->po_no,
+            'row'        => $purchase_order,
+            'suppliers'  => Supplier::where('is_active', true)->orderBy('name')->get(),
+            'warehouses' => Warehouse::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
+        ]);
     }
 
     /** ② المشتريات: المورد والأسعار وتاريخ التوريد */
@@ -254,7 +235,7 @@ class PurchaseOrderController extends Controller
         });
 
         ActivityLogger::log('sourced', $purchase_order, 'تسعير طلب شراء ' . $purchase_order->po_no);
-        return back()->with(FlowMessage::flash('po.sourced', $purchase_order));
+        return redirect()->route('purchasing.source', $purchase_order)->with('success', 'تم الحفظ — راجع الإجمالي وبعدين نزّل للحسابات.');
     }
 
     /** ② ← ③ تنزيل الطلب للحسابات */
@@ -275,7 +256,24 @@ class PurchaseOrderController extends Controller
             route('finance.payables'), 'info');
 
         ActivityLogger::log('sent', $purchase_order, 'تنزيل طلب شراء للحسابات ' . $purchase_order->po_no);
-        return back()->with(FlowMessage::flash('po.to_finance', $purchase_order));
+
+        // «نزّل للحسابات» ⇒ رجوع لقايمة المشتريات — الطلب خرج منها
+        return redirect()->route('purchasing.queue')->with(FlowMessage::flash('po.to_finance', $purchase_order));
+    }
+
+    /** صفحة العلم — بند الحسابات بس */
+    public function financeForm(PurchaseOrder $purchase_order)
+    {
+        if ($purchase_order->stage !== 'finance') {
+            return redirect()->route('purchase-orders.edit', $purchase_order);
+        }
+
+        $purchase_order->load(['lines.color', 'lines.fabricType', 'supplier', 'requester', 'sourcer']);
+
+        return view('po.finance', [
+            'title' => 'علم الحسابات — ' . $purchase_order->po_no,
+            'row'   => $purchase_order,
+        ]);
     }
 
     /**
@@ -304,7 +302,9 @@ class PurchaseOrderController extends Controller
             route('stock-additions.index'), 'info');
 
         ActivityLogger::log('acknowledged', $purchase_order, 'علم الحسابات بطلب الشراء ' . $purchase_order->po_no);
-        return back()->with(FlowMessage::flash('po.finance_ack', $purchase_order));
+
+        // «علمت» ⇒ رجوع لقايمة الحسابات — الطلب خرج منها
+        return redirect()->route('finance.payables')->with(FlowMessage::flash('po.finance_ack', $purchase_order));
     }
 
     public function print(PurchaseOrder $purchase_order)
@@ -323,19 +323,6 @@ class PurchaseOrderController extends Controller
     }
 
     // ── داخلي ────────────────────────────────────────────────────
-
-    private function formData(array $extra): array
-    {
-        return array_merge([
-            'title'       => 'طلب شراء',
-            'suppliers'   => Supplier::where('is_active', true)->orderBy('name')->get(),
-            'warehouses'  => Warehouse::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
-            'colors'      => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
-            'fabricTypes' => FabricType::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
-            'employees'   => User::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
-            'defaultTolerance' => config('lvplanning.default_po_tolerance_pct', 5),
-        ], $extra);
-    }
 
     /** التحقق من بند التخطيط — التاريخ والموظف أوتوماتيك، مش من الفورم */
     private function validatePlanning(Request $request): array

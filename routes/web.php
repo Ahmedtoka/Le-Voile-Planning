@@ -88,19 +88,21 @@ Route::middleware('auth.user')->group(function () {
     Route::middleware('can.do:po.request')->group(function () {
         Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->name('purchase-orders.create');
         Route::post('purchase-orders',       [PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
-        Route::put('purchase-orders/{purchase_order}',    [PurchaseOrderController::class, 'update'])->name('purchase-orders.update');
         Route::delete('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'destroy'])->name('purchase-orders.destroy');
-        Route::post('purchase-orders/{purchase_order}/to-purchasing', [PurchaseOrderController::class, 'toPurchasing'])->name('purchase-orders.to-purchasing');
     });
 
     Route::middleware('can.do:po.source')->group(function () {
         // تاب المشتريات — الطلبات اللي نزلت من التخطيط ومستنية تسعير
         Route::get('purchasing', [PurchaseOrderController::class, 'purchasingQueue'])->name('purchasing.queue');
+        // صفحة التسعير — بند المشتريات بس
+        Route::get('purchasing/{purchase_order}', [PurchaseOrderController::class, 'sourceForm'])->name('purchasing.source');
         Route::post('purchase-orders/{purchase_order}/sourcing',   [PurchaseOrderController::class, 'saveSourcing'])->name('purchase-orders.sourcing');
         Route::post('purchase-orders/{purchase_order}/to-finance', [PurchaseOrderController::class, 'toFinance'])->name('purchase-orders.to-finance');
     });
 
     Route::middleware('can.do:po.finance')->group(function () {
+        // صفحة العلم — بند الحسابات بس
+        Route::get('finance/orders/{purchase_order}', [PurchaseOrderController::class, 'financeForm'])->name('finance.ack');
         Route::post('purchase-orders/{purchase_order}/finance-ack', [PurchaseOrderController::class, 'financeAck'])->name('purchase-orders.finance-ack');
         Route::get('finance/payables', [FinanceController::class, 'payables'])->name('finance.payables');
     });

@@ -33,7 +33,7 @@
       @forelse($rows as $r)
         @php $days = (int) ($r->requested_at?->diffInDays(now(), true) ?? 0); @endphp
         <tr class="{{ $days > 3 ? 'table-warning' : '' }}">
-          <td class="num fw-bold"><a href="{{ route('purchase-orders.edit',$r) }}">{{ $r->po_no }}</a></td>
+          <td class="num fw-bold"><a href="{{ route('purchasing.source',$r) }}">{{ $r->po_no }}</a></td>
           <td>
             {{ $r->requester?->name ?? '—' }}
             @if($r->planning_note)<div class="hint">{{ Str::limit($r->planning_note, 45) }}</div>@endif
@@ -51,8 +51,8 @@
           </td>
           <td class="num">{{ rtrim(rtrim(number_format((float)$r->total_qty,2),'0'),'.') }}</td>
           <td>
-            <a href="{{ route('purchase-orders.edit',$r) }}" class="btn btn-sm btn-plum py-1 w-100">
-              <i class="bi bi-tag" aria-hidden="true"></i> سعّر الطلب
+            <a href="{{ route('purchasing.source',$r) }}" class="btn btn-sm btn-plum py-1 w-100">
+              <i class="bi bi-tag" aria-hidden="true"></i> سعّر
             </a>
           </td>
         </tr>

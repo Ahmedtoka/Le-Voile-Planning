@@ -50,7 +50,7 @@
               <td><span class="badge bg-{{ $r->stage_color }}">{{ $r->stage_name }}</span></td>
               <td>
                 @if($r->stage === 'finance')
-                  <a href="{{ route('purchase-orders.edit',$r) }}" class="btn btn-sm btn-plum py-0">علّم</a>
+                  <a href="{{ route('finance.ack',$r) }}" class="btn btn-sm btn-plum py-0">علّم</a>
                 @endif
               </td>
             </tr>
