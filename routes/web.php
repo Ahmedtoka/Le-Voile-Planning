@@ -94,6 +94,8 @@ Route::middleware('auth.user')->group(function () {
     });
 
     Route::middleware('can.do:po.source')->group(function () {
+        // تاب المشتريات — الطلبات اللي نزلت من التخطيط ومستنية تسعير
+        Route::get('purchasing', [PurchaseOrderController::class, 'purchasingQueue'])->name('purchasing.queue');
         Route::post('purchase-orders/{purchase_order}/sourcing',   [PurchaseOrderController::class, 'saveSourcing'])->name('purchase-orders.sourcing');
         Route::post('purchase-orders/{purchase_order}/to-finance', [PurchaseOrderController::class, 'toFinance'])->name('purchase-orders.to-finance');
     });

@@ -412,8 +412,8 @@ class DemoDataService
 
         // توزيع المراحل: كل دور يلاقي شغل مستني منه
         $plan = array_merge(
-            array_fill(0, 4,  'planning'),
-            array_fill(0, 5,  'purchasing'),
+            // الحفظ بينزّل للمشتريات تلقائيًا — planning مرحلة عابرة
+            array_fill(0, 8,  'purchasing'),
             array_fill(0, 5,  'finance'),
             array_fill(0, 10, 'approved'),
             array_fill(0, 14, 'receiving'),

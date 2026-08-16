@@ -40,19 +40,20 @@ class MenuCounters
         // ── الاعتمادات: أي حاجة مستنية توقيعي ──
         $c['approvals.index'] = ApprovalEngine::pendingFor($user)->count();
 
-        // ── طلبات الشراء: كل دور والمرحلة بتاعته ──
-        $po = 0;
-        if ($can('po.request')) {
-            $po += PurchaseOrder::where('stage', 'planning')
-                     ->where('requested_by', $user->id)->count();
+        // ── المشتريات: الطلبات اللي نزلت من التخطيط ومستنية تسعير ──
+        if ($can('po.source')) {
+            $c['purchasing.queue'] = PurchaseOrder::where('stage', 'purchasing')->count();
         }
-        if ($can('po.source'))  $po += PurchaseOrder::where('stage', 'purchasing')->count();
-        if ($can('po.finance')) $po += PurchaseOrder::where('stage', 'finance')->count();
-        $c['purchase-orders.index'] = $po;
 
-        // ── الحسابات: الطلبات المستنية علم ──
+        // ── الحسابات: الطلبات اللي اتسعّرت ومستنية علم ──
         if ($can('po.finance')) {
             $c['finance.payables'] = PurchaseOrder::where('stage', 'finance')->count();
+        }
+
+        // ── طلبات الشراء: مسودات التخطيط بس (لو فضلت واحدة) ──
+        if ($can('po.request')) {
+            $c['purchase-orders.index'] = PurchaseOrder::where('stage', 'planning')
+                ->where('requested_by', $user->id)->count();
         }
 
         // ── إذن إضافة: مسوداتي ──

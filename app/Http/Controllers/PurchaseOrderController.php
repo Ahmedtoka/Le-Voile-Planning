@@ -66,6 +66,41 @@ class PurchaseOrderController extends Controller
         ]);
     }
 
+    /**
+     * تاب المشتريات — كل الطلبات اللي نزلت من التخطيط ومستنية
+     * تحديد مورد وسعر ووحدة وتاريخ توريد.
+     */
+    public function purchasingQueue(Request $request)
+    {
+        $q = PurchaseOrder::with(['requester', 'lines.color', 'lines.fabricType'])
+            ->where('stage', 'purchasing');
+
+        if ($term = trim((string) $request->get('q'))) $q->where('po_no', 'like', "%{$term}%");
+        if ($u = $request->get('requested_by'))        $q->where('requested_by', $u);
+
+        $sourcedToday = PurchaseOrder::whereDate('sourced_at', now()->toDateString())->count();
+
+        return view('po.purchasing', [
+            'title'      => 'المشتريات — طلبات مستنية تسعير',
+            'rows'       => $q->oldest('requested_at')->paginate(25)->withQueryString(),
+            'requesters' => User::whereIn('id', PurchaseOrder::whereNotNull('requested_by')
+                                ->pluck('requested_by')->unique())->pluck('name', 'id'),
+            'summary'    => [
+                ['label' => 'مستنية تسعير', 'value' => PurchaseOrder::where('stage', 'purchasing')->count(),
+                 'tone' => 'warn', 'note' => 'نزلت من التخطيط ولسه مالهاش مورد ولا سعر.'],
+                ['label' => 'أقدم طلب مستني',
+                 'value' => ($old = PurchaseOrder::where('stage', 'purchasing')->oldest('requested_at')->first())
+                             ? (int) $old->requested_at?->diffInDays(now(), true) . ' يوم' : '—',
+                 'tone' => 'muted', 'note' => 'من ساعة ما التخطيط طلبه.'],
+                ['label' => 'اتسعّرت النهارده', 'value' => $sourcedToday, 'tone' => 'ok',
+                 'note' => 'طلبات خلّصت تسعير ونزلت للحسابات.'],
+                ['label' => 'عند الحسابات', 'value' => PurchaseOrder::where('stage', 'finance')->count(),
+                 'note' => 'مستنية علم الحسابات.',
+                 'link' => [route('finance.payables'), 'افتح الحسابات']],
+            ],
+        ]);
+    }
+
     public function create()
     {
         return view('po.form', $this->formData([
@@ -80,7 +115,11 @@ class PurchaseOrderController extends Controller
         ]));
     }
 
-    /** ① التخطيط بينشئ الطلب — أصناف وكميات بس. التاريخ والموظف أوتوماتيك. */
+    /**
+     * ① التخطيط بينشئ الطلب — والحفظ بينزّله للمشتريات تلقائيًا.
+     * مفيش خطوة «نزّل» منفصلة: أول ما التخطيط يحفظ، الطلب يظهر فورًا
+     * في تاب المشتريات ويوصلهم إشعار.
+     */
     public function store(Request $request)
     {
         $data = $this->validatePlanning($request);
@@ -90,7 +129,7 @@ class PurchaseOrderController extends Controller
                 'po_no'        => DocNumber::next('purchase_order', 'purchase_orders', 'po_no'),
                 'po_date'      => now()->toDateString(),   // وقت الطلب — مش بيتكتب يدوي
                 'employee_id'  => auth()->id(),            // اللي عامل الطلب
-                'stage'        => 'planning',
+                'stage'        => 'purchasing',            // الحفظ = نزول للمشتريات على طول
                 'status'       => 'draft',
                 'created_by'   => auth()->id(),
                 'requested_by' => auth()->id(),
@@ -101,7 +140,14 @@ class PurchaseOrderController extends Controller
             return $po;
         });
 
-        ActivityLogger::log('created', $po, 'طلب شراء جديد ' . $po->po_no);
+        Notifier::broadcastToRole('purchasing', 'po_sourcing',
+            'طلب شراء جديد من ' . (auth()->user()?->name ?? 'التخطيط'),
+            $po->po_no . ' — ' . $po->lines()->count() . ' صنف · '
+                . rtrim(rtrim(number_format((float) $po->total_qty, 3), '0'), '.') . ' إجمالي'
+                . ($po->planning_note ? ' · ' . $po->planning_note : ''),
+            route('purchase-orders.edit', $po), 'warning');
+
+        ActivityLogger::log('created', $po, 'طلب شراء جديد ' . $po->po_no . ' — نزل للمشتريات');
         return redirect()->route('purchase-orders.edit', $po)->with(FlowMessage::flash('po.created', $po));
     }
 

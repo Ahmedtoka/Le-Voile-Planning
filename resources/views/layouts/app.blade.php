@@ -233,9 +233,11 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
     ['buy', 'دورة الشراء', 'bi-cart3', [
       ['purchase-orders.index', 'طلبات الشراء', 'bi-file-earmark-text',
        'po.view|po.request|po.source|po.finance',
-       'مستند واحد بيمر على التخطيط ثم المشتريات ثم الحسابات ثم الاعتماد'],
-      ['finance.payables', 'المستحقات المتوقعة', 'bi-cash-coin', 'po.finance',
-       'إيه اللي جاي على الحسابات فلوس، لمين، وإمتى'],
+       'كل الطلبات بكل مراحلها — الحفظ بينزّل الطلب للمشتريات تلقائيًا'],
+      ['purchasing.queue', 'المشتريات', 'bi-cart3', 'po.source',
+       'الطلبات اللي نزلت من التخطيط ومستنية مورد وسعر وتاريخ توريد'],
+      ['finance.payables', 'الحسابات', 'bi-cash-coin', 'po.finance',
+       'الطلبات اللي المشتريات سعّرتها — المستحق المتوقع لكل مورد'],
     ]],
 
     ['fabric', 'وصول القماش', 'bi-box-arrow-in-down', [

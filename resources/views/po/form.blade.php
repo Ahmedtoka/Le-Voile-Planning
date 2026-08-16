@@ -70,22 +70,18 @@
     </fieldset></div>
 
     @if($planEd)
-      <div class="card-footer bg-white d-flex gap-2">
-        <button class="btn btn-plum btn-sm"><i class="bi bi-save"></i> حفظ</button>
-        @if($mode==='edit')
-          <button type="button" class="btn btn-success btn-sm"
-                  onclick="if(confirm('تنزيل الطلب للمشتريات؟ مش هتقدر تعدّل الأصناف بعدها.')) document.getElementById('toPurchasing').submit()">
-            <i class="bi bi-arrow-left"></i> نزّل للمشتريات
-          </button>
+      <div class="card-footer bg-white d-flex gap-2 align-items-center">
+        <button class="btn btn-plum btn-sm">
+          <i class="bi bi-send" aria-hidden="true"></i>
+          {{ $mode === 'create' ? 'حفظ — وينزل للمشتريات تلقائيًا' : 'حفظ التعديلات' }}
+        </button>
+        @if($mode === 'create')
+          <span class="hint">أول ما تحفظ، الطلب يظهر في تاب المشتريات فورًا ويوصلهم إشعار.</span>
         @endif
       </div>
     @endif
   </div>
 </form>
-
-@if($mode==='edit' && $planEd)
-  <form id="toPurchasing" method="post" action="{{ route('purchase-orders.to-purchasing',$row) }}" class="d-none">@csrf</form>
-@endif
 
 @if($mode === 'edit')
 

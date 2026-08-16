@@ -3,7 +3,8 @@
 return [
     'dashboard'                  => 'لوحة التحكم',
     'purchase-orders.index'      => 'طلبات الشراء',
-    'finance.payables'           => 'المستحقات المتوقعة',
+    'purchasing.queue'           => 'المشتريات',
+    'finance.payables'           => 'الحسابات',
     'stock-additions.index'      => 'أذون الإضافة',
     'inspections.index'          => 'تقارير فحص القماش',
     'lab-reports.index'          => 'تقارير المعمل',
