@@ -3,8 +3,9 @@
 
 <div class="note-box mb-3">
   <i class="bi bi-info-circle"></i>
-  أمر الشغل بيربط <b>حوض واحد + ماركر واحد + مصنع واحد</b>. الأرقام المتوقعة فيه محسوبة من أقل عرض
-  ومتوسط البنشر وطول الفرشة. الفعلي بييجي من بيان القص، والفرق الطبيعي 2-4%.
+أمر الشغل هو <b>ورقة المصنع</b>: منتج واحد ممكن يتعمل من أكتر من خامة، وكل خامة ليها
+  رسالتها وحسبتها. <b>الخامة اللي بتدي أقل قطع هي اللي بتحكم الإنتاج.</b>
+  الفعلي بييجي من بيان القص، والفرق الطبيعي 2-4%.
 </div>
 
 @include('partials.summary')
@@ -45,11 +46,21 @@
         <tr class="{{ $r->is_late ? 'table-warning' : '' }}">
           <td class="num fw-bold"><a href="{{ route('work-orders.show',$r) }}">{{ $r->wo_no }}</a></td>
           <td class="num">{{ $r->wo_date?->format('Y-m-d') }}</td>
-          <td class="num">{{ $r->consignment?->consignment_no ?? '—' }}</td>
-          <td>{{ $r->consignment?->color?->code ?? '—' }}</td>
+          <td>{{ Str::limit($r->product_title, 28) ?: '—' }}</td>
+          <td class="num hint">
+            {{ $r->fabrics->pluck('consignment.consignment_no')->filter()->implode('، ') ?: '—' }}
+            @if($r->fabrics->count() > 1)
+              <div><span class="badge bg-light text-dark">{{ $r->fabrics->count() }} خامات</span></div>
+            @endif
+          </td>
           <td>{{ $r->factory?->name ?? '—' }}</td>
-          <td class="num">{{ number_format((float)$r->allocated_kg,1) }}</td>
-          <td class="num">{{ number_format((int)$r->expected_pieces) }}</td>
+          <td class="num">{{ rtrim(rtrim(number_format((float) $r->fabrics->sum('planned_qty'), 1), '0'), '.') }}</td>
+          <td class="num fw-bold">
+            {{ number_format($r->target_qty) }}
+            @if($r->fabric_gap > 0)
+              <div class="hint text-warning" title="فرق بين الخامات">فرق {{ number_format($r->fabric_gap) }}</div>
+            @endif
+          </td>
           <td class="num">{{ number_format((int)$r->cut_pieces) }}</td>
           <td class="num">{{ number_format((int)$r->received_pieces) }}</td>
           <td class="num">{{ number_format($r->outstanding_pieces) }}</td>

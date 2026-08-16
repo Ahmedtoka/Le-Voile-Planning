@@ -13,6 +13,8 @@ use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\ImportExportController;
 use App\Http\Controllers\LabReportController;
 use App\Http\Controllers\MarkerController;
+use App\Http\Controllers\MaterialIssueController;
+use App\Http\Controllers\RejectionController;
 use App\Http\Controllers\MasterData\AccessoryController;
 use App\Http\Controllers\MasterData\ColorController;
 use App\Http\Controllers\MasterData\FabricTypeController;
@@ -174,6 +176,28 @@ Route::middleware('auth.user')->group(function () {
     Route::get('work-orders/{work_order}', [WorkOrderController::class, 'show'])
         ->middleware('can.do:wo.view')->name('work-orders.show');
 
+    // ── إذن صرف خام ──────────────────────────────────────────────
+    Route::get('material-issues', [MaterialIssueController::class, 'index'])
+        ->middleware('can.do:receipt.view,wo.view')->name('material-issues.index');
+    Route::get('material-issues/{material_issue}/print', [MaterialIssueController::class, 'print'])
+        ->middleware('can.do:receipt.view,wo.view')->name('material-issues.print');
+
+    Route::middleware('can.do:receipt.manage')->group(function () {
+        Route::resource('material-issues', MaterialIssueController::class)->except(['show', 'index']);
+        Route::post('material-issues/{material_issue}/submit', [MaterialIssueController::class, 'submit'])
+            ->name('material-issues.submit');
+    });
+
+    // ── المرفوضات والمعلّق ───────────────────────────────────────
+    Route::get('rejections', [RejectionController::class, 'index'])
+        ->middleware('can.do:qc.view,receipt.view,po.view')->name('rejections.index');
+    Route::post('goods-receipts/{goods_receipt}/rejections', [RejectionController::class, 'store'])
+        ->middleware('can.do:qc.manage,receipt.manage')->name('rejections.store');
+    Route::post('rejections/{rejection}/resolve', [RejectionController::class, 'resolve'])
+        ->middleware('can.do:wo.manage,po.source')->name('rejections.resolve');
+    Route::delete('rejections/{rejection}', [RejectionController::class, 'destroy'])
+        ->middleware('can.do:qc.manage,receipt.manage')->name('rejections.destroy');
+
     // ── بيان القص والاستلام ──────────────────────────────────────
     Route::get('cut-declarations', [CutDeclarationController::class, 'index'])
         ->middleware('can.do:cut.view')->name('cut-declarations.index');
@@ -256,6 +280,7 @@ Route::middleware('auth.user')->group(function () {
         // أدوات الداتا — للأدمن بس
         Route::middleware('can.do:settings.data')->group(function () {
             Route::get('data',           [DemoDataController::class, 'index'])->name('settings.data');
+            Route::post('data/paper',    [DemoDataController::class, 'generatePaper'])->name('data.paper');
             Route::post('data/generate', [DemoDataController::class, 'generate'])->name('data.generate');
             Route::post('data/master',   [DemoDataController::class, 'generateMaster'])->name('data.master');
             Route::post('data/reset',    [DemoDataController::class, 'reset'])->name('data.reset');

@@ -6,7 +6,7 @@
 
 <div class="note-box mb-3">
   <b>طول الفرشة الفعلي هو أهم رقم هنا.</b>
-  المخطط كان {{ $wo->input_spread_length_m }} متر. لو المصنع فرش على أكتر — ولو 5 سنتيمتر —
+  المخطط كان {{ $wo->governingFabric()?->effective_spread ?? '—' }} متر. لو المصنع فرش على أكتر — ولو 5 سنتيمتر —
   بياكل من كل رِقّة ويقلل عدد الرِقّات، وعدد القطع بينزل. سجّل الرقم الفعلي زي ما هو.
 </div>
 
@@ -30,7 +30,7 @@
         <div class="col-md-3"><label class="form-label req">طول الفرشة الفعلي (م)</label>
           <input type="number" step="0.001" name="actual_spread_length_m" class="form-control form-control-sm"
                  value="{{ old('actual_spread_length_m',$row->actual_spread_length_m) }}" required>
-          <div class="hint">المخطط: {{ $wo->input_spread_length_m }}</div></div>
+          <div class="hint">المخطط: {{ $wo->governingFabric()?->effective_spread ?? '—' }}</div></div>
         <div class="col-md-2"><label class="form-label">عدد الرِقّات الفعلي</label>
           <input type="number" name="actual_plies" class="form-control form-control-sm" value="{{ old('actual_plies',$row->actual_plies) }}"></div>
         <div class="col-md-2"><label class="form-label">القماش المستهلك (كجم)</label>
@@ -49,7 +49,7 @@
     @if($mode==='edit')
       <div class="card-footer bg-white">
         <div class="row text-center g-2">
-          <div class="col"><div class="hint">المتوقع</div><b class="num">{{ number_format((int)$wo->expected_pieces) }}</b></div>
+          <div class="col"><div class="hint">المستهدف</div><b class="num">{{ number_format($wo->target_qty) }}</b></div>
           <div class="col"><div class="hint">المقصوص</div><b class="num">{{ number_format((int)$row->total_pieces) }}</b></div>
           <div class="col"><div class="hint">الانحراف</div>
             <b class="num text-{{ ['ok'=>'success','warn'=>'warning','danger'=>'danger'][$row->variance_flag] ?? 'muted' }}">

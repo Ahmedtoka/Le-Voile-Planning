@@ -49,6 +49,19 @@
   </tbody>
 </table>
 
+@php $rej = $gr->consignment?->rejections()->where('goods_receipt_id', $gr->id)->get() ?? collect(); @endphp
+@if($rej->count())
+  <div class="terms" style="border:1px solid #000;padding:8px;margin-top:8px">
+    @foreach($rej as $r)
+      ✱ تم {{ $r->kind === 'on_hold' ? 'تعليق' : 'رفض' }}
+      {{ $r->lot_label ?: ('كود ' . ($r->color_code ?: $r->color?->code)) }}
+      عدد {{ $r->rolls_count }} توب بوزن
+      {{ rtrim(rtrim(number_format((float) $r->qty, 3), '0'), '.') }} {{ $r->unit }}
+      — {{ $r->party_name }}{{ $r->reason ? ' (' . $r->reason . ')' : '' }}<br>
+    @endforeach
+  </div>
+@endif
+
 <div class="sigs">
   <div class="sig">مندوب المورد<div class="line">{{ $gr->supplier_rep }}</div></div>
   <div class="sig">أمين المخزن<div class="line"></div></div>

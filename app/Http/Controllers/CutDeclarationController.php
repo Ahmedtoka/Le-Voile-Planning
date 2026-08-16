@@ -67,7 +67,7 @@ class CutDeclarationController extends Controller
                 'doc_date'                => now()->toDateString(),
                 'work_order_id'           => $wo->id,
                 'factory_id'              => $wo->factory_id,
-                'actual_spread_length_m'  => $wo->input_spread_length_m,
+                'actual_spread_length_m'  => $wo->governingFabric()?->effective_spread,
                 'status'                  => 'draft',
             ]),
             'wo'   => $wo,
@@ -192,7 +192,7 @@ class CutDeclarationController extends Controller
         $total = (int) $cd->lines->sum('qty');
         $wo    = $cd->workOrder;
 
-        $v = $wo ? PlanningEngine::variance((float) $wo->expected_pieces, (float) $total) : ['pct' => null, 'flag' => null];
+        $v = $wo ? PlanningEngine::variance((float) $wo->target_qty, (float) $total) : ['pct' => null, 'flag' => null];
 
         $cd->forceFill([
             'total_pieces'          => $total,

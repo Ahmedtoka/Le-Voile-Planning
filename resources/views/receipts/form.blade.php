@@ -112,6 +112,95 @@
 @endif
 
 <template id="lineTpl">@include('receipts.line', ['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
+
+@if($mode === 'edit')
+  @php $rejections = $row->consignment?->rejections()->where('goods_receipt_id', $row->id)->get() ?? collect(); @endphp
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-x-octagon" aria-hidden="true"></i> الرفض الجزئي وتعليق الألوان</span>
+      <span class="hint">{{ $rejections->count() }} بند</span>
+    </div>
+
+    <div class="card-body pb-2">
+      <div class="hint mb-3">
+        زي ما بيتكتب على الورقة بالظبط: «تم رفض عدد 2 توب كود 1132 بوزنه 8.36 كيلو — مصلحة الجودة»،
+        أو «تم تعليق اللون الروز كود 2580 لحين الرد من إدارة التخطيط والمشتريات».
+        المرفوض ما بيدخلش المخزون وما بيتحسبش على أمر الشراء.
+      </div>
+
+      @forelse($rejections as $rj)
+        <div class="d-flex align-items-start gap-2 mb-2 pb-2" style="border-bottom:1px dashed var(--lv-line)">
+          <span class="badge bg-{{ $rj->kind === 'on_hold' ? 'warning' : 'danger' }}">{{ $rj->kind_name }}</span>
+          <div class="flex-grow-1">
+            <b style="font-size:.85rem">{{ $rj->label }}</b>
+            <div class="hint">{{ $rj->party_name }} — {{ $rj->reason }}</div>
+          </div>
+          <span class="badge bg-{{ $rj->resolution === 'open' ? 'secondary' : 'success' }}">{{ $rj->resolution_name }}</span>
+          @if($rj->resolution === 'open' && $row->isEditable())
+            <form method="post" action="{{ route('rejections.destroy', $rj) }}" onsubmit="return confirm('حذف البند؟')">
+              @csrf @method('DELETE')
+              <button class="btn btn-sm btn-link text-danger p-0" style="font-size:.75rem">حذف</button>
+            </form>
+          @endif
+        </div>
+      @empty
+        <div class="text-muted small py-2">مفيش رفض ولا تعليق على الإذن ده.</div>
+      @endforelse
+    </div>
+
+    @if($row->isEditable())
+      <div class="card-footer bg-white">
+        <form method="post" action="{{ route('rejections.store', $row) }}" class="row g-2">@csrf
+          <div class="col-md-2">
+            <label class="form-label req">النوع</label>
+            <select name="kind" class="form-select form-select-sm" required>
+              <option value="rejected">مرفوض</option>
+              <option value="on_hold">معلّق لحين الرد</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">كود اللون</label>
+            <input name="color_code" class="form-control form-control-sm" placeholder="1132">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">وصف الحوض</label>
+            <input name="lot_label" class="form-control form-control-sm" placeholder="الحوض الأخضر">
+          </div>
+          <div class="col-md-1">
+            <label class="form-label req">أتواب</label>
+            <input type="number" name="rolls_count" class="form-control form-control-sm" value="0" required>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label req">الوزن</label>
+            <div class="input-group input-group-sm">
+              <input type="number" step="0.001" name="qty" class="form-control" required>
+              <select name="unit" class="form-select" style="max-width:75px">
+                <option value="كجم">كجم</option><option value="متر">متر</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label req">الجهة</label>
+            <select name="party" class="form-select form-select-sm" required>
+              <option value="quality">مصلحة الجودة</option>
+              <option value="planning">إدارة التخطيط</option>
+              <option value="purchasing">إدارة المشتريات</option>
+            </select>
+          </div>
+          <div class="col-md-10">
+            <label class="form-label req">السبب</label>
+            <input name="reason" class="form-control form-control-sm" required
+                   placeholder="مثال: بيهم تل غريبة وتناسخ · لون غير مطابق">
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-outline-danger btn-sm w-100">تسجيل</button>
+          </div>
+        </form>
+      </div>
+    @endif
+  </div>
+@endif
+
 @if($mode === 'edit')
   @include('partials.comments')
 @endif

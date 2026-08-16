@@ -2,20 +2,21 @@
 
 namespace Database\Seeders;
 
-use App\Services\DemoDataService;
+use App\Services\PaperSeeder;
 use Illuminate\Database\Seeder;
 
 /**
- * الداتا الديمو — نفس اللي بيعمله زرار «ولّد الداتا» في الإعدادات،
- * وبيتنادى كمان من `php artisan lv:demo`.
- * مصدر واحد للحقيقة، عشان الاتنين ما يفرقوش.
+ * الافتراضي بعد migrate --seed = **الورق الحقيقي**.
+ * نفس اللي بيعمله `php artisan lv:paper` وزرار «الورق الحقيقي» في الإعدادات.
+ *
+ * عايز ديمو كبير للتجربة؟  php artisan lv:demo
+ * عايز بيانات أساسية بس؟   php artisan lv:master
  */
 class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        $svc = new DemoDataService(fn ($m) => $this->command?->line('    ' . $m));
-        $stats = $svc->generate();
+        $stats = (new PaperSeeder(fn ($m) => $this->command?->line('    ' . $m)))->run();
 
         $this->command?->newLine();
         $this->command?->table(

@@ -30,7 +30,7 @@ class CutDeclaration extends Model
 
     public function getSpreadDeviationCmAttribute(): ?float
     {
-        $planned = (float) ($this->workOrder?->input_spread_length_m ?? 0);
+        $planned = (float) ($this->workOrder?->governingFabric()?->effective_spread ?? 0);
         if (!$planned || !$this->actual_spread_length_m) return null;
         return round(((float) $this->actual_spread_length_m - $planned) * 100, 2);
     }

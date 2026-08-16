@@ -26,7 +26,19 @@ Database\Seeders\MasterDataSeeder ... DemoFlowSeeder ...
 
 ### ① ارفع الملفات
 
-ارفع المشروع كله **ما عدا**: `.env` · `vendor/` · `node_modules/` · `storage/logs/*`
+ارفع المشروع كله **ما عدا**:
+
+| متترفعش | ليه |
+|---|---|
+| `.env` | إعدادات السيرفر مختلفة — `.envlive` هو اللي بيتنسخ |
+| `vendor/` | بيتبني على السيرفر بـ `composer install` |
+| `node_modules/` | مش مستخدم أصلًا |
+| **`bootstrap/cache/*.php`** | **أخطر واحد.** الملفات دي بتتبني على جهازك وفيها حزم dev. رفعها + `composer install --no-dev` = `Class "…CollisionServiceProvider" not found` وقفلة كاملة حتى في artisan. |
+| `storage/logs/*` · `storage/framework/{cache,sessions,views}/*` | ملفات مؤقتة |
+
+> لو حصلت المشكلة دي: `rm -f bootstrap/cache/*.php` وخلاص.
+> السيستم كمان فيه حارس في `bootstrap/app.php` بيمسح الـ manifest لوحده
+> لو لقى فيه كلاس مش موجود.
 
 > مهم: اتأكد إن `database/seeders/DatabaseSeeder.php` اترفع بالنسخة الجديدة.
 > لو لسه بينده `MasterDataSeeder` يبقى الرفع ما اكتملش.
@@ -91,6 +103,20 @@ php artisan view:cache
 ```
 
 > لو عدّلت `.env` بعد كده، لازم `php artisan config:clear` وإلا التعديل مش هيتقرأ.
+
+---
+
+## `Class "NunoMaduro\Collision\...\CollisionServiceProvider" not found`
+
+رفعت `bootstrap/cache/packages.php` من جهازك — وفيه حزم dev مش متسطّبة على
+السيرفر. لارافيل بيحمّله أثناء الإقلاع فمتقدرش حتى تشغّل `package:discover`.
+
+```bash
+rm -f bootstrap/cache/*.php
+php artisan lv:doctor
+```
+
+خلاص. (الحارس اللي في `bootstrap/app.php` بيعمل ده تلقائيًا كمان.)
 
 ---
 

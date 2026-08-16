@@ -21,6 +21,7 @@ class CommentController extends Controller
         'work_order'         => \App\Models\WorkOrder::class,
         'cut_declaration'    => \App\Models\CutDeclaration::class,
         'production_receipt' => \App\Models\ProductionReceipt::class,
+        'material_issue'     => \App\Models\MaterialIssue::class,
         'consignment'        => \App\Models\Consignment::class,
     ];
 

@@ -56,7 +56,7 @@ class ConsignmentController extends Controller
         $consignment->load([
             'supplier', 'fabricType', 'color', 'warehouse', 'purchaseOrder',
             'rolls', 'inspections.rolls', 'labReports.readings',
-            'workOrders.factory', 'workOrders.marker',
+            'workOrderFabrics.workOrder.factory',
         ]);
 
         return view('consignments.show', [

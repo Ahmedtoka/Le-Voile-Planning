@@ -25,6 +25,7 @@ class DocNumber
         'work_order'         => 'WO',
         'cut_declaration'    => 'CD',
         'production_receipt' => 'PR',
+        'material_issue'     => 'MI',
     ];
 
     /**

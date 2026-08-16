@@ -2,11 +2,22 @@
 /node_modules
 /public/storage
 /public/hot
+
+# ⚠ مهم: الملفات دي بتتبني على جهاز التطوير وفيها حزم dev.
+# رفعها للسيرفر بيكسر الإقلاع بعد composer install --no-dev.
+/bootstrap/cache/*.php
+
 /storage/*.key
 /storage/logs/*.log
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+!/storage/framework/**/.gitkeep
+
 .env
 .env.*
 !.env.example
+
 .phpunit.result.cache
 .DS_Store
 Thumbs.db

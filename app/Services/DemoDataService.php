@@ -54,6 +54,8 @@ class DemoDataService
         'document_comments', 'approval_steps', 'approvals',
         'production_receipt_lines', 'production_receipts',
         'cut_declaration_lines', 'cut_declarations',
+        'material_issue_lines', 'material_issues',
+        'goods_receipt_rejections', 'work_order_fabrics',
         'accessory_requirements', 'work_order_lines', 'work_orders',
         'marker_lines', 'markers', 'marker_requests',
         'lab_gsm_readings', 'lab_reports',
@@ -767,24 +769,42 @@ class DemoDataService
             $due = now()->subDays(55 - $i * 2);
 
             $wo = WorkOrder::create([
-                'wo_no'          => sprintf('WO-%d-%05d', now()->year, $n),
-                'wo_date'        => now()->subDays(60 - $i * 2)->toDateString(),
-                'consignment_id' => $c->id,
-                'marker_id'      => $marker->id,
-                'factory_id'     => $marker->factory_id,
-                'due_date'       => $due->toDateString(),
-                'allocated_kg'   => $alloc,
-                'allocated_rolls'=> max(1, (int) round($alloc / 150)),
-                'status'         => $status,
-                'created_by'     => $planner,
-                'input_min_width_cm'      => $c->min_width_cm,
-                'input_avg_gsm'           => $c->avg_gsm,
-                'input_spread_length_m'   => $marker->spread_length_m,
-                'input_pieces_per_spread' => $marker->pieces_per_spread,
-                'ply_weight_kg'           => $calc['ply_weight_kg'],
-                'kg_per_piece'            => $calc['kg_per_piece'],
-                'expected_plies'          => $calc['expected_plies'],
-                'expected_pieces'         => $calc['expected_pieces'],
+                'wo_no'         => sprintf('WO-%d-%05d', now()->year, $n),
+                'wo_date'       => now()->subDays(60 - $i * 2)->toDateString(),
+                'factory_id'    => $marker->factory_id,
+                'due_date'      => $due->toDateString(),
+                'receive_date'  => $due->copy()->addDays(3)->toDateString(),
+                'product_title' => $marker->lines->first()?->productModel?->name ?? 'منتج',
+                'qb_code'       => $marker->code,
+                'marker_copies' => 2,
+                'planner_id'    => $planner,
+                'status'        => $status,
+                'created_by'    => $planner,
+            ]);
+
+            // خامة واحدة — الديمو المولّد مش بيحاكي المنتجات متعددة الخامات
+            \App\Models\WorkOrderFabric::create([
+                'work_order_id'         => $wo->id,
+                'line_no'               => 1,
+                'consignment_id'        => $c->id,
+                'fabric_type_id'        => $c->fabric_type_id,
+                'color_id'              => $c->color_id,
+                'marker_id'             => $marker->id,
+                'role'                  => 'main',
+                'calc_mode'             => 'weight',
+                'unit'                  => 'كجم',
+                'planned_qty'           => $alloc,
+                'spread_length_m'       => $marker->spread_length_m,
+                'fabric_width_m'        => round((float) $c->min_width_cm / 100, 3),
+                'gsm_kg_m2'             => round((float) $c->avg_gsm / 1000, 4),
+                'pieces_per_spread'     => $marker->pieces_per_spread,
+                'ply_weight_kg'         => $calc['ply_weight_kg'],
+                'consumption_per_piece' => $calc['kg_per_piece'],
+                'calc_plies'            => $calc['expected_plies'],
+                'calc_pieces'           => $calc['expected_pieces'],
+                'plies'                 => $calc['expected_plies'],
+                'expected_pieces'       => $calc['expected_pieces'],
+                'is_governing'          => true,
             ]);
 
             $spreads = (int) floor($calc['expected_pieces'] / max(1, $marker->pieces_per_spread));
@@ -797,6 +817,7 @@ class DemoDataService
                     'planned_qty'      => $spreads * (int) $ml->qty_per_spread,
                 ]);
             }
+            $wo->refresh()->recalc();
 
             foreach (PlanningEngine::explodeAccessories($wo->refresh()) as $accId => $r) {
                 \App\Models\AccessoryRequirement::updateOrCreate(

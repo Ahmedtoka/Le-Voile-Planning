@@ -43,11 +43,16 @@ class WorkOrder extends Model
         'danger' => 'خارج الحدود',
     ];
 
+    /** @deprecated أمر الشغل بقى بأكتر من خامة — استخدم fabrics() */
     public function consignment()   { return $this->belongsTo(Consignment::class); }
+    /** @deprecated الماركر بقى على مستوى الخامة — استخدم fabrics()->marker */
     public function marker()        { return $this->belongsTo(Marker::class); }
     public function factory()       { return $this->belongsTo(Factory::class); }
     public function creator()       { return $this->belongsTo(User::class, 'created_by'); }
     public function lines()         { return $this->hasMany(WorkOrderLine::class); }
+    public function fabrics()       { return $this->hasMany(WorkOrderFabric::class)->orderBy('line_no'); }
+    public function materialIssueLines() { return $this->hasMany(MaterialIssueLine::class); }
+    public function planner()       { return $this->belongsTo(User::class, 'planner_id'); }
     public function rolls()         { return $this->hasMany(FabricRoll::class); }
     public function cutDeclarations(){ return $this->hasMany(CutDeclaration::class); }
     public function receipts()      { return $this->hasMany(ProductionReceipt::class); }
@@ -86,6 +91,35 @@ class WorkOrder extends Model
         return $base > 0 ? round(((int) $this->received_pieces / $base) * 100, 1) : 0;
     }
 
+    /**
+     * الخامة الحاكمة — اللي بتدي أقل قطع، وبالتالي بتوقف الإنتاج.
+     * على الورق الفرق ده بيبقى مخفي تمامًا.
+     */
+    public function governingFabric(): ?WorkOrderFabric
+    {
+        return $this->fabrics->sortBy(fn ($f) => $f->expected_pieces ?? PHP_INT_MAX)->first();
+    }
+
+    /** الكمية اللي الخامات فعلًا تسمح بيها */
+    public function getComputedGoverningQtyAttribute(): int
+    {
+        $vals = $this->fabrics->pluck('expected_pieces')->filter()->all();
+        return $vals ? (int) min($vals) : 0;
+    }
+
+    /** الكمية اللي هتتنفذ فعلًا: اعتماد المخطط لو موجود، وإلا الحاكمة */
+    public function getTargetQtyAttribute(): int
+    {
+        return (int) ($this->approved_qty ?: $this->governing_qty ?: $this->computed_governing_qty);
+    }
+
+    /** فرق بين الخامات — رقم بيوضّح النقص أو الركود */
+    public function getFabricGapAttribute(): int
+    {
+        $vals = $this->fabrics->pluck('expected_pieces')->filter()->all();
+        return count($vals) > 1 ? (int) (max($vals) - min($vals)) : 0;
+    }
+
     /** إعادة حساب الإجماليات من السطور والاستلامات */
     public function recalc(): void
     {
@@ -93,9 +127,18 @@ class WorkOrder extends Model
         $cut      = (int) $this->lines->sum('cut_qty');
         $received = (int) $this->lines->sum('received_qty');
 
+        $this->load('fabrics');
+
         $this->forceFill([
             'cut_pieces'      => $cut,
             'received_pieces' => $received,
+            'governing_qty'   => $this->computed_governing_qty ?: null,
         ])->saveQuietly();
+
+        // علّم الخامة الحاكمة
+        $min = $this->computed_governing_qty;
+        foreach ($this->fabrics as $f) {
+            $f->forceFill(['is_governing' => $min > 0 && (int) $f->expected_pieces === $min])->saveQuietly();
+        }
     }
 }

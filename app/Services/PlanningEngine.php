@@ -194,6 +194,166 @@ class PlanningEngine
         return $w;
     }
 
+
+    /* ═══════════════════════════════════════════════════════════════
+       حسبة الخامة الواحدة داخل أمر شغل متعدد الخامات
+       ═══════════════════════════════════════════════════════════════
+
+       الواقع من ورق المصنع: المنتج بيتعمل من أكتر من خامة، وكل خامة
+       بتتحسب بطريقة مختلفة:
+
+       • بالطول (تل مستورد — بالمتر)
+             استهلاك القطعة = طول الفرشة ÷ عدد القطع في الفرشة
+             عدد الرقات     = FLOOR(المتاح بالمتر ÷ طول الفرشة)
+
+       • بالوزن (مياي/سنجل — بالكيلو)
+             وزن الراق      = طول الفرشة × عرض القماش (م) × البنشر (كجم/م²)
+             استهلاك القطعة = وزن الراق ÷ عدد القطع في الفرشة
+             عدد الرقات     = FLOOR(المتاح بالكيلو ÷ وزن الراق)
+
+       في الحالتين: القص المتوقع = عدد الرقات × عدد القطع في الفرشة
+
+       ★ طول الفرشة المستخدم هو **طول الأمان** لو متحدد، مش الطول الأساسي.
+         (متحقق من ورقة KB106: 3.75 بالأمان مش 3.7 هي اللي طلّعت وزن راق 1.433)
+    */
+    public static function computeFabric(array $in): array
+    {
+        $mode    = $in['calc_mode'] ?? 'weight';
+        $spread  = (float) ($in['spread_length_safe_m'] ?? 0) ?: (float) ($in['spread_length_m'] ?? 0);
+        $pps     = (int) ($in['pieces_per_spread'] ?? 0);
+        $avail   = (float) ($in['available'] ?? 0);
+        $widthM  = (float) ($in['fabric_width_m'] ?? 0);
+        $gsm     = (float) ($in['gsm_kg_m2'] ?? 0);
+
+        $errors = [];
+        if ($spread <= 0) $errors[] = 'طول الفرشة لازم يكون أكبر من صفر.';
+        if ($pps <= 0)    $errors[] = 'عدد القطع في الفرشة لازم يكون أكبر من صفر.';
+
+        if ($mode === 'weight') {
+            if ($widthM <= 0) $errors[] = 'عرض القماش لازم يكون أكبر من صفر للخامة اللي بتتحسب بالوزن.';
+            if ($gsm <= 0)    $errors[] = 'وزن البنشر لازم يكون أكبر من صفر للخامة اللي بتتحسب بالوزن.';
+        }
+
+        if ($errors) {
+            return ['ok' => false, 'errors' => $errors];
+        }
+
+        if ($mode === 'weight') {
+            $plyWeight   = $spread * $widthM * $gsm;          // كجم للراق الواحد
+            $consumption = $plyWeight / $pps;                  // كجم للقطعة
+            $perPly      = $plyWeight;                         // الوحدة المستهلكة لكل رقة
+        } else {
+            $plyWeight   = null;
+            $consumption = $spread / $pps;                     // متر للقطعة
+            $perPly      = $spread;                            // متر لكل رقة
+        }
+
+        $plies    = $perPly > 0 ? (int) floor($avail / $perPly) : 0;
+        $expected = $plies * $pps;
+        $leftover = $perPly > 0 ? round($avail - ($plies * $perPly), 3) : null;
+
+        return [
+            'ok'                    => true,
+            'errors'                => [],
+            'calc_mode'             => $mode,
+            'unit'                  => $mode === 'weight' ? 'كجم' : 'متر',
+            'spread_used_m'         => round($spread, 3),
+            'ply_weight_kg'         => $plyWeight !== null ? round($plyWeight, 4) : null,
+            'consumption_per_piece' => round($consumption, 5),
+            'plies'                 => $plies,
+            'expected_pieces'       => $expected,
+            'leftover'              => $leftover,
+            'needed_for'            => fn (int $pieces) => round($consumption * $pieces, 3),
+        ];
+    }
+
+    /**
+     * أمر شغل بأكتر من خامة.
+     *
+     * بيحسب كل خامة لوحدها، وبيحدد **الخامة الحاكمة** = اللي بتدي أقل قطع.
+     * دي اللي بتوقف الإنتاج فعليًا، وعلى الورق الفرق ده بيبقى مخفي تمامًا.
+     *
+     * @param  array $fabrics  كل عنصر = مدخلات computeFabric + 'label'
+     */
+    public static function computeWorkOrder(array $fabrics): array
+    {
+        $rows = [];
+        $min  = null;
+
+        foreach ($fabrics as $i => $f) {
+            $r = self::computeFabric($f);
+            $r['label'] = $f['label'] ?? ('خامة ' . ($i + 1));
+            $r['index'] = $i;
+            $rows[] = $r;
+
+            if (($r['ok'] ?? false) && ($min === null || $r['expected_pieces'] < $min)) {
+                $min = $r['expected_pieces'];
+            }
+        }
+
+        $governing = null;
+        foreach ($rows as $k => $r) {
+            $is = ($r['ok'] ?? false) && $r['expected_pieces'] === $min;
+            $rows[$k]['is_governing'] = $is;
+            if ($is && $governing === null) $governing = $k;
+        }
+
+        // الفجوة بين الخامة الحاكمة وأعلى خامة — ده الرقم اللي بيوضّح النقص
+        $max  = collect($rows)->where('ok', true)->max('expected_pieces');
+        $gaps = [];
+        foreach ($rows as $r) {
+            if (!($r['ok'] ?? false) || $r['expected_pieces'] <= (int) $min) continue;
+            $gaps[] = [
+                'label'   => $r['label'],
+                'surplus' => $r['expected_pieces'] - (int) $min,
+            ];
+        }
+
+        return [
+            'ok'             => collect($rows)->every(fn ($r) => $r['ok'] ?? false),
+            'fabrics'        => $rows,
+            'governing_qty'  => (int) ($min ?? 0),
+            'governing_index'=> $governing,
+            'max_qty'        => (int) ($max ?? 0),
+            'gaps'           => $gaps,
+            'warnings'       => self::fabricWarnings($rows, (int) ($min ?? 0)),
+        ];
+    }
+
+    /** تحذيرات الخامات المتعددة */
+    private static function fabricWarnings(array $rows, int $min): array
+    {
+        $w = [];
+
+        foreach ($rows as $r) {
+            if (!($r['ok'] ?? false)) {
+                $w[] = ['level' => 'danger', 'text' => $r['label'] . ': ' . implode(' ', $r['errors'])];
+                continue;
+            }
+            if ($r['expected_pieces'] === 0) {
+                $w[] = ['level' => 'danger',
+                        'text'  => $r['label'] . ': الكمية المتاحة مش كفاية ولا رِقّة واحدة.'];
+            }
+        }
+
+        $okRows = array_values(array_filter($rows, fn ($r) => ($r['ok'] ?? false) && $r['expected_pieces'] > 0));
+
+        if (count($okRows) > 1 && $min > 0) {
+            $max = max(array_column($okRows, 'expected_pieces'));
+            if ($max > $min) {
+                $pct = round((($max - $min) / $max) * 100, 1);
+                $gov = collect($okRows)->firstWhere('expected_pieces', $min)['label'] ?? '';
+                $w[] = [
+                    'level' => $pct > 10 ? 'danger' : 'warning',
+                    'text'  => "الخامات مش متوازنة: «{$gov}» هتدي {$min} قطعة بس، وأعلى خامة هتدي {$max} "
+                             . "— فرق {$pct}%. يا تزوّد الخامة الحاكمة يا هتسيب باقي الخامات راكدة.",
+                ];
+            }
+        }
+
+        return $w;
+    }
+
     /**
      * تأثير الفرق في طول الفرشة.
      *

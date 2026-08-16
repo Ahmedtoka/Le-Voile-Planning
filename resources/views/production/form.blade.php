@@ -46,7 +46,7 @@
           <tr>
             <td>{{ $wl->productModel?->name }}
               <input type="hidden" name="lines[{{ $i }}][product_model_id]" value="{{ $wl->product_model_id }}">
-              <input type="hidden" name="lines[{{ $i }}][color_id]" value="{{ $wo->consignment?->color_id }}"></td>
+              <input type="hidden" name="lines[{{ $i }}][color_id]" value="{{ $wo->governingFabric()?->color_id }}"></td>
             <td>{{ $wl->size?->name ?? 'كل المقاسات' }}
               <input type="hidden" name="lines[{{ $i }}][size_id]" value="{{ $wl->size_id }}"></td>
             <td class="num">{{ number_format($wl->cut_qty) }}</td>

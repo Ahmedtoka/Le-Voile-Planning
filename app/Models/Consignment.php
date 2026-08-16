@@ -56,7 +56,10 @@ class Consignment extends Model
     public function rolls()         { return $this->hasMany(FabricRoll::class); }
     public function inspections()   { return $this->hasMany(FabricInspection::class); }
     public function labReports()    { return $this->hasMany(LabReport::class); }
-    public function workOrders()    { return $this->hasMany(WorkOrder::class); }
+    public function workOrders()      { return $this->hasMany(WorkOrder::class); }
+    public function workOrderFabrics(){ return $this->hasMany(WorkOrderFabric::class); }
+    public function issueLines()      { return $this->hasMany(MaterialIssueLine::class); }
+    public function rejections()      { return $this->hasMany(GoodsReceiptRejection::class); }
     public function goodsReceipts() { return $this->hasMany(GoodsReceipt::class); }
 
     public function getStatusNameAttribute(): string
@@ -124,9 +127,11 @@ class Consignment extends Model
      */
     public function recalcRemaining(): void
     {
-        $allocated = (float) $this->workOrders()
-            ->whereNotIn('status', ['cancelled', 'draft'])
-            ->sum('allocated_kg');
+        /* المخصص بيتجمع من خامات أوامر الشغل — لأن أمر الشغل الواحد
+           بياخد من أكتر من حوض، وكل حوض بكميته. */
+        $allocated = (float) $this->workOrderFabrics()
+            ->whereHas('workOrder', fn ($q) => $q->whereNotIn('status', ['cancelled', 'draft']))
+            ->sum('planned_qty');
 
         $released = in_array($this->status, ['released', 'in_production', 'closed'], true)
             ? (float) ($this->released_kg ?: $this->total_kg)

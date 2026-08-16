@@ -37,6 +37,7 @@ class DocumentEffects
             $doc instanceof WorkOrder         => self::workOrder($doc),
             $doc instanceof CutDeclaration    => self::cutDeclaration($doc),
             $doc instanceof ProductionReceipt => self::productionReceipt($doc),
+            $doc instanceof \App\Models\MaterialIssue => self::materialIssue($doc),
             default => null,
         };
     }
@@ -299,12 +300,68 @@ class DocumentEffects
         ])->save();
     }
 
-    /** أمر شغل معتمد ⇒ خصم الكيلوهات من الحوض + حجز الأتواب */
+    /**
+     * ⑥ إذن صرف خام معتمد ⇒ الخامة خرجت فعليًا للمصنع.
+     * بيخصم من رصيد الحوض ويسجّل حركة مخزون خارجة.
+     */
+    protected static function materialIssue(\App\Models\MaterialIssue $mi): void
+    {
+        DB::transaction(function () use ($mi) {
+            $mi->load('lines.consignment');
+
+            foreach ($mi->lines as $line) {
+                StockMovement::create([
+                    'moved_at'       => $mi->doc_date,
+                    'warehouse_id'   => $mi->warehouse_id,
+                    'item_type'      => 'fabric',
+                    'fabric_type_id' => $line->fabric_type_id,
+                    'color_id'       => $line->color_id,
+                    'consignment_id' => $line->consignment_id,
+                    'direction'      => 'out',
+                    'quality_state'  => 'released',
+                    'qty'            => $line->qty,
+                    'unit'           => $line->unit,
+                    'source_type'    => \App\Models\MaterialIssue::class,
+                    'source_id'      => $mi->id,
+                    'reference'      => $mi->doc_no,
+                    'created_by'     => auth()->id(),
+                ]);
+
+                $line->consignment?->recalcRemaining();
+
+                // الخامة المنصرفة بتتسجّل على سطر أمر الشغل
+                if ($line->work_order_fabric_id) {
+                    \App\Models\WorkOrderFabric::where('id', $line->work_order_fabric_id)
+                        ->increment('issued_qty', (float) $line->qty);
+                }
+            }
+
+            // أوامر الشغل اللي اتصرفلها خامة بتدخل التشغيل
+            foreach ($mi->lines->pluck('work_order_id')->filter()->unique() as $woId) {
+                $wo = WorkOrder::find($woId);
+                if ($wo && in_array($wo->status, ['approved', 'sent_to_factory'], true)) {
+                    $wo->forceFill(['status' => 'cutting'])->save();
+                }
+            }
+
+            Notifier::broadcastToRole('factory_follow', 'material_issued',
+                'اتصرفت خامة لمصنع',
+                $mi->doc_no . ' — ' . ($mi->factory?->name ?? '') . ' · '
+                    . number_format((float) $mi->total_qty, 1) . ' وحدة',
+                null, 'info');
+        });
+    }
+
+    /** أمر شغل معتمد ⇒ حجز الكميات على الأحواض */
     protected static function workOrder(WorkOrder $wo): void
     {
         DB::transaction(function () use ($wo) {
-            $wo->consignment?->recalcRemaining();
-            $wo->consignment?->forceFill(['status' => 'in_production'])->save();
+            $wo->load('fabrics.consignment');
+
+            foreach ($wo->fabrics as $f) {
+                $f->consignment?->recalcRemaining();
+                $f->consignment?->forceFill(['status' => 'in_production'])->save();
+            }
 
             // تسجيل الإكسسوارات المطلوبة
             foreach (PlanningEngine::explodeAccessories($wo) as $accId => $row) {
@@ -338,7 +395,7 @@ class DocumentEffects
 
             $wo->refresh()->recalc();
 
-            $v = PlanningEngine::variance((float) $wo->expected_pieces, (float) $wo->cut_pieces);
+            $v = PlanningEngine::variance((float) $wo->target_qty, (float) $wo->cut_pieces);
 
             $wo->forceFill([
                 'actual_spread_length_m' => $cd->actual_spread_length_m,
@@ -383,7 +440,7 @@ class DocumentEffects
                     'product_model_id' => $line->product_model_id,
                     'size_id'          => $line->size_id,
                     'color_id'         => $line->color_id,
-                    'consignment_id'   => $wo?->consignment_id,
+                    'consignment_id'   => $wo?->fabrics->first()?->consignment_id,
                     'direction'        => 'in',
                     'qty'              => $line->qty,
                     'unit'             => 'قطعة',
@@ -405,7 +462,9 @@ class DocumentEffects
                 $wo->forceFill(['status' => $status])->save();
 
                 if ($status === 'closed') {
-                    $wo->consignment?->recalcRemaining();
+                    foreach ($wo->load('fabrics.consignment')->fabrics as $f) {
+                        $f->consignment?->recalcRemaining();
+                    }
                 }
             }
         });

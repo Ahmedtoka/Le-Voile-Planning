@@ -47,6 +47,10 @@ class ApprovalFlowSeeder extends Seeder
             ['مراجعة متابعة المصانع', 'factory_follow'],
             ['اعتماد المخطط', 'planner'],
         ]],
+        'material_issue' => ['إذن صرف خام', [
+            ['اعتماد أمين المخزن', 'storekeeper'],
+            ['مراجعة مراقب المخزون', 'stock_controller'],
+        ]],
         'production_receipt' => ['استلام إنتاج', [
             ['اعتماد أمين المخزن', 'storekeeper'],
         ]],

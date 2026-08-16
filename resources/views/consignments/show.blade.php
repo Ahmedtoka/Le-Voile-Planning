@@ -89,21 +89,27 @@
       <div class="card-header">أوامر الشغل على الحوض ده</div>
       <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead><tr><th>أمر الشغل</th><th>المصنع</th><th>الماركر</th><th>كجم</th><th>متوقع</th><th>مقصوص</th><th>مستلم</th><th>الحالة</th></tr></thead>
+          <thead><tr><th>أمر الشغل</th><th>المصنع</th><th>الكمية</th><th>القص المتوقع</th>
+            <th>المنصرف</th><th>مقصوص</th><th>مستلم</th><th>الحالة</th></tr></thead>
           <tbody>
-          @forelse($row->workOrders as $w)
-            <tr>
-              <td class="num"><a href="{{ route('work-orders.show',$w) }}">{{ $w->wo_no }}</a></td>
+          @forelse($row->workOrderFabrics as $f)
+            @php $w = $f->workOrder; @endphp
+            @continue(!$w)
+            <tr class="{{ $f->is_governing ? 'table-warning' : '' }}">
+              <td class="num">
+                <a href="{{ route('work-orders.show',$w) }}">{{ $w->wo_no }}</a>
+                @if($f->is_governing)<div><span class="badge bg-warning">حاكمة</span></div>@endif
+              </td>
               <td>{{ $w->factory?->name }}</td>
-              <td class="num">{{ $w->marker?->code }}</td>
-              <td class="num">{{ number_format((float)$w->allocated_kg,1) }}</td>
-              <td class="num">{{ number_format((int)$w->expected_pieces) }}</td>
+              <td class="num">{{ rtrim(rtrim(number_format((float)$f->planned_qty,2),'0'),'.') }} {{ $f->unit }}</td>
+              <td class="num">{{ number_format((int)$f->expected_pieces) }}</td>
+              <td class="num">{{ rtrim(rtrim(number_format($f->issued_actual,2),'0'),'.') }}</td>
               <td class="num">{{ number_format((int)$w->cut_pieces) }}</td>
               <td class="num">{{ number_format((int)$w->received_pieces) }}</td>
               <td><span class="badge bg-{{ $w->status_color }}">{{ $w->status_name }}</span></td>
             </tr>
           @empty
-            <tr><td colspan="8" class="text-center text-muted py-3">مفيش أوامر شغل لسه.</td></tr>
+            <tr><td colspan="8" class="text-center text-muted py-3">مفيش أوامر شغل على الحوض ده.</td></tr>
           @endforelse
           </tbody>
         </table>

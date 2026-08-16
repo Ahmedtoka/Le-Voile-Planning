@@ -12,4 +12,5 @@ return [
     'work_order'         => 'أمر شغل',
     'cut_declaration'    => 'بيان قص',
     'production_receipt' => 'استلام إنتاج',
+    'material_issue'     => 'إذن صرف خام',
 ];

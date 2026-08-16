@@ -13,6 +13,8 @@ return [
     'markers.index'              => 'الماركرات',
     'work-orders.index'          => 'أوامر الشغل',
     'cut-declarations.index'     => 'بيانات القص',
+    'material-issues.index'      => 'أذون صرف الخام',
+    'rejections.index'           => 'المرفوضات والمعلّق',
     'production-receipts.index'  => 'استلامات الإنتاج',
     'planning.calculator'        => 'حاسبة التخطيط',
     'planning.coverage'          => 'أيام التغطية',

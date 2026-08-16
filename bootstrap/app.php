@@ -4,6 +4,43 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
+/*
+|--------------------------------------------------------------------------
+| حارس manifest الحزم
+|--------------------------------------------------------------------------
+| bootstrap/cache/packages.php بيتبني على جهاز التطوير وفيه حزم dev
+| (زي collision و ignition). لو الملف ده اترفع للسيرفر واتعمل
+| composer install --no-dev، الكلاسات دي مش هتكون موجودة.
+|
+| ولارافيل بيحمّل الملف ده أثناء الإقلاع — قبل ما يقدر يصلّحه — فالنتيجة
+| "Class ... not found" وقفلة كاملة حتى في artisan، فمتقدرش حتى تشغّل
+| package:discover عشان تصلّحها.
+|
+| هنا بنتأكد إن كل provider مذكور موجود فعلًا. لو واحد ناقص بنمسح الـ
+| manifest ولارافيل بيعيد بناءه لوحده من vendor الموجود.
+*/
+$__manifest = __DIR__.'/cache/packages.php';
+
+if (is_file($__manifest)) {
+    $__packages = @require $__manifest;
+
+    if (is_array($__packages)) {
+        foreach ($__packages as $__pkg) {
+            foreach ((array) ($__pkg['providers'] ?? []) as $__provider) {
+                if (!class_exists($__provider)) {
+                    @unlink($__manifest);
+                    @unlink(__DIR__.'/cache/services.php');
+                    break 2;
+                }
+            }
+        }
+    }
+
+    unset($__packages, $__pkg, $__provider);
+}
+
+unset($__manifest);
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',

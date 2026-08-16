@@ -10,9 +10,38 @@
 
 <div class="row g-3">
   <div class="col-lg-5">
+    <div class="card mb-3" style="border:2px solid var(--lv-brand)">
+      <div class="card-header" style="background:var(--lv-tint);color:var(--lv-brand-ink)">
+        <i class="bi bi-file-earmark-text" aria-hidden="true"></i> ⓪ الورق الحقيقي — المستندات الفعلية
+        <span class="badge bg-{{ 'primary' }} ms-1">الافتراضي</span>
+      </div>
+      <form method="post" action="{{ route('data.paper') }}" class="card-body">@csrf
+        <p class="hint mb-2">
+          بيفرّغ السيستم ويدخّل المستندات اللي في إيدك بأرقامها الفعلية، عشان تقارن كل شاشة بالورقة.
+        </p>
+        <ul class="small mb-3" style="line-height:1.9">
+          <li><b>طلب شراء 107</b> — 22 سطر، مياي بالكيلو وتل بالمتر</li>
+          <li><b>إذن استلام 1000885</b> (أنس تكس) + الخمس قرارات رفض وتعليق</li>
+          <li><b>تقرير فحص 04379</b> — 3 أتواب · 61.7 كجم · رفض 2 توب 8.36 كجم</li>
+          <li><b>أمر شغل KB106</b> (الخطيب) — خامتين بحسبة كل واحدة</li>
+          <li><b>إذن صرف 1303774</b> — يغطي KB106 و KB107</li>
+        </ul>
+        <div class="note-box mb-3" style="font-size:.78rem">
+          هتشوف على شاشة أمر الشغل إن التل بيدي <b>392</b> والمياي <b>459</b> —
+          الفرق ده مخفي تمامًا على الورق، والسيستم بيوريهولك.
+        </div>
+        <label class="form-label req" for="c0">اكتب «الورق» للتأكيد</label>
+        <input id="c0" name="confirm" class="form-control form-control-sm mb-2" placeholder="الورق" required autocomplete="off">
+        <button class="btn btn-plum btn-sm w-100" onclick="return confirm('هيتفرّغ السيستم ويتدخّل الورق الحقيقي. متأكد؟')">
+          <i class="bi bi-file-earmark-check" aria-hidden="true"></i> ادخّل الورق الحقيقي
+        </button>
+      </form>
+    </div>
+
+    <div class="col-lg-5">
     <div class="card mb-3">
       <div class="card-header text-success">
-        <i class="bi bi-database-add"></i> ① ديمو كامل — السيستم وهو شغّال
+        <i class="bi bi-database-add" aria-hidden="true"></i> ① ديمو كامل — بيانات مولّدة للتجربة
       </div>
       <form method="post" action="{{ route('data.generate') }}" class="card-body">@csrf
         <p class="hint mb-2">
@@ -99,6 +128,7 @@
       </div>
       <div class="card-footer bg-white hint">
         من التيرمنال:
+        <code style="direction:ltr;display:inline-block">php artisan lv:paper</code> الورق الحقيقي ·
         <code style="direction:ltr;display:inline-block">php artisan lv:demo</code> ديمو كامل ·
         <code style="direction:ltr;display:inline-block">php artisan lv:master</code> بيانات أساسية ·
         <code style="direction:ltr;display:inline-block">php artisan lv:reset</code> مسح ·

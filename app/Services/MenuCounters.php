@@ -85,7 +85,8 @@ class MenuCounters
         // ── الأحواض: مفرج عنها ولسه ما اتعملهاش أمر شغل ⇒ محتاجة أكشن ──
         if ($can('wo.manage')) {
             $c['consignments.index'] = Consignment::readyForProduction()
-                ->whereDoesntHave('workOrders', fn ($q) => $q->whereNotIn('status', ['cancelled']))
+                ->whereDoesntHave('workOrderFabrics', fn ($q) =>
+                    $q->whereHas('workOrder', fn ($w) => $w->whereNotIn('status', ['cancelled'])))
                 ->count();
         }
 
@@ -120,6 +121,19 @@ class MenuCounters
         if ($can('prod.manage')) {
             $c['production-receipts.index'] = WorkOrder::open()
                 ->whereColumn('cut_pieces', '>', 'received_pieces')->count();
+        }
+
+        // ── إذن صرف خام: أوامر معتمدة ولسه ما اتصرفلهاش خامة ──
+        if ($can('receipt.manage')) {
+            $c['material-issues.index'] = WorkOrder::whereIn('status', ['approved', 'sent_to_factory'])
+                ->whereDoesntHave('materialIssueLines', fn ($q) =>
+                    $q->whereHas('materialIssue', fn ($m) => $m->where('status', 'approved')))
+                ->count();
+        }
+
+        // ── المرفوضات: البنود المفتوحة اللي محتاجة قرار ──
+        if ($can('wo.manage') || $can('po.source')) {
+            $c['rejections.index'] = \App\Models\GoodsReceiptRejection::open()->count();
         }
 
         // ── التغطية: موديلات في الخطر ──

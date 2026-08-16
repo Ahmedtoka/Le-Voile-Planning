@@ -106,17 +106,21 @@ class ImportExportController extends Controller
 
     public function exportWorkOrders()
     {
-        $rows = WorkOrder::with(['consignment.color','factory','marker'])->latest('id')->get()->map(fn ($w) => [
-            $w->wo_no, $w->wo_date?->format('Y-m-d'), $w->consignment?->consignment_no,
-            $w->consignment?->color?->code, $w->factory?->name, $w->marker?->code,
-            $w->allocated_kg, $w->kg_per_piece, $w->expected_pieces, $w->cut_pieces,
-            $w->received_pieces, $w->outstanding_pieces, $w->variance_pct, $w->status_name,
-        ])->all();
+        $rows = WorkOrder::with(['fabrics.consignment', 'fabrics.color', 'factory'])->latest('id')->get()
+            ->map(fn ($w) => [
+                $w->wo_no, $w->wo_date?->format('Y-m-d'), $w->product_title,
+                $w->fabrics->pluck('consignment.consignment_no')->filter()->implode('، '),
+                $w->fabrics->pluck('color.code')->filter()->implode('، '),
+                $w->factory?->name,
+                round((float) $w->fabrics->sum('planned_qty'), 2),
+                $w->computed_governing_qty, $w->target_qty, $w->cut_pieces,
+                $w->received_pieces, $w->outstanding_pieces, $w->variance_pct, $w->status_name,
+            ])->all();
 
         return Excel::download(
             new TableExport(
-                ['أمر الشغل','التاريخ','الحوض','اللون','المصنع','الماركر','الكمية (كجم)',
-                 'استهلاك القطعة','المتوقع','المقصوص','المستلم','المتبقي','الانحراف %','الحالة'],
+                ['أمر الشغل','التاريخ','المنتج','الرسائل','الألوان','المصنع','إجمالي الخامة',
+                 'الحاكمة','المستهدف','المقصوص','المستلم','المتبقي','الانحراف %','الحالة'],
                 $rows, 'أوامر الشغل'
             ),
             'work-orders-' . now()->format('Ymd') . '.xlsx'

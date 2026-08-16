@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\ActivityLogger;
 use App\Services\DemoDataService;
+use App\Services\PaperSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -40,6 +41,24 @@ class DemoDataController extends Controller
             . e(collect($stats)->map(fn ($v, $k) => "{$k}: {$v}")->implode(' · ')) . '</span>');
     }
 
+    /** ⓪ الورق الحقيقي — المستندات الفعلية بأرقامها */
+    public function generatePaper(Request $request)
+    {
+        $request->validate(['confirm' => ['required', 'in:الورق']], [], ['confirm' => 'التأكيد']);
+
+        @set_time_limit(600);
+        $stats = (new PaperSeeder())->run();
+        ActivityLogger::log('paper_generated', null, 'إدخال المستندات الورقية');
+
+        return back()->with('info',
+            '<b>تم إدخال الورق الحقيقي.</b> قارن كل شاشة بالورقة اللي في إيدك: '
+            . '<a href="' . route('purchase-orders.index') . '">طلب شراء 107</a> · '
+            . '<a href="' . route('goods-receipts.index') . '">استلام 1000885</a> · '
+            . '<a href="' . route('work-orders.index') . '">KB106</a> · '
+            . '<a href="' . route('material-issues.index') . '">صرف 1303774</a>'
+            . '<br><span class="hint">' . e(collect($stats)->map(fn ($v, $k) => "{$k}: {$v}")->implode(' · ')) . '</span>');
+    }
+
     /** ② بيانات أساسية بس — نقطة بداية للشغل الحقيقي */
     public function generateMaster(Request $request)
     {
@@ -71,6 +90,8 @@ class DemoDataController extends Controller
         $out = [];
         foreach ([
             'suppliers' => 'موردين', 'factories' => 'مصانع', 'warehouses' => 'مخازن',
+            'material_issues' => 'أذون صرف', 'goods_receipt_rejections' => 'رفض وتعليق',
+            'work_order_fabrics' => 'خامات أوامر',
             'fabric_types' => 'خامات', 'colors' => 'ألوان', 'product_models' => 'موديلات',
             'accessories' => 'إكسسوارات', 'purchase_orders' => 'طلبات شراء',
             'stock_additions' => 'أذون إضافة', 'consignments' => 'أحواض',
