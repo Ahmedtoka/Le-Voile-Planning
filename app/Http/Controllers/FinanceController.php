@@ -36,7 +36,7 @@ class FinanceController extends Controller
             'suppliers' => Supplier::orderBy('name')->pluck('name', 'id'),
             'stages'    => PurchaseOrder::STAGES,
             'summary'   => [
-                'awaiting_ack' => (clone $base)->where('stage', 'finance')->count(),
+                'priced_today' => PurchaseOrder::whereDate('sourced_at', now()->toDateString())->count(),
                 'total'        => (float) (clone $base)->sum('total'),
                 'due_30'       => (float) (clone $base)
                                     ->whereNotNull('delivery_date')

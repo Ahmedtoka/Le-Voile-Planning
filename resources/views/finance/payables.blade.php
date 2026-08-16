@@ -2,15 +2,15 @@
 @section('content')
 
 <div class="note-box mb-3">
-  الشاشة دي للمتابعة — <b>مفيش اعتماد ولا توقيعات</b>. كل طلب اتحدد له مورد وسعر
-  بيظهر هنا كمستحق متوقع. دوس «علمت» والطلب يبقى جاهز للاستلام على طول،
-  والحسابات تتابع الرصيد وتصفّيه دفعات أو كاش حسب الاتفاق مع المورد.
+  الشاشة دي <b>متابعة بس — مفيش أي إجراء مطلوب منك</b>. أول ما المشتريات تسعّر طلب،
+  الترانزاكشن بتنزل هنا تلقائيًا: المستحق، المورد، طريقة الدفع، وتاريخ التوريد.
+  تابع الرصيد وصفّيه دفعات أو كاش حسب الاتفاق.
 </div>
 
 <div class="row g-3 mb-3">
   <div class="col-md-4"><div class="stat">
-    <div class="v {{ $summary['awaiting_ack'] ? 'text-warning' : '' }}">{{ $summary['awaiting_ack'] }}</div>
-    <div class="l">مستني علم الحسابات</div></div></div>
+    <div class="v">{{ $summary['priced_today'] }}</div>
+    <div class="l">اتسعّرت النهارده</div></div></div>
   <div class="col-md-4"><div class="stat">
     <div class="v num">{{ number_format($summary['total'], 0) }}</div>
     <div class="l">إجمالي المستحق المتوقع ({{ config('lvplanning.currency') }})</div></div></div>
@@ -49,9 +49,8 @@
               <td class="hint">{{ $r->payment_method ?: '—' }}</td>
               <td><span class="badge bg-{{ $r->stage_color }}">{{ $r->stage_name }}</span></td>
               <td>
-                @if($r->stage === 'finance')
-                  <a href="{{ route('finance.ack',$r) }}" class="btn btn-sm btn-plum py-0">علّم</a>
-                @endif
+                <a href="{{ route('purchase-orders.edit',$r) }}" class="btn btn-sm btn-outline-plum py-0"
+                   aria-label="عرض" title="عرض"><i class="bi bi-eye" aria-hidden="true"></i></a>
               </td>
             </tr>
           @empty

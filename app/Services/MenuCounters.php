@@ -45,10 +45,7 @@ class MenuCounters
             $c['purchasing.queue'] = PurchaseOrder::where('stage', 'purchasing')->count();
         }
 
-        // ── الحسابات: الطلبات اللي اتسعّرت ومستنية علم ──
-        if ($can('po.finance')) {
-            $c['finance.payables'] = PurchaseOrder::where('stage', 'finance')->count();
-        }
+        // الحسابات متابعة بس — مفيش أكشن مطلوب فمفيش كاونتر.
 
         // ── طلبات الشراء: مسودات التخطيط بس (لو فضلت واحدة) ──
         if ($can('po.request')) {

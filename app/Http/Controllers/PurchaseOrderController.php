@@ -94,9 +94,9 @@ class PurchaseOrderController extends Controller
                  'tone' => 'muted', 'note' => 'من ساعة ما التخطيط طلبه.'],
                 ['label' => 'اتسعّرت النهارده', 'value' => $sourcedToday, 'tone' => 'ok',
                  'note' => 'طلبات خلّصت تسعير ونزلت للحسابات.'],
-                ['label' => 'عند الحسابات', 'value' => PurchaseOrder::where('stage', 'finance')->count(),
-                 'note' => 'مستنية علم الحسابات.',
-                 'link' => [route('finance.payables'), 'افتح الحسابات']],
+                ['label' => 'مستنية الاستلام', 'value' => PurchaseOrder::where('stage', 'approved')->count(),
+                 'tone' => 'brand', 'note' => 'اتسعّرت ومستنية القماش يوصل المخزن.',
+                 'link' => [route('stock-additions.index'), 'أذون الإضافة']],
             ],
         ]);
     }
@@ -229,37 +229,38 @@ class PurchaseOrderController extends Controller
                 'tax_pct'        => $data['tax_pct'] ?? 0,
                 'sourced_by'     => auth()->id(),
                 'sourced_at'     => now(),
+                // «احفظ» = التسعير خلص. الطلب بقى جاهز للاستلام في المخزن،
+                // والحسابات بيوصلها الترانزاكشن للمتابعة — من غير أي خطوة عليها.
+                'stage'          => 'approved',
+                'status'         => 'approved',
             ]);
 
             $purchase_order->refresh()->recalcTotals();
         });
 
-        ActivityLogger::log('sourced', $purchase_order, 'تسعير طلب شراء ' . $purchase_order->po_no);
-        return redirect()->route('purchasing.source', $purchase_order)->with('success', 'تم الحفظ — راجع الإجمالي وبعدين نزّل للحسابات.');
-    }
+        $purchase_order->refresh();
 
-    /** ② ← ③ تنزيل الطلب للحسابات */
-    public function toFinance(PurchaseOrder $purchase_order)
-    {
-        abort_unless($purchase_order->stage === 'purchasing', 403);
+        // أمين المخزن: فيه توريد جاي بتاريخ محدد
+        Notifier::broadcastToRole('storekeeper', 'po_ready',
+            'طلب اتسعّر — استلام متوقع ' . $purchase_order->delivery_date?->format('Y-m-d'),
+            $purchase_order->po_no . ' — ' . ($purchase_order->supplier?->name ?? '')
+                . ' · ' . number_format((float) $purchase_order->total, 0) . ' ' . config('lvplanning.currency'),
+            route('stock-additions.index'), 'info');
 
-        if (!$purchase_order->readyForFinance()) {
-            return back()->withErrors(['msg' => 'لازم تحدد المورد وتاريخ التوريد الأول.']);
-        }
-
-        $purchase_order->forceFill(['stage' => 'finance'])->save();
-
+        // الحسابات: الترانزاكشن نزلها للمتابعة
         Notifier::broadcastToRole('finance', 'po_payable',
-            'طلب شراء للعلم — مستحق متوقع لمورد',
-            $purchase_order->po_no . ' — ' . $purchase_order->supplier?->name . ' · '
-                . number_format((float) $purchase_order->total, 2) . ' ' . config('lvplanning.currency'),
+            'مستحق جديد للمتابعة',
+            $purchase_order->po_no . ' — ' . ($purchase_order->supplier?->name ?? '')
+                . ' · ' . number_format((float) $purchase_order->total, 0) . ' ' . config('lvplanning.currency')
+                . ' · ' . ($purchase_order->payment_method ?? ''),
             route('finance.payables'), 'info');
 
-        ActivityLogger::log('sent', $purchase_order, 'تنزيل طلب شراء للحسابات ' . $purchase_order->po_no);
+        ActivityLogger::log('sourced', $purchase_order, 'تسعير طلب شراء ' . $purchase_order->po_no);
 
-        // «نزّل للحسابات» ⇒ رجوع لقايمة المشتريات — الطلب خرج منها
-        return redirect()->route('purchasing.queue')->with(FlowMessage::flash('po.to_finance', $purchase_order));
+        // «احفظ» ⇒ رجوع لقايمة المشتريات — الطلب اتسعّر وخرج منها
+        return redirect()->route('purchasing.queue')->with(FlowMessage::flash('po.sourced', $purchase_order));
     }
+
 
     /** صفحة العلم — بند الحسابات بس */
     public function financeForm(PurchaseOrder $purchase_order)

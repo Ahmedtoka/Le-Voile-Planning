@@ -1,13 +1,12 @@
 @php
   $steps = [
-    'planning'   => ['التخطيط',   'bi-pencil-square'],
-    'purchasing' => ['المشتريات', 'bi-cart3'],
-    'finance'    => ['الحسابات',  'bi-cash-coin'],
-    'approved'   => ['عند المورد','bi-send'],
-    'receiving'  => ['الاستلام',  'bi-truck'],
+    'planning'   => ['التخطيط',        'bi-pencil-square'],
+    'purchasing' => ['التسعير',        'bi-cart3'],
+    'approved'   => ['مستني الاستلام', 'bi-hourglass-split'],
+    'receiving'  => ['الاستلام',       'bi-truck'],
   ];
-  // approval موجودة للتوافق مع داتا قديمة — بتتعامل كأنها finance
-  $stage = $row->stage === 'approval' ? 'finance' : $row->stage;
+  // مراحل قديمة (finance/approval) بتتعامل كأنها اتسعّرت
+  $stage = in_array($row->stage, ['approval', 'finance'], true) ? 'approved' : $row->stage;
   $order = array_keys($steps);
   $now   = array_search($stage, $order, true);
   $now   = $now === false ? count($order) - 1 : $now;

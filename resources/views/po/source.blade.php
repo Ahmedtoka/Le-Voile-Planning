@@ -7,7 +7,7 @@
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   طلبه <b>{{ $row->requester?->name }}</b> يوم {{ $row->po_date?->format('Y-m-d') }}
   @if($row->planning_note) — «{{ $row->planning_note }}» @endif.
-  حدد المورد والسعر والوحدة وتاريخ التوريد، <b>احفظ</b>، وبعدين <b>نزّل للحسابات</b>.
+  حدد المورد والسعر والوحدة وتاريخ التوريد واضغط <b>«احفظ»</b> — وخلاص.
 </div>
 
 <form method="post" action="{{ route('purchase-orders.sourcing', $row) }}">@csrf
@@ -90,22 +90,14 @@
       </div>
     </div>
     <div class="card-footer bg-white d-flex gap-2 align-items-center">
-      <button class="btn btn-plum btn-sm px-4"><i class="bi bi-save" aria-hidden="true"></i> احفظ</button>
-      @if($row->readyForFinance())
-        <button type="button" class="btn btn-success btn-sm px-3"
-                onclick="if(confirm('تنزيل الطلب للحسابات؟')) document.getElementById('toFinance').submit()">
-          <i class="bi bi-arrow-left" aria-hidden="true"></i> نزّل للحسابات
-        </button>
-      @else
-        <span class="hint">احفظ المورد وتاريخ التوريد الأول، وبعدها زرار «نزّل للحسابات» هيظهر.</span>
-      @endif
+      <button class="btn btn-plum btn-sm px-4"><i class="bi bi-check2" aria-hidden="true"></i> احفظ</button>
+      <span class="hint">
+        «احفظ» بيقفل التسعير: الطلب يبقى مستني الاستلام في المخزن،
+        والحسابات توصلها الترانزاكشن للمتابعة — وهترجع على المشتريات.
+      </span>
     </div>
   </div>
 </form>
-
-<form id="toFinance" method="post" action="{{ route('purchase-orders.to-finance',$row) }}" class="d-none">@csrf</form>
-
-@include('partials.comments')
 
 @push('scripts')
 <script>

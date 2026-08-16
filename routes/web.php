@@ -96,8 +96,7 @@ Route::middleware('auth.user')->group(function () {
         Route::get('purchasing', [PurchaseOrderController::class, 'purchasingQueue'])->name('purchasing.queue');
         // صفحة التسعير — بند المشتريات بس
         Route::get('purchasing/{purchase_order}', [PurchaseOrderController::class, 'sourceForm'])->name('purchasing.source');
-        Route::post('purchase-orders/{purchase_order}/sourcing',   [PurchaseOrderController::class, 'saveSourcing'])->name('purchase-orders.sourcing');
-        Route::post('purchase-orders/{purchase_order}/to-finance', [PurchaseOrderController::class, 'toFinance'])->name('purchase-orders.to-finance');
+        Route::post('purchase-orders/{purchase_order}/sourcing', [PurchaseOrderController::class, 'saveSourcing'])->name('purchase-orders.sourcing');
     });
 
     Route::middleware('can.do:po.finance')->group(function () {

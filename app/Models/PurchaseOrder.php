@@ -40,9 +40,9 @@ class PurchaseOrder extends Model
     public const STAGES = [
         'planning'   => 'عند التخطيط',
         'purchasing' => 'عند المشتريات',
-        'finance'    => 'عند الحسابات',
-        'approval'   => 'تحت الاعتماد',      // موجودة للتوافق — الدورة الحالية بتتخطاها
-        'approved'   => 'جاهز — عند المورد',
+        'finance'    => 'عند الحسابات',       // للتوافق مع داتا قديمة
+        'approval'   => 'تحت الاعتماد',      // للتوافق مع داتا قديمة
+        'approved'   => 'اتسعّر — مستني الاستلام',
         'receiving'  => 'جاري الاستلام',
         'closed'     => 'مقفول',
         'cancelled'  => 'ملغي',

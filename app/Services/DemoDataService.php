@@ -414,8 +414,7 @@ class DemoDataService
         $plan = array_merge(
             // الحفظ بينزّل للمشتريات تلقائيًا — planning مرحلة عابرة
             array_fill(0, 8,  'purchasing'),
-            array_fill(0, 5,  'finance'),
-            array_fill(0, 10, 'approved'),
+            array_fill(0, 15, 'approved'),
             array_fill(0, 14, 'receiving'),
             array_fill(0, 7,  'closed'),
         );
