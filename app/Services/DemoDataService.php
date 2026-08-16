@@ -414,9 +414,8 @@ class DemoDataService
         $plan = array_merge(
             array_fill(0, 4,  'planning'),
             array_fill(0, 5,  'purchasing'),
-            array_fill(0, 4,  'finance'),
-            array_fill(0, 3,  'approval'),
-            array_fill(0, 8,  'approved'),
+            array_fill(0, 5,  'finance'),
+            array_fill(0, 10, 'approved'),
             array_fill(0, 14, 'receiving'),
             array_fill(0, 7,  'closed'),
         );
@@ -460,7 +459,7 @@ class DemoDataService
                     'warehouse_id'   => $whs[$i % count($whs)],
                     'delivery_date'  => now()->subDays(max(1, $daysAgo - 25))->toDateString(),
                     'delivery_place' => 'العبور',
-                    'payment_method' => ['آجل 60 يوم','آجل 30 يوم','نقدي'][$i % 3],
+                    'payment_method' => ['آجل 60 يوم','آجل 30 يوم','نقدي','دفعات'][$i % 4],
                     'sourced_by'     => $purch,
                     'sourced_at'     => now()->subDays(max(1, $daysAgo - 1)),
                 ]);

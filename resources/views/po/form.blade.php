@@ -35,17 +35,17 @@
 
     <div class="card-body"><fieldset @disabled(!$planEd)>
       <div class="row g-3">
-        <div class="col-md-2"><label class="form-label req">التاريخ</label>
-          <input type="date" name="po_date" class="form-control form-control-sm"
-                 value="{{ old('po_date', $row->po_date?->format('Y-m-d') ?? $row->po_date) }}" required></div>
-        <div class="col-md-3"><label class="form-label">اسم الموظف</label>
-          <select name="employee_id" class="form-select form-select-sm">
-            <option value="">— اختر —</option>
-            @foreach($employees as $k=>$v)<option value="{{ $k }}" @selected(old('employee_id',$row->employee_id ?? auth()->id())==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-7"><label class="form-label">سبب الطلب / ملاحظات التخطيط</label>
+        <div class="col-12">
+          <label class="form-label">سبب الطلب / ملاحظات التخطيط</label>
           <input name="planning_note" class="form-control form-control-sm" value="{{ old('planning_note',$row->planning_note) }}"
-                 placeholder="مثال: تغطية فوركاست الربع الأول — الأساسيات"></div>
+                 placeholder="مثال: تغطية فوركاست الربع الأول — الأساسيات">
+          <div class="hint mt-1">
+            التاريخ والموظف بيتسجلوا تلقائيًا
+            @if($mode === 'edit')
+              — الطلب ده اتعمل {{ $row->po_date?->format('Y-m-d') }} بواسطة {{ $row->requester?->name }}
+            @endif
+          </div>
+        </div>
       </div>
 
       <div class="table-responsive mt-3">
@@ -126,8 +126,13 @@
             <div class="note-box" id="supBox">بيانات المورد بتظهر هنا لما تختاره.</div>
           </div>
 
-          <div class="col-md-3"><label class="form-label">طريقة الدفع</label>
-            <input name="payment_method" class="form-control form-control-sm" value="{{ old('payment_method',$row->payment_method) }}"></div>
+          <div class="col-md-3"><label class="form-label req">طريقة الدفع</label>
+            <select name="payment_method" class="form-select form-select-sm" required>
+              <option value="">— اختر —</option>
+              @foreach(\App\Models\PurchaseOrder::PAYMENT_METHODS as $k => $v)
+                <option value="{{ $k }}" @selected(old('payment_method',$row->payment_method)===$k)>{{ $v }}</option>
+              @endforeach
+            </select></div>
           <div class="col-md-2"><label class="form-label">الخصم %</label>
             <input type="number" step="0.01" name="discount_pct" class="form-control form-control-sm" value="{{ old('discount_pct',$row->discount_pct ?? 0) }}"></div>
           <div class="col-md-2"><label class="form-label">الضريبة %</label>
@@ -136,17 +141,24 @@
 
         <div class="table-responsive mt-3">
           <table class="table table-sm mb-0">
-            <thead><tr><th style="width:35px">م</th><th>الصنف</th><th>اللون</th><th>الكمية</th>
-              <th style="width:130px">سعر الوحدة</th><th style="width:120px">الإجمالي</th></tr></thead>
+            <thead><tr><th style="width:35px">م</th><th>الصنف</th><th>اللون</th><th style="width:100px">الكمية</th>
+              <th style="width:95px">الوحدة</th><th style="width:125px">سعر الوحدة</th><th style="width:120px">الإجمالي</th></tr></thead>
             <tbody>
             @foreach($row->lines as $i => $l)
               <tr>
                 <td class="text-center">{{ $i+1 }}</td>
                 <td>{{ $l->fabricType?->name }}</td>
                 <td>{{ $l->color?->name }}</td>
-                <td class="num">{{ rtrim(rtrim(number_format((float)$l->qty,3),'0'),'.') }} {{ $l->unit }}</td>
+                <td class="num">{{ rtrim(rtrim(number_format((float)$l->qty,3),'0'),'.') }}</td>
                 <td>
                   <input type="hidden" name="prices[{{ $i }}][id]" value="{{ $l->id }}">
+                  <select name="prices[{{ $i }}][unit]" class="form-select form-select-sm" @disabled(!$srcEd)>
+                    @foreach(['طن','كيلو','متر'] as $u)
+                      <option value="{{ $u }}" @selected($l->unit===$u || ($l->unit==='كجم' && $u==='كيلو'))>{{ $u }}</option>
+                    @endforeach
+                  </select>
+                </td>
+                <td>
                   <input type="number" step="0.01" name="prices[{{ $i }}][unit_price]"
                          class="form-control form-control-sm" value="{{ $l->unit_price }}" @disabled(!$srcEd)>
                 </td>
@@ -204,8 +216,11 @@
           <label class="form-label">ملاحظة الحسابات</label>
           <textarea name="finance_note" rows="2" class="form-control form-control-sm mb-2"
                     placeholder="مثال: هيتصرف على دفعتين — الأولى مع التوريد"></textarea>
-          <button class="btn btn-plum btn-sm"><i class="bi bi-check2"></i> علمت ومتابع — إرسال للاعتماد</button>
-          <div class="hint mt-1">الحسابات مش بتوقف الطلب — بس بتسجّل إنها شايفة المستحق.</div>
+          <button class="btn btn-plum btn-sm"><i class="bi bi-check2" aria-hidden="true"></i> علمت — الطلب جاهز للاستلام</button>
+          <div class="hint mt-1">
+            مفيش اعتماد ولا توقيعات — العلم بس. بعدها الطلب عند المورد،
+            والحسابات هتتابع الرصيد وتصفّيه دفعات أو كاش حسب الاتفاق.
+          </div>
         </form>
       @elseif($row->finance_note)
         <div class="note-box">{{ $row->finance_note }}</div>

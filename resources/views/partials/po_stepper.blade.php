@@ -3,12 +3,13 @@
     'planning'   => ['التخطيط',   'bi-pencil-square'],
     'purchasing' => ['المشتريات', 'bi-cart3'],
     'finance'    => ['الحسابات',  'bi-cash-coin'],
-    'approval'   => ['الاعتماد',  'bi-check2-square'],
-    'approved'   => ['للمورد',    'bi-send'],
+    'approved'   => ['عند المورد','bi-send'],
     'receiving'  => ['الاستلام',  'bi-truck'],
   ];
+  // approval موجودة للتوافق مع داتا قديمة — بتتعامل كأنها finance
+  $stage = $row->stage === 'approval' ? 'finance' : $row->stage;
   $order = array_keys($steps);
-  $now   = array_search($row->stage, $order, true);
+  $now   = array_search($stage, $order, true);
   $now   = $now === false ? count($order) - 1 : $now;
 @endphp
 <div class="card mb-3"><div class="card-body py-3">

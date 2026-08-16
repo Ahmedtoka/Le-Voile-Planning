@@ -51,7 +51,7 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
   outline:3px solid var(--lv-soft); outline-offset:2px; border-radius:6px;
 }
 .sidebar a:focus-visible, .sidebar button:focus-visible{
-  outline:3px solid #E8C9DE; outline-offset:-3px;
+  outline:2px solid #E8C9DE; outline-offset:-2px; border-radius:0;
 }
 
 /* ── تخطي للمحتوى — للكيبورد وقارئ الشاشة ── */
@@ -59,28 +59,65 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
   background:var(--lv-brand);color:#fff;padding:10px 18px;border-radius:8px}
 .skip-link:focus{inset-inline-start:8px;color:#fff}
 
-/* ── القايمة الجانبية ── */
+/* ── القايمة الجانبية ──────────────────────────────────────────
+   لونين واضحين:
+   • المستوى الأول (المجموعات): على خلفية القايمة الأساسية
+   • المستوى التاني (الصفحات): لوحة أغمق بخط جانبي — عشان تعرف إنت
+     واقف جوه أنهي مجموعة من أول نظرة
+*/
 .sidebar{position:fixed;inset-block:0;inset-inline-start:0;width:248px;
-  background:linear-gradient(180deg,var(--lv-brand-deep),var(--lv-brand-ink));
+  background:var(--lv-brand-deep);
   color:#F0E3EC;overflow-y:auto;z-index:1030}
-.sidebar .brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.14);text-align:center}
+.sidebar .brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.14);
+  text-align:center;background:var(--lv-brand-deep)}
 .sidebar .brand img{width:150px;display:block;margin:0 auto 8px}
 .sidebar .brand small{color:#DDB9CF;font-size:.72rem;letter-spacing:.5px}
-.sidebar .nav-group-btn{display:flex;align-items:center;gap:9px;width:100%;border:0;background:none;
-  color:#D2AAC4;font-size:.76rem;letter-spacing:.3px;padding:13px 16px 8px;text-align:start;min-height:40px}
-.sidebar .nav-group-btn:hover{color:#fff}
-.sidebar .nav-group-btn .caret{margin-inline-start:auto;font-size:.65rem;transition:transform .18s ease-out}
-.sidebar .nav-group-btn[aria-expanded="true"]{color:#F2DCEA}
-.sidebar .nav-group-btn[aria-expanded="true"] .caret{transform:rotate(180deg)}
-.sidebar a.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;color:#EEDFE8;
-  font-size:.85rem;min-height:40px}
-.sidebar a.nav-item:hover{background:rgba(255,255,255,.09);color:#fff;text-decoration:none}
-.sidebar a.nav-item.active{background:var(--lv-brand);color:#fff;font-weight:600;
-  box-shadow:inset 3px 0 0 #F0D6E6}
-.sidebar a.nav-item i{width:18px;text-align:center;opacity:.9}
+
+/* ── المستوى الأول: زرار المجموعة ── */
+.sidebar .nav-group-btn{display:flex;align-items:center;gap:10px;width:100%;border:0;
+  background:none;color:#E9D2E1;font-size:.86rem;font-weight:600;letter-spacing:.2px;
+  padding:12px 16px;text-align:start;min-height:44px;
+  border-inline-start:3px solid transparent;transition:background .15s ease-out}
+.sidebar .nav-group-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.sidebar .nav-group-btn i:first-child{width:19px;text-align:center;font-size:.95rem;opacity:.9}
+.sidebar .nav-group-btn .caret{margin-inline-start:auto;font-size:.62rem;opacity:.7;
+  transition:transform .18s ease-out}
+
+/* المجموعة المفتوحة: بتنوّر وبيبان إنها اللي شغالة */
+.sidebar .nav-group-btn[aria-expanded="true"]{
+  background:rgba(0,0,0,.28);color:#fff;
+  border-inline-start-color:var(--lv-soft)}
+.sidebar .nav-group-btn[aria-expanded="true"] .caret{transform:rotate(180deg);opacity:1}
+.sidebar .nav-group-btn .badge-count{margin-inline-start:auto;margin-inline-end:8px}
+
+/* ── المستوى التاني: لوحة أغمق ── */
+.sidebar .collapse,
+.sidebar .collapsing{
+  background:var(--lv-brand-ink);
+  border-inline-start:3px solid var(--lv-soft);
+  box-shadow:inset 0 6px 8px -6px rgba(0,0,0,.5), inset 0 -6px 8px -6px rgba(0,0,0,.5)}
+
+.sidebar a.nav-item{display:flex;align-items:center;gap:9px;
+  padding:8px 14px 8px 16px;padding-inline-start:30px;
+  color:#D8C2D1;font-size:.83rem;min-height:40px;
+  border-inline-start:3px solid transparent;margin-inline-start:-3px;
+  transition:background .12s ease-out}
+.sidebar a.nav-item:hover{background:rgba(255,255,255,.08);color:#fff;text-decoration:none}
+.sidebar a.nav-item i{width:17px;text-align:center;opacity:.75;font-size:.85rem}
+
+/* الصفحة اللي إنت فيها دلوقتي */
+.sidebar a.nav-item.active{
+  background:var(--lv-brand);color:#fff;font-weight:600;
+  border-inline-start-color:#fff;margin-inline-start:-3px}
+.sidebar a.nav-item.active i{opacity:1}
+
+/* عنصر المستوى الأول اللي مالوش مجموعة (لوحة التحكم) */
+.sidebar > a.nav-item{padding-inline-start:16px;margin-inline-start:0;
+  border-inline-start:3px solid transparent;color:#E9D2E1;font-size:.86rem;font-weight:600}
+.sidebar > a.nav-item.active{border-inline-start-color:#fff}
+
 .sidebar .badge-count{margin-inline-start:auto;background:#D8394F;color:#fff;font-size:.68rem;
   min-width:20px;padding:2px 6px}
-.sidebar .nav-group-btn .badge-count{margin-inline-start:auto}
 
 /* ── الهيكل ── */
 .main{margin-inline-start:248px}
@@ -273,7 +310,7 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
   };
 @endphp
 
-<aside class="sidebar">
+<aside class="sidebar" id="sideNav">
   <div class="brand">
     <a href="{{ route('dashboard') }}">
       <img src="{{ asset('assets/logo-white.png') }}" alt="Le Voile">
@@ -303,14 +340,15 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
     @endif
 
     <button class="nav-group-btn {{ $isOpen ? 'open' : '' }}" type="button"
-            data-bs-toggle="collapse" data-bs-target="#g-{{ $gid }}" aria-expanded="{{ $isOpen ? 'true' : 'false' }}">
+            data-bs-toggle="collapse" data-bs-target="#g-{{ $gid }}"
+            aria-expanded="{{ $isOpen ? 'true' : 'false' }}" aria-controls="g-{{ $gid }}">
       <i class="bi {{ $gicon }}"></i>
       <span>{{ $group }}</span>
       @if($groupCount > 0)<span class="badge badge-count rounded-pill">{{ $groupCount }}</span>@endif
       <i class="bi bi-chevron-down caret"></i>
     </button>
 
-    <div class="collapse {{ $isOpen ? 'show' : '' }}" id="g-{{ $gid }}">
+    <div class="collapse {{ $isOpen ? 'show' : '' }}" id="g-{{ $gid }}" data-bs-parent="#sideNav">
       @foreach($visible as [$route,$label,$icon,$perm,$info])
         @php $n = $cnt[$route] ?? 0; @endphp
         <a class="nav-item {{ request()->routeIs(str_replace('.index','.*',$route)) || request()->routeIs($route) ? 'active' : '' }}"

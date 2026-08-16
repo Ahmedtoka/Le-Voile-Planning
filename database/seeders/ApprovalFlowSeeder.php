@@ -16,11 +16,7 @@ use Illuminate\Database\Seeder;
 class ApprovalFlowSeeder extends Seeder
 {
     public const FLOWS = [
-        // الحسابات بتعلم في المرحلة اللي قبل الاعتماد، فما فيش داعي تعتمد تاني
-        'purchase_order' => ['طلب شراء', [
-            ['اعتماد مدير المشتريات', 'purchasing_mgr'],
-            ['اعتماد المدير العام', 'gm'],
-        ]],
+        // طلب الشراء مالوش دورة اعتماد — الدورة بتنتهي بعلم الحسابات
         // ① أول مستند: وصول القماش وحجزه
         'stock_addition' => ['إذن إضافة (تحت الفحص)', [
             ['مراجعة مراقب المخزون', 'stock_controller'],

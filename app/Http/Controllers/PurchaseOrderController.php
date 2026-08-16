@@ -10,7 +10,6 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\ActivityLogger;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
 use App\Services\FlowMessage;
 use App\Services\Notifier;
@@ -31,7 +30,7 @@ class PurchaseOrderController extends Controller
 {
     public function index(Request $request)
     {
-        $q = PurchaseOrder::with(['supplier', 'requester', 'sourcer'])->latest('id');
+        $q = PurchaseOrder::with(['supplier', 'requester', 'sourcer', 'financer', 'lines'])->latest('id');
 
         if ($s = $request->get('stage'))         $q->where('stage', $s);
         if ($sup = $request->get('supplier_id')) $q->where('supplier_id', $sup);
@@ -81,7 +80,7 @@ class PurchaseOrderController extends Controller
         ]));
     }
 
-    /** ① التخطيط بينشئ الطلب — أصناف وكميات بس */
+    /** ① التخطيط بينشئ الطلب — أصناف وكميات بس. التاريخ والموظف أوتوماتيك. */
     public function store(Request $request)
     {
         $data = $this->validatePlanning($request);
@@ -89,6 +88,8 @@ class PurchaseOrderController extends Controller
         $po = DB::transaction(function () use ($data) {
             $po = PurchaseOrder::create($data['header'] + [
                 'po_no'        => DocNumber::next('purchase_order', 'purchase_orders', 'po_no'),
+                'po_date'      => now()->toDateString(),   // وقت الطلب — مش بيتكتب يدوي
+                'employee_id'  => auth()->id(),            // اللي عامل الطلب
                 'stage'        => 'planning',
                 'status'       => 'draft',
                 'created_by'   => auth()->id(),
@@ -166,16 +167,18 @@ class PurchaseOrderController extends Controller
             'warehouse_id'   => ['nullable', 'exists:warehouses,id'],
             'delivery_date'  => ['required', 'date'],
             'delivery_place' => ['nullable', 'string', 'max:191'],
-            'payment_method' => ['nullable', 'string', 'max:191'],
+            'payment_method' => ['required', 'in:' . implode(',', array_keys(PurchaseOrder::PAYMENT_METHODS))],
             'discount_pct'   => ['nullable', 'numeric', 'min:0', 'max:100'],
             'tax_pct'        => ['nullable', 'numeric', 'min:0', 'max:100'],
             'prices'                 => ['required', 'array'],
             'prices.*.id'            => ['required', 'exists:purchase_order_lines,id'],
             'prices.*.unit_price'    => ['required', 'numeric', 'min:0'],
+            'prices.*.unit'          => ['required', 'in:طن,كيلو,كجم,متر'],
         ], [], [
-            'supplier_id'   => 'المورد',
-            'delivery_date' => 'تاريخ التوريد',
-            'prices'        => 'الأسعار',
+            'supplier_id'    => 'المورد',
+            'delivery_date'  => 'تاريخ التوريد',
+            'payment_method' => 'طريقة الدفع',
+            'prices'         => 'الأسعار',
         ]);
 
         DB::transaction(function () use ($purchase_order, $data) {
@@ -183,6 +186,7 @@ class PurchaseOrderController extends Controller
                 $line = $purchase_order->lines()->find($p['id']);
                 if (!$line) continue;
                 $line->update([
+                    'unit'       => $p['unit'],
                     'unit_price' => $p['unit_price'],
                     'line_total' => (float) $line->qty * (float) $p['unit_price'],
                 ]);
@@ -228,7 +232,11 @@ class PurchaseOrderController extends Controller
         return back()->with(FlowMessage::flash('po.to_finance', $purchase_order));
     }
 
-    /** ③ الحسابات: علم ومتابعة — مش بتوقف الطلب */
+    /**
+     * ③ الحسابات: علم بس — مفيش اعتماد ولا توقيعات.
+     * بمجرد ما الحسابات تدوس «علمت»، الطلب جاهز يتبعت للمورد
+     * وتستقبل عليه أذون إضافة. دي نهاية الدورة الأولى.
+     */
     public function financeAck(Request $request, PurchaseOrder $purchase_order)
     {
         abort_unless($purchase_order->stage === 'finance', 403);
@@ -236,13 +244,18 @@ class PurchaseOrderController extends Controller
         $data = $request->validate(['finance_note' => ['nullable', 'string']], [], ['finance_note' => 'ملاحظة الحسابات']);
 
         $purchase_order->forceFill([
-            'stage'        => 'approval',
+            'stage'        => 'approved',      // جاهز للاستلام — من غير دورة اعتماد
+            'status'       => 'approved',
             'finance_by'   => auth()->id(),
             'finance_at'   => now(),
             'finance_note' => $data['finance_note'] ?? null,
         ])->save();
 
-        ApprovalEngine::submit($purchase_order->refresh(), auth()->user());
+        Notifier::broadcastToRole('storekeeper', 'po_ready',
+            'طلب شراء جاهز للاستلام',
+            $purchase_order->po_no . ' — ' . ($purchase_order->supplier?->name ?? '')
+                . ' · التوريد ' . $purchase_order->delivery_date?->format('Y-m-d'),
+            route('stock-additions.index'), 'info');
 
         ActivityLogger::log('acknowledged', $purchase_order, 'علم الحسابات بطلب الشراء ' . $purchase_order->po_no);
         return back()->with(FlowMessage::flash('po.finance_ack', $purchase_order));
@@ -278,12 +291,10 @@ class PurchaseOrderController extends Controller
         ], $extra);
     }
 
-    /** التحقق من بند التخطيط — من غير مورد ولا أسعار */
+    /** التحقق من بند التخطيط — التاريخ والموظف أوتوماتيك، مش من الفورم */
     private function validatePlanning(Request $request): array
     {
         $v = $request->validate([
-            'po_date'       => ['required', 'date'],
-            'employee_id'   => ['nullable', 'exists:users,id'],
             'planning_note' => ['nullable', 'string'],
             'notes'         => ['nullable', 'string'],
 
@@ -295,7 +306,6 @@ class PurchaseOrderController extends Controller
             'lines.*.tolerance_pct'  => ['nullable', 'numeric', 'min:0', 'max:100'],
             'lines.*.notes'          => ['nullable', 'string'],
         ], [], [
-            'po_date'                => 'التاريخ',
             'lines'                  => 'الأصناف',
             'lines.*.color_id'       => 'كود اللون',
             'lines.*.fabric_type_id' => 'اسم الصنف',
