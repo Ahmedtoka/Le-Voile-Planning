@@ -38,7 +38,7 @@
       </div>
 
       <div class="table-responsive">
-        <table class="table table-sm table-hover">
+        <table class="table table-sm">
           <thead><tr>
             <th>الكود</th><th>الاسم</th><th>العائلة</th><th>أساسي</th><th>الحالة</th><th>مدموج في</th><th></th>
           </tr></thead>

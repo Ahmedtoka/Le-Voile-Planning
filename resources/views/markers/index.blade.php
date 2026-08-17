@@ -16,7 +16,7 @@
     <a href="{{ route('markers.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> ماركر</a>
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-hover">
+    <table class="table table-sm">
       <thead><tr><th>الكود</th><th>الاسم</th><th>المصنع</th><th>عرض القماش</th><th>طول الفرشة</th>
         <th>قطع الفرشة</th><th>الموديلات</th><th>الباترونست</th><th>الحالة</th><th></th></tr></thead>
       <tbody>

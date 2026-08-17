@@ -154,22 +154,8 @@ class GoodsReceiptController extends Controller
                 'الحوض ' . $c->consignment_no . ' لسه مالوش تقرير معمل معتمد — مفيش بنشر نحسب عليه.']);
         }
 
-        // تحذير تجاوز نسبة الزيادة المسموح بها في أمر الشراء
-        if ($po = $goods_receipt->purchaseOrder) {
-            $po->load('lines');
-            foreach ($goods_receipt->lines as $line) {
-                $poLine = $po->lines->first(fn ($l) =>
-                    $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $line->color_id);
-                if (!$poLine) continue;
-
-                $qty = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
-                if ((float) $poLine->received_qty + $qty > $poLine->max_allowed_qty + 0.0001) {
-                    return back()->withErrors(['msg' =>
-                        'الكمية المستلمة بتتعدى نسبة الزيادة المسموح بها ('
-                        . $poLine->tolerance_pct . '%) في أمر الشراء. راجع الكمية أو عدّل أمر الشراء.']);
-                }
-            }
-        }
+        /* حارس نسبة الزيادة اتنقل لإذن الإضافة — الاستلام بيتحسب هناك.
+           هنا إفراج جودة بس. */
 
         ApprovalEngine::submit($goods_receipt);
         return back()->with(FlowMessage::flash('receipt.submitted', $goods_receipt));

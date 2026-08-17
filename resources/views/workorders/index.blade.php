@@ -38,7 +38,7 @@
     <a href="{{ route('work-orders.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> أمر شغل</a>
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-hover">
+    <table class="table table-sm">
       <thead><tr><th>رقم الأمر</th><th>التاريخ</th><th>الحوض</th><th>اللون</th><th>المصنع</th><th>كجم</th>
         <th>متوقع</th><th>مقصوص</th><th>مستلم</th><th>متبقي</th><th>الانحراف</th><th>التسليم</th><th>الحالة</th><th></th></tr></thead>
       <tbody>

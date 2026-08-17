@@ -128,6 +128,7 @@ class PaperSeeder
             ['OBR', 'مخزن العبور',       'fabric'],
             ['ACC', 'مخزن الإكسسوارات',  'accessories'],
             ['FIN', 'مخزن المنتج التام', 'finished'],
+            ['RTN', 'مخزن المرتجعات',    'other'],
         ] as [$c, $n, $t]) {
             Warehouse::updateOrCreate(['code' => $c], ['name' => $n, 'type' => $t, 'is_active' => true]);
         }
@@ -357,9 +358,6 @@ class PaperSeeder
                 'consignment_no' => 'MAMI-080726-127-00',
             ]);
         }
-        $gr->refresh()->recalcTotals();
-        DocumentEffects::onApproved($gr->refresh());
-
         // القرارات الخمسة المكتوبة بالإيد على الورقة
         foreach ([
             ['rejected', '1132', null,             2, 8.36,  'quality',  'مصلحة الجودة'],
@@ -384,6 +382,10 @@ class PaperSeeder
                 'created_by'           => $store,
             ]);
         }
+
+        // القرارات لازم تتسجل قبل الاعتماد — زي الشاشة، الإفراج بيخصمهم
+        $gr->refresh()->recalcTotals();
+        DocumentEffects::onApproved($gr->refresh());
 
         // ═══ رسالة التل: TUFR-230726-108-00 ═══
         $tufr = $this->consignment(

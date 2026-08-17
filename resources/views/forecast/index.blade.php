@@ -58,7 +58,7 @@
     </span>
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-hover">
+    <table class="table table-sm">
       <thead><tr><th>الموديل</th><th>اللون</th><th>الشهر</th><th>الأساس</th><th>النمو %</th>
         <th>المتوقع</th><th>الفعلي</th><th>التحقق %</th><th>الحالة</th></tr></thead>
       <tbody>

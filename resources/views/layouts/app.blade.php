@@ -137,11 +137,18 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
   box-shadow:0 1px 2px rgba(59,9,47,.04);background:var(--lv-white)}
 .card-header{background:var(--lv-white);border-bottom:1px solid var(--lv-line);font-weight:600;
   border-radius:var(--radius) var(--radius) 0 0 !important;padding:.7rem 1rem;color:var(--lv-brand-ink)}
-.table{font-size:.85rem;margin-bottom:0}
-.table>thead>tr>th{background:var(--lv-tint);color:var(--lv-brand-ink);font-weight:600;
-  white-space:nowrap;border-bottom:1px solid var(--lv-soft);font-size:.8rem}
-.table>tbody>tr>td{vertical-align:middle}
-.table-hover>tbody>tr:hover>*{background:var(--lv-tint)}
+/* ── الجداول: من غير هوفر — هيدر واضح وفواصل هادية ── */
+.table{font-size:.85rem;margin-bottom:0;--bs-table-hover-bg:transparent}
+.table>thead>tr>th{background:var(--lv-tint);color:var(--lv-brand-ink);font-weight:700;
+  white-space:nowrap;border-bottom:2px solid var(--lv-soft);font-size:.78rem;
+  padding-top:.55rem;padding-bottom:.55rem;letter-spacing:.2px}
+.table>tbody>tr>td{vertical-align:middle;border-color:#F0EAEE;padding-top:.5rem;padding-bottom:.5rem}
+.table>tbody>tr:last-child>td{border-bottom:0}
+.table>tfoot>tr>td,.table>tfoot>tr>th{border-top:2px solid var(--lv-soft);font-size:.82rem}
+/* جداول البيان/القيمة: الهيدر هو العمود الأول */
+.table>tbody>tr>th{background:var(--lv-offwhite);color:#5A4E56;font-weight:600;
+  font-size:.8rem;border-color:#F0EAEE;vertical-align:middle}
+/* صفوف الحالات (تحذير/خطر) بتفضل شغالة زي ما هي */
 
 /* ── الأزرار: مساحة لمس كافية ── */
 .btn{min-height:34px}

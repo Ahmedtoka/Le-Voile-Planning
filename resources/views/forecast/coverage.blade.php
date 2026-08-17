@@ -13,7 +13,7 @@
     <a href="{{ route('io.export.coverage') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download"></i> تصدير</a>
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-hover">
+    <table class="table table-sm">
       <thead><tr>
         <th>الكود</th><th>الموديل</th><th>مبيعات {{ config('lvplanning.avg_sales_window_days') }} يوم</th>
         <th>متوسط يومي</th><th>الرصيد</th><th>مخزون الأمان</th><th>المتاح</th><th>أيام التغطية</th><th>الحالة</th><th>آخر سحب</th>

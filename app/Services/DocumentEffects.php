@@ -109,6 +109,32 @@ class DocumentEffects
                     null, 'warning');
             }
 
+            /* ── الاستلام الجزئي على طلب الشراء ──────────────────
+               طالب 50 ووصل 30؟ الطلب بيتعلّم «جاري الاستلام» والكمية
+               المستلمة بتتحدث على كل سطر. لما يكمل، بيتقفل لوحده.
+               (الوحدات بتتحول: الإذن بالكيلو والطلب ممكن يكون بالطن) */
+            if ($po = $sa->purchaseOrder) {
+                $po->load('lines');
+
+                foreach ($sa->lines as $line) {
+                    if (!$line->fabric_type_id) continue;
+                    $poLine = $po->lines->first(fn ($l) =>
+                        $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $line->color_id);
+                    if ($poLine) {
+                        $poLine->increment('received_qty', self::toUnit($line->qty, $line->unit, $poLine->unit));
+                    }
+                }
+
+                $po->refresh()->load('lines');
+                $fully = $po->lines->every(fn ($l) =>
+                    (float) $l->received_qty >= (float) $l->min_allowed_qty);
+
+                $po->forceFill([
+                    'stage'  => $fully ? 'closed' : 'receiving',
+                    'status' => $fully ? 'received' : 'partially_received',
+                ])->save();
+            }
+
             // ── حركة المخزون: داخل ومحجوز ──
             foreach ($sa->lines as $line) {
                 StockMovement::create([
@@ -150,12 +176,26 @@ class DocumentEffects
 
             $consignment = $gr->consignment;
 
-            // ── الإفراج عن الحوض ──
+            // ── الإفراج عن الحوض: السليم بس ──
             if ($consignment) {
-                // الأسطر ممكن تيجي بالطن — بنوحّدها كيلو، وبنجمع مش بنستبدل
-                // عشان الإفراج الجزئي على دفعات ما يمسحش اللي قبله.
-                $releasedKg = (float) $gr->lines->sum(fn ($l) => self::toUnit($l->qty, $l->unit, 'كجم'));
-                if ($releasedKg <= 0) $releasedKg = (float) $consignment->total_kg;
+                $receivedKg = (float) $gr->lines->sum(fn ($l) => self::toUnit($l->qty, $l->unit, 'كجم'));
+                if ($receivedKg <= 0) $receivedKg = (float) $consignment->total_kg;
+
+                /* المرفوض والمعلّق ما بيتفرجش عنهم:
+                   • المرفوض بيروح مخزن المرتجعات كحركة مستقلة (مطالبة على المورد)
+                   • المعلّق بيستنى قرار التخطيط والمشتريات — لو اتقبل بيرجع
+                     للمتاح تلقائيًا (RejectionController::resolve) */
+                /* بنخصم مرفوضات لون الحوض ده بس — الورقة الواحدة بيتكتب عليها
+                   قرارات لألوان وأحواض تانية، ودي مالهاش دعوة بحساب الإفراج هنا. */
+                $rejections = \App\Models\GoodsReceiptRejection::where('goods_receipt_id', $gr->id)
+                    ->where(fn ($q) => $q->where('color_id', $consignment->color_id)
+                                         ->orWhereNull('color_id'))
+                    ->get();
+                $rejectedKg = (float) $rejections->where('kind', 'rejected')->sum('qty');
+                $heldKg     = (float) $rejections->where('kind', 'on_hold')
+                                                 ->where('resolution', 'open')->sum('qty');
+
+                $releasedKg = max(0, $receivedKg - $rejectedKg - $heldKg);
 
                 $consignment->forceFill([
                     'status'      => 'released',
@@ -163,6 +203,29 @@ class DocumentEffects
                                          (float) $consignment->released_kg + $releasedKg),
                     'hold_kg'     => 0,
                 ])->save();
+
+                // المرفوض ينزل في مكانه: مخزن المرتجعات
+                if ($rejectedKg > 0) {
+                    $rtn = \App\Models\Warehouse::where('code', 'RTN')->value('id')
+                        ?? \App\Models\Warehouse::where('type', 'other')->value('id');
+
+                    StockMovement::create([
+                        'moved_at'       => $gr->doc_date,
+                        'warehouse_id'   => $rtn,
+                        'item_type'      => 'fabric',
+                        'fabric_type_id' => $consignment->fabric_type_id,
+                        'color_id'       => $consignment->color_id,
+                        'consignment_id' => $consignment->id,
+                        'direction'      => 'in',
+                        'quality_state'  => 'rejected',
+                        'qty'            => $rejectedKg,
+                        'unit'           => 'كجم',
+                        'source_type'    => GoodsReceipt::class,
+                        'source_id'      => $gr->id,
+                        'reference'      => $gr->doc_no . ' — مرفوض',
+                        'created_by'     => auth()->id(),
+                    ]);
+                }
 
                 $consignment->recalcRemaining();
 
@@ -195,27 +258,8 @@ class DocumentEffects
                     null, 'info');
             }
 
-            // ── تحديث المستلم في أمر الشراء ──
-            if ($po = $gr->purchaseOrder) {
-                foreach ($gr->lines as $line) {
-                    $poLine = $po->lines->first(fn ($l) =>
-                        $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $line->color_id
-                    );
-                    if ($poLine) {
-                        // الوحدات ممكن تختلف بين سطر الطلب وسطر الاستلام —
-                        // بنعدّي على الكيلو الأول وبعدين نحوّل لوحدة سطر الطلب.
-                        $poLine->increment('received_qty', self::toUnit($line->qty, $line->unit, $poLine->unit));
-                    }
-                }
-
-                $po->refresh()->load('lines');
-                $fully = $po->lines->every(fn ($l) => (float) $l->received_qty >= (float) $l->min_allowed_qty);
-
-                $po->forceFill([
-                    'status' => $fully ? 'received' : 'partially_received',
-                    'stage'  => $fully ? 'closed' : 'receiving',
-                ])->save();
-            }
+            /* تحديث المستلم على الطلب بيحصل عند إذن الإضافة (الوصول الفعلي)
+               مش هنا — الإفراج جودة مش استلام. */
         });
     }
 

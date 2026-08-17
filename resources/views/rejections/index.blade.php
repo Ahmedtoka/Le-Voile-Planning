@@ -36,7 +36,7 @@
   </div>
 
   <div class="table-responsive">
-    <table class="table table-sm table-hover">
+    <table class="table table-sm">
       <thead><tr>
         <th>النوع</th><th>البند</th><th>الرسالة</th><th>المورد</th><th>أتواب</th><th>الكمية</th>
         <th>الجهة</th><th>السبب</th><th>القرار</th><th style="width:120px"></th>

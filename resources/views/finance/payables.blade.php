@@ -36,7 +36,7 @@
         </form>
       </div>
       <div class="table-responsive">
-        <table class="table table-sm table-hover">
+        <table class="table table-sm">
           <thead><tr><th>رقم الطلب</th><th>المورد</th><th>تاريخ التوريد</th><th>الإجمالي</th>
             <th>طريقة الدفع</th><th>المرحلة</th><th></th></tr></thead>
           <tbody>

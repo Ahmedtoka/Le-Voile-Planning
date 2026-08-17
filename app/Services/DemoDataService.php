@@ -491,7 +491,10 @@ class DemoDataService
         $qc    = User::where('username','qc')->value('id');
         $lab   = User::where('username','lab')->value('id');
 
-        $pos     = PurchaseOrder::whereIn('stage', ['approved','receiving','closed'])->get();
+        /* الوصول بيحدّث مرحلة الطلب تلقائيًا (جزئي/مقفول)، فبنستلم بس على
+           الطلبات اللي المفروض تبان «جاري الاستلام» — ونسيب المعمولة
+           «مستنية الاستلام» من غير أذون عشان توزيع المراحل يفضل صادق. */
+        $pos     = PurchaseOrder::where('stage', 'receiving')->get();
         $fabrics = FabricType::all()->keyBy('id');
         $whs     = Warehouse::where('type','fabric')->pluck('id')->all();
 

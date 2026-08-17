@@ -54,7 +54,7 @@
   </div>
 
   <div class="table-responsive">
-    <table class="table table-sm table-hover">
+    <table class="table table-sm">
       <thead><tr>
         <th>رقم الطلب</th><th>حالة الطلب</th><th>المورد</th><th>الأصناف</th><th>الإجمالي</th>
         <th>متوقع وصوله</th><th>آخر أبديت</th><th>مين عمله</th><th style="width:90px"></th>

@@ -3,18 +3,26 @@
   // الطلبات اللي اتسعّرت ومستنية القماش يوصل — زرار «استلم» بيفتح إذن إضافة متملي
   $topTable = [
     'title' => 'طلبات شراء مستنية الاستلام — دوس «استلم» والإذن يتملى من الطلب',
-    'cols'  => ['رقم الطلب','المورد','توريد متوقع','الإجمالي',''],
+    'cols'  => ['رقم الطلب','الحالة','المورد','توريد متوقع','مستلم',''],
     'empty' => 'مفيش طلبات مستنية استلام.',
     'rows'  => ($awaitingPos ?? collect())->map(function ($p) {
         $eta  = $p->delivery_date;
         $late = $eta && $eta->isPast();
+        $tot  = (float) $p->lines->sum('qty');
+        $rec  = (float) $p->lines->sum('received_qty');
+        $pct  = $tot > 0 ? (int) round($rec / $tot * 100) : 0;
+        $badge = $p->stage === 'receiving'
+            ? '<span class="badge bg-info">جزئي — استلم '.$pct.'%</span>'
+            : '<span class="badge bg-secondary">لسه موصلش</span>';
         return '<td class="num fw-bold">'.e($p->po_no).'</td>'
+             . '<td>'.$badge.'</td>'
              . '<td>'.e($p->supplier?->name ?? '—').'</td>'
              . '<td class="num'.($late ? ' text-danger fw-bold' : '').'">'
                  .($eta ? $eta->format('Y-m-d').($late ? ' — متأخر' : '') : '—').'</td>'
-             . '<td class="num">'.number_format((float)$p->total, 0).'</td>'
+             . '<td class="num">'.rtrim(rtrim(number_format($rec,2),'0'),'.').' / '
+                 .rtrim(rtrim(number_format($tot,2),'0'),'.').'</td>'
              . '<td><a href="'.route('stock-additions.create', ['purchase_order_id' => $p->id]).'"'
-                 .' class="btn btn-sm btn-plum py-0">استلم</a></td>';
+                 .' class="btn btn-sm btn-plum py-0">'.($p->stage === 'receiving' ? 'استلم الباقي' : 'استلم').'</a></td>';
     })->all(),
   ];
   $intro = 'أول مستند في دورة القماش. اعتماده بيولّد <b>الحوض (الرسالة)</b> ويدخّل الكمية المخزن '

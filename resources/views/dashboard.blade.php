@@ -271,7 +271,7 @@
         <span class="hint">45 يوم جايين — المتأخر الأول</span>
       </div>
       <div class="table-responsive">
-        <table class="table table-sm table-hover mb-0">
+        <table class="table table-sm mb-0">
           <thead><tr><th>التاريخ</th><th>النوع</th><th>المستند</th><th>الطرف</th><th>المتبقي</th></tr></thead>
           <tbody>
           @forelse($upcoming as $u)
@@ -318,7 +318,7 @@
         <a href="{{ route('planning.coverage') }}" class="btn btn-sm btn-outline-plum py-0">الكل</a>
       </div>
       <div class="table-responsive">
-        <table class="table table-sm table-hover">
+        <table class="table table-sm">
           <thead><tr><th>الموديل</th><th>متوسط يومي</th><th>الرصيد</th><th>أيام التغطية</th><th>الحالة</th></tr></thead>
           <tbody>
           @forelse($coverage as $c)

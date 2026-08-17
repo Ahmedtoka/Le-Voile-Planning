@@ -42,8 +42,9 @@ class StockAdditionController extends Controller
 
         return view('additions.index', [
             'title'   => 'أذون الإضافة (تحت الفحص)',
-            'awaitingPos' => PurchaseOrder::with('supplier')
-                ->where('stage', 'approved')
+            // approved = لسه موصلش حاجة · receiving = وصل جزء ومستني الباقي
+            'awaitingPos' => PurchaseOrder::with(['supplier', 'lines'])
+                ->whereIn('stage', ['approved', 'receiving'])
                 ->orderBy('delivery_date')->limit(8)->get(),
             'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
             'filters' => [
@@ -167,6 +168,28 @@ class StockAdditionController extends Controller
 
         if ($missing) {
             return back()->withErrors(['msg' => 'لازم تكتب عدد الأتواب لكل صنف قماش — الفحص هيجرد عليه.']);
+        }
+
+        /* حارس نسبة الزيادة: الوصول هو الاستلام الفعلي على الطلب.
+           طالب 50 بزيادة 5%؟ أقصى استلام تراكمي = 52.5 — أكتر من كده بيترفض. */
+        if ($po = $stock_addition->purchaseOrder) {
+            $po->load('lines');
+            foreach ($stock_addition->lines as $line) {
+                if (!$line->fabric_type_id) continue;
+                $poLine = $po->lines->first(fn ($l) =>
+                    $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $line->color_id);
+                if (!$poLine) continue;
+
+                $qty = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
+                if ((float) $poLine->received_qty + $qty > $poLine->max_allowed_qty + 0.0001) {
+                    return back()->withErrors(['msg' =>
+                        'الكمية بتتعدى نسبة الزيادة المسموح بها (' . $poLine->tolerance_pct
+                        . '%) على الطلب ' . $po->po_no . ' — المستلم قبل كده '
+                        . rtrim(rtrim(number_format((float) $poLine->received_qty, 2), '0'), '.')
+                        . ' والمطلوب ' . rtrim(rtrim(number_format((float) $poLine->qty, 2), '0'), '.')
+                        . ' ' . $poLine->unit . '.']);
+                }
+            }
         }
         ApprovalEngine::submit($stock_addition);
         return back()->with(FlowMessage::flash('addition.submitted', $stock_addition));

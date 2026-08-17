@@ -12,7 +12,7 @@
     <a href="{{ route('markers.requests.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> طلب ماركر</a>
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-hover">
+    <table class="table table-sm">
       <thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>الحوض</th><th>المصنع</th><th>عرض القماش</th>
         <th>المطلوب</th><th>الباترونست</th><th>مطلوب في</th><th>الماركر</th><th>الحالة</th></tr></thead>
       <tbody>

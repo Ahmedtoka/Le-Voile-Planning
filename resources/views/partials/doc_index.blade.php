@@ -12,7 +12,7 @@
   <div class="card mb-3" style="border-color:var(--lv-soft)">
     <div class="card-header py-2">{{ $topTable['title'] }}</div>
     <div class="table-responsive">
-      <table class="table table-sm table-hover mb-0">
+      <table class="table table-sm mb-0">
         <thead><tr>@foreach($topTable['cols'] as $c)<th>{{ $c }}</th>@endforeach</tr></thead>
         <tbody>
           @forelse($topTable['rows'] as $tr)
@@ -65,7 +65,7 @@
   </div>
 
   <div class="table-responsive">
-    <table class="table table-sm table-hover">
+    <table class="table table-sm">
       <thead><tr>@foreach($cols as $c)<th>{{ $c }}</th>@endforeach<th style="width:90px"></th></tr></thead>
       <tbody>
       @forelse($rows as $r)

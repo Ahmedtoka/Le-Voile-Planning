@@ -24,7 +24,7 @@
   </div>
 
   <div class="table-responsive">
-    <table class="table table-hover table-sm">
+    <table class="table table-sm">
       <thead>
         <tr>
           <th style="width:40px">#</th>

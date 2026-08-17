@@ -41,7 +41,7 @@
     <a href="{{ route('io.export.consignments') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download"></i></a>
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-hover">
+    <table class="table table-sm">
       <thead><tr>
         <th>رقم الرسالة</th><th>التاريخ</th><th>المورد</th><th>الخامة</th><th>اللون</th>
         <th>الوزن</th><th>الأتواب</th><th>أقل عرض</th><th>البنشر</th><th>محجوز</th><th>متاح</th><th>الحالة</th><th></th>
