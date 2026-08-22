@@ -79,7 +79,7 @@ class WorkOrder extends Model
     public function getIsLateAttribute(): bool
     {
         return $this->due_date && $this->due_date->isPast()
-            && !in_array($this->status, ['closed', 'cancelled'], true);
+            && !in_array($this->status, ['closed', 'cancelled', 'superseded'], true);
     }
 
     /** المتبقي على المصنع = المقصوص - المستلم */

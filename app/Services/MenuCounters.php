@@ -84,7 +84,7 @@ class MenuCounters
         if ($can('wo.manage')) {
             $c['consignments.index'] = Consignment::readyForProduction()
                 ->whereDoesntHave('workOrderFabrics', fn ($q) =>
-                    $q->whereHas('workOrder', fn ($w) => $w->whereNotIn('status', ['cancelled'])))
+                    $q->whereHas('workOrder', fn ($w) => $w->whereNotIn('status', ['cancelled', 'superseded'])))
                 ->count();
         }
 
