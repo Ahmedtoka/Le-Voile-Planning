@@ -6,9 +6,24 @@
   <td><select name="lines[{{ $i }}][fabric_type_id]"><option value="">—</option>
       @foreach($fabricTypes as $k=>$v)<option value="{{ $k }}" @selected(($l['fabric_type_id'] ?? null)==$k)>{{ $v }}</option>@endforeach
     </select></td>
-  <td><select name="lines[{{ $i }}][color_id]"><option value="">—</option>
+  <td>
+    <select name="lines[{{ $i }}][color_id]"><option value="">—</option>
       @foreach($colors as $k=>$v)<option value="{{ $k }}" @selected(($l['color_id'] ?? null)==$k)>{{ $v }}</option>@endforeach
-    </select></td>
+    </select>
+    @php $poColor = $l['po_color_id'] ?? null; @endphp
+    <input type="hidden" name="lines[{{ $i }}][po_color_id]" value="{{ $poColor }}">
+    @if($poColor)
+      <div class="color-mismatch mt-1" data-pocolor="{{ $poColor }}"
+           style="{{ ($l['color_id'] ?? null) != $poColor ? '' : 'display:none' }}">
+        <div class="hint text-danger">الدرجة اختلفت — المطلوب: {{ $colors[$poColor] ?? '' }}</div>
+        <select name="lines[{{ $i }}][color_action]" class="form-select form-select-sm">
+          <option value="">— اختار القرار —</option>
+          <option value="substitute" @selected(($l['color_action'] ?? null)==='substitute')>سكّنه مكان اللون المطلوب</option>
+          <option value="new_po" @selected(($l['color_action'] ?? null)==='new_po')>طلب جديد — والأصلي يفضل مطلوب</option>
+        </select>
+      </div>
+    @endif
+  </td>
   <td><select name="lines[{{ $i }}][accessory_id]"><option value="">—</option>
       @foreach($accessories as $k=>$v)<option value="{{ $k }}" @selected(($l['accessory_id'] ?? null)==$k)>{{ $v }}</option>@endforeach
     </select></td>

@@ -77,6 +77,9 @@ class WorkOrderController extends Controller
             'status'        => 'draft',
             'marker_copies' => 2,
             'planner_id'    => auth()->id(),
+            // التسليم الافتراضي بعد 15 يوم — المخطط يعدّله عادي
+            'due_date'      => now()->addDays(15)->toDateString(),
+            'receive_date'  => now()->addDays(15)->toDateString(),
         ]);
 
         // لو جاي من شاشة الحوض، نبدأ بسطر خامة جاهز عليه
@@ -136,6 +139,8 @@ class WorkOrderController extends Controller
             'approval.steps.user', 'approval.steps.role',
         ]);
 
+        $work_order->load(['revisedFrom', 'revisions']);
+
         return view('workorders.show', [
             'title'       => 'أمر الشغل ' . $work_order->wo_no,
             'row'         => $work_order,
@@ -143,6 +148,10 @@ class WorkOrderController extends Controller
             'accessories' => PlanningEngine::explodeAccessories($work_order),
             'issued'      => $work_order->materialIssueLines
                                 ->groupBy('work_order_fabric_id'),
+            'history'     => \App\Models\ActivityLog::with('user')
+                                ->where('subject_type', $work_order->getMorphClass())
+                                ->where('subject_id', $work_order->id)
+                                ->latest('id')->limit(30)->get(),
         ]);
     }
 
@@ -243,6 +252,113 @@ class WorkOrderController extends Controller
         return view('print.work_order', ['wo' => $work_order]);
     }
 
+    /**
+     * نسخة معدلة (Revision) — الأمر المعتمد مش بيتعدل مباشرة.
+     * بننسخه بالكامل (خامات وموديلات) كمسودة جديدة بترجع للتخطيط
+     * والاعتماد، والأصل بيتعلم «استُبدل بنسخة أحدث» ويفضل محفوظ بسجله.
+     */
+    public function revise(Request $request, WorkOrder $work_order)
+    {
+        abort_unless(in_array($work_order->status, ['approved', 'sent_to_factory'], true), 403,
+            'النسخ المعدلة بتتعمل من أمر معتمد أو مُرسل للمصنع بس.');
+
+        $reason = trim((string) $request->input('revision_reason'));
+        if ($reason === '') {
+            return back()->withErrors(['msg' => 'لازم تكتب سبب التعديل — بيتسجل في تاريخ الأمر.']);
+        }
+
+        $rev = DB::transaction(function () use ($work_order, $reason) {
+            $work_order->load('fabrics', 'lines');
+
+            $base  = preg_replace('/-R\d+$/', '', $work_order->wo_no);
+            $revNo = (int) $work_order->revision_no + 1;
+
+            $rev = $work_order->replicate([
+                'wo_no', 'status', 'revision_no', 'revised_from_id', 'revision_reason',
+                'cut_pieces', 'received_pieces', 'variance_pct', 'variance_flag', 'variance_reason',
+                'actual_spread_length_m', 'actual_plies',
+            ]);
+            $rev->forceFill([
+                'wo_no'           => $base . '-R' . $revNo,
+                'status'          => 'draft',
+                'revision_no'     => $revNo,
+                'revised_from_id' => $work_order->id,
+                'revision_reason' => $reason,
+                'created_by'      => auth()->id(),
+            ])->save();
+
+            foreach ($work_order->fabrics as $f) {
+                $rev->fabrics()->create(collect($f->getAttributes())
+                    ->except(['id', 'work_order_id', 'created_at', 'updated_at'])->all());
+            }
+            foreach ($work_order->lines as $l) {
+                $rev->lines()->create(collect($l->getAttributes())
+                    ->except(['id', 'work_order_id', 'created_at', 'updated_at',
+                              'cut_qty', 'received_qty', 'remaining_qty'])->all());
+            }
+
+            $work_order->forceFill(['status' => 'superseded'])->save();
+            $this->touchConsignments($work_order);
+
+            ActivityLogger::log('revised', $work_order,
+                'اتعمل منه نسخة معدلة ' . $rev->wo_no . ' — السبب: ' . $reason);
+            ActivityLogger::log('created', $rev,
+                'نسخة معدلة من ' . $work_order->wo_no . ' — السبب: ' . $reason);
+
+            return $rev;
+        });
+
+        return redirect()->route('work-orders.edit', $rev)
+            ->with('success', 'اتعملت النسخة ' . $rev->wo_no . ' — عدّل اللي محتاجه وابعتها للاعتماد. النسخة القديمة محفوظة زي ما هي.');
+    }
+
+    /**
+     * طلب شراء من عجز الإكسسوارات — سطر لكل صنف ناقص، بينزل للمشتريات فورًا.
+     */
+    public function shortagePo(WorkOrder $work_order)
+    {
+        $shortages = collect(PlanningEngine::explodeAccessories($work_order))
+            ->filter(fn ($a) => $a['shortage'] > 0)->values();
+
+        if ($shortages->isEmpty()) {
+            return back()->withErrors(['msg' => 'مفيش عجز إكسسوارات على الأمر ده.']);
+        }
+
+        $po = DB::transaction(function () use ($work_order, $shortages) {
+            $po = \App\Models\PurchaseOrder::create([
+                'po_no'         => \App\Services\DocNumber::next('purchase_order', 'purchase_orders', 'po_no'),
+                'po_date'       => now()->toDateString(),
+                'stage'         => 'purchasing',
+                'status'        => 'draft',
+                'planning_note' => 'عجز إكسسوارات أمر الشغل ' . $work_order->wo_no,
+                'employee_id'   => auth()->id(),
+                'created_by'    => auth()->id(),
+                'requested_by'  => auth()->id(),
+                'requested_at'  => now(),
+            ]);
+
+            foreach ($shortages as $i => $a) {
+                \App\Models\PurchaseOrderLine::create([
+                    'purchase_order_id' => $po->id,
+                    'line_no'   => $i + 1,
+                    'item_name' => $a['accessory']->name . ' (' . $a['accessory']->code . ')',
+                    'qty'       => $a['shortage'],
+                    'unit'      => $a['accessory']->unit,
+                ]);
+            }
+            $po->recalcTotals();
+            return $po;
+        });
+
+        \App\Services\Notifier::broadcastToRole('purchasing', 'po_sourcing',
+            'طلب شراء لعجز إكسسوارات',
+            $po->po_no . ' — ' . $shortages->count() . ' صنف ناقص لأمر الشغل ' . $work_order->wo_no,
+            route('purchase-orders.edit', $po), 'warning');
+
+        return redirect()->route('purchase-orders.edit', $po)
+            ->with('success', 'اتعمل الطلب ' . $po->po_no . ' بأصناف العجز ونزل للمشتريات.');
+    }
+
     public function destroy(WorkOrder $work_order)
     {
         abort_unless($work_order->isDraft(), 403);
@@ -336,6 +452,7 @@ class WorkOrderController extends Controller
             'products'                    => ['nullable', 'array'],
             'products.*.product_model_id' => ['required_with:products', 'exists:product_models,id'],
             'products.*.size_id'          => ['nullable', 'exists:sizes,id'],
+            'products.*.qty_per_spread'   => ['nullable', 'integer', 'min:0'],
             'products.*.planned_qty'      => ['nullable', 'integer', 'min:0'],
         ], [], [
             'factory_id'    => 'المصنع',
@@ -408,6 +525,14 @@ class WorkOrderController extends Controller
      * ولا استلام إنتاج، ولا هتطلع احتياجات الإكسسوارات.
      * لو المستخدم ما فصّلش مقاسات، بنعمل سطر واحد بالكمية المستهدفة.
      */
+    /**
+     * الموديلات المشتركة في الفرشة + توزيع الاستهلاك بالمتوسطات.
+     *
+     * لو المستخدم حدّد «قطع الموديل في الفرشة» (6 تلبيسة + 6 كويتي مثلًا)،
+     * كل موديل بياخد: قطعه المتوقعة = الرِقّات × قطعه في الفرشة،
+     * واستهلاكه = نصيبه من الاستهلاك الفعلي بنسبة متوسطه التاريخي —
+     * بدل ما الورقة القديمة كانت بتعمّم رقم واحد على الكل.
+     */
     private function syncProducts(WorkOrder $wo, array $products, ?int $fallbackModel = null): void
     {
         $wo->refresh()->load('fabrics');
@@ -420,20 +545,54 @@ class WorkOrderController extends Controller
         }
         if (!$rows) return;
 
+        // الخامة الرئيسية = اللي الماركر المشترك متفصّل عليها
+        $main  = $wo->fabrics->firstWhere('role', 'main') ?: $wo->fabrics->first();
+        $plies = (int) ($main?->plies ?: $main?->calc_plies ?: 0);
+        $per   = (float) ($main?->consumption_per_piece ?: 0);
+
+        $modelIds = array_column($rows, 'product_model_id');
+        $avgs = ProductModel::whereIn('id', $modelIds)->pluck('std_consumption_kg', 'id');
+        $names = ProductModel::whereIn('id', $modelIds)->pluck('name', 'id');
+
+        $split = null;
+        /* التوزيع بيشتغل بس لما المخطط يكتب قطع الفرشة فعلًا (قيمة > 1) —
+           السطور القديمة كلها متسجلة بـ 1 افتراضيًا، ومينفعش إعادة حفظها
+           تفعّل التوزيع من غير ما حد يطلبه. */
+        $hasPps = collect($rows)->contains(fn ($p) => (int) ($p['qty_per_spread'] ?? 0) > 1);
+        if ($hasPps && $per > 0) {
+            $split = PlanningEngine::splitConsumption(array_map(fn ($p) => [
+                'product_model_id' => $p['product_model_id'],
+                'label'            => $names[$p['product_model_id']] ?? '',
+                'pieces_in_spread' => (int) ($p['qty_per_spread'] ?? 0),
+                'avg_kg'           => (float) ($avgs[$p['product_model_id']] ?? 0),
+            ], $rows), $per, $plies);
+        }
+
         $sum = array_sum(array_map(fn ($p) => (int) ($p['planned_qty'] ?? 0), $rows));
 
         foreach ($rows as $p) {
+            $pps = (int) ($p['qty_per_spread'] ?? 0);
+            $sp  = $split ? collect($split['rows'])->firstWhere('product_model_id', $p['product_model_id']) : null;
+
             $qty = (int) ($p['planned_qty'] ?? 0);
-            if ($qty === 0 && $sum === 0) {
+            if ($qty === 0 && $sp) {
+                $qty = (int) $sp['expected_pieces'];          // الرِقّات × قطعه في الفرشة
+            } elseif ($qty === 0 && $sum === 0) {
                 $qty = count($rows) === 1 ? $target : (int) floor($target / max(1, count($rows)));
             }
 
             WorkOrderLine::create([
-                'work_order_id'    => $wo->id,
-                'product_model_id' => $p['product_model_id'],
-                'size_id'          => $p['size_id'] ?? null,
-                'qty_per_spread'   => 1,
-                'planned_qty'      => $qty,
+                'work_order_id'         => $wo->id,
+                'product_model_id'      => $p['product_model_id'],
+                'size_id'               => $p['size_id'] ?? null,
+                'qty_per_spread'        => max(1, $pps),
+                'planned_qty'           => $qty,
+                'avg_consumption_kg'    => (float) ($avgs[$p['product_model_id']] ?? 0) ?: null,
+                'consumption_per_piece' => $sp['per_piece'] ?? ($per ?: null),
+                // الكيلوهات دايمًا = الكمية الفعلية × نصيب القطعة — حتى لو المخطط كتب كمية مختلفة
+                'planned_kg'            => $sp
+                    ? round($sp['per_piece'] * $qty, 3)
+                    : ($per > 0 ? round($per * $qty, 3) : null),
             ]);
         }
     }

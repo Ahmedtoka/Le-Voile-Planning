@@ -24,8 +24,14 @@
       @foreach(['كجم','متر'] as $u)<option value="{{ $u }}" @selected(($l['unit'] ?? 'كجم')===$u)>{{ $u }}</option>@endforeach
     </select></td>
 
-  <td><input type="number" step="0.001" name="fabrics[{{ $i }}][planned_qty]" class="f-qty"
-             value="{{ $l['planned_qty'] ?? '' }}" required oninput="LVF.calc()"></td>
+  <td>
+    <input type="number" step="0.001" name="fabrics[{{ $i }}][planned_qty]" class="f-qty"
+           value="{{ $l['planned_qty'] ?? '' }}" required oninput="LVF.calc()">
+    {{-- التخطيط العكسي: اكتب القطع المستهدفة والسيستم يحسب الخامة المطلوبة --}}
+    <input type="number" class="f-target form-control form-control-sm mt-1"
+           placeholder="أو قطع مستهدفة…" title="اكتب عدد القطع المطلوب والسيستم يحسب كمية الخامة اللازمة"
+           oninput="LVF.target(this)">
+  </td>
 
   <td><input type="number" step="0.001" name="fabrics[{{ $i }}][spread_length_m]" class="f-sp"
              value="{{ $l['spread_length_m'] ?? '' }}" required oninput="LVF.calc()"></td>
@@ -53,7 +59,11 @@
   <td><select name="fabrics[{{ $i }}][marker_id]">
       <option value="">— بدون —</option>
       @foreach($markers as $m)
-        <option value="{{ $m->id }}" @selected(($l['marker_id'] ?? null)==$m->id)>{{ $m->code }}</option>
+        {{-- مكتبة الماركرات: نفس الموديل على كل العروض — اختار اللي عرضه مطابق لأقل عرض الرسالة --}}
+        <option value="{{ $m->id }}" @selected(($l['marker_id'] ?? null)==$m->id)>
+          {{ $m->code }} — عرض {{ rtrim(rtrim(number_format((float)$m->fabric_width_cm,1),'0'),'.') }} سم
+          · {{ $m->pieces_per_spread }} قطعة{{ $m->efficiency_pct ? ' · كفاءة ' . rtrim(rtrim(number_format((float)$m->efficiency_pct,1),'0'),'.') . '%' : '' }}
+        </option>
       @endforeach
     </select></td>
 

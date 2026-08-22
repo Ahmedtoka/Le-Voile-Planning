@@ -130,7 +130,7 @@ class Consignment extends Model
         /* المخصص بيتجمع من خامات أوامر الشغل — لأن أمر الشغل الواحد
            بياخد من أكتر من حوض، وكل حوض بكميته. */
         $allocated = (float) $this->workOrderFabrics()
-            ->whereHas('workOrder', fn ($q) => $q->whereNotIn('status', ['cancelled', 'draft']))
+            ->whereHas('workOrder', fn ($q) => $q->whereNotIn('status', ['cancelled', 'draft', 'superseded']))
             ->sum('planned_qty');
 
         $released = in_array($this->status, ['released', 'in_production', 'closed'], true)

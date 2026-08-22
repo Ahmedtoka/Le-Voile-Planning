@@ -23,6 +23,17 @@ class StockAddition extends Model
 
     public const DOC_TYPE = 'stock_addition';
 
+    /** عادي = يدخل دورة الفحص · حاويات = الإذن ده هو الاستلام النهائي */
+    public const RECEIPT_TYPES = [
+        'normal'    => 'عادي — يدخل الفحص',
+        'container' => 'حاويات — بدون فحص',
+    ];
+
+    public function getReceiptTypeNameAttribute(): string
+    {
+        return self::RECEIPT_TYPES[$this->receipt_type] ?? 'عادي';
+    }
+
     public function supplier()      { return $this->belongsTo(Supplier::class); }
     public function warehouse()     { return $this->belongsTo(Warehouse::class); }
     public function purchaseOrder() { return $this->belongsTo(PurchaseOrder::class); }

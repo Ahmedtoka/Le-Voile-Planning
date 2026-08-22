@@ -72,7 +72,8 @@
       <table class="table table-sm mb-0">
         <tr><th style="width:130px">طلبه</th>
             <td>{{ $row->requester?->name ?? '—' }} <span class="hint">{{ $row->requested_at?->format('Y-m-d H:i') }}</span>
-              @if($row->planning_note)<div class="hint">«{{ $row->planning_note }}»</div>@endif</td></tr>
+              @if($row->planning_note)<div class="hint">«{{ $row->planning_note }}»</div>@endif
+              @if($row->productModel)<div class="hint">للموديل: <b>{{ $row->productModel->label }}</b></div>@endif</td></tr>
         <tr><th>سعّره</th>
             <td>{{ $row->sourcer?->name ?? '— لسه' }} <span class="hint">{{ $row->sourced_at?->format('Y-m-d H:i') }}</span></td></tr>
         <tr><th>علمت الحسابات</th>

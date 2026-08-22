@@ -13,8 +13,9 @@
     <td class="k">إسم المخزن</td><td style="width:140px">{{ $sa->warehouse?->code }} — {{ $sa->warehouse?->name }}</td>
   </tr>
   <tr>
-    <td class="k">رقم الرسالة</td><td colspan="3">{{ $sa->consignment_no ?: $sa->consignment?->consignment_no }}</td>
-    <td class="k">الحالة</td><td>تحت الفحص</td>
+    <td class="k">رقم الرسالة</td><td>{{ $sa->consignment_no ?: $sa->consignment?->consignment_no }}</td>
+    <td class="k">رقم إذن المورد</td><td>{{ $sa->supplier_doc_no ?: '—' }}</td>
+    <td class="k">الحالة</td><td>{{ $sa->receipt_type === 'container' ? 'استلام مباشر — بدون فحص' : 'تحت الفحص' }}</td>
   </tr>
 </table>
 

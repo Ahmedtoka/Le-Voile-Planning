@@ -7,6 +7,25 @@
 
 @include('partials.approval_box')
 
+{{-- النسخ المعدلة --}}
+@if($row->status === 'superseded' && $row->revisions->isNotEmpty())
+  <div class="alert alert-warning py-2">
+    <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+    الأمر ده اتعمل منه نسخة معدلة:
+    @foreach($row->revisions as $rv)
+      <a href="{{ route('work-orders.show', $rv) }}" class="fw-bold">{{ $rv->wo_no }}</a>{{ !$loop->last ? '، ' : '' }}
+    @endforeach
+    — النسخة دي محفوظة للرجوع بس.
+  </div>
+@elseif($row->revisedFrom)
+  <div class="alert alert-info py-2">
+    <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+    نسخة معدلة رقم {{ $row->revision_no }} من
+    <a href="{{ route('work-orders.show', $row->revisedFrom) }}" class="fw-bold">{{ $row->revisedFrom->wo_no }}</a>
+    @if($row->revision_reason) — السبب: «{{ $row->revision_reason }}» @endif
+  </div>
+@endif
+
 @foreach(($calc['warnings'] ?? []) as $w)
   <div class="alert alert-{{ $w['level']==='danger' ? 'danger' : 'warning' }} py-2">
     <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ $w['text'] }}
@@ -106,6 +125,65 @@
         @endif
       </div>
     </div>
+
+    {{-- الموديلات وتوزيع الاستهلاك --}}
+    @if($row->lines->isNotEmpty())
+    @php
+      $mainFab  = $row->fabrics->firstWhere('role','main') ?: $row->fabrics->first();
+      $sumPps   = (int) $row->lines->sum('qty_per_spread');
+      $fabPps   = (int) ($mainFab?->pieces_per_spread ?? 0);
+    @endphp
+    <div class="card mb-3">
+      <div class="card-header">الموديلات — توزيع الاستهلاك بالمتوسطات</div>
+      @if(count($row->lines) > 1 && $fabPps > 0 && $sumPps !== $fabPps)
+        <div class="alert alert-warning rounded-0 mb-0 py-2 px-3">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+          مجموع قطع الموديلات في الفرشة ({{ $sumPps }}) مش مساوي لقطع فرشة الخامة الرئيسية ({{ $fabPps }}) —
+          راجع التوزيع قبل ما تبعت للمصنع.
+        </div>
+      @endif
+      <table class="table table-sm mb-0">
+        <thead><tr>
+          <th>الموديل</th><th>المقاس</th><th>قطعه في الفرشة</th>
+          <th>متوسطه التاريخي</th><th>نصيبه من الاستهلاك</th>
+          <th>الكمية</th><th>بالدستة</th><th>كجم مخططة</th>
+        </tr></thead>
+        <tbody>
+        @foreach($row->lines as $l)
+          <tr>
+            <td>{{ $l->productModel?->name ?? '—' }}
+              @if($l->productModel?->code)<div class="hint">{{ $l->productModel->code }}</div>@endif
+            </td>
+            <td>{{ $l->size?->name ?? 'كل المقاسات' }}</td>
+            <td class="num">{{ $l->qty_per_spread }}</td>
+            <td class="num">
+              @if($l->avg_consumption_kg)
+                {{ rtrim(rtrim(number_format((float)$l->avg_consumption_kg * 1000, 1),'0'),'.') }} جم
+              @else
+                <span class="text-danger">مش مسجّل</span>
+              @endif
+            </td>
+            <td class="num fw-bold">
+              @if($l->consumption_per_piece)
+                {{ rtrim(rtrim(number_format((float)$l->consumption_per_piece * 1000, 1),'0'),'.') }} جم
+              @else — @endif
+            </td>
+            <td class="num fw-bold">{{ number_format((int)$l->planned_qty) }}</td>
+            <td class="num">{{ number_format((int)$l->planned_qty / 12, 2) }}</td>
+            <td class="num">{{ $l->planned_kg ? rtrim(rtrim(number_format((float)$l->planned_kg,3),'0'),'.') : '—' }}</td>
+          </tr>
+        @endforeach
+        </tbody>
+      </table>
+      <div class="card-footer bg-white hint">
+        نصيب الموديل = الاستهلاك الفعلي × (متوسطه ÷ المتوسط المرجّح لكل موديلات الفرشة) —
+        كده البادي مش بياخد نفس رقم المعصم، ومجموع الكيلوهات بيساوي المستهلك الحقيقي بالظبط.
+        @if($row->lines->count() > 1 && $row->lines->contains(fn ($l) => !$l->avg_consumption_kg))
+          <span class="text-danger">فيه موديل من غير متوسط مسجّل — الاستهلاك اتعمّم. سجّل المتوسط من شاشة الموديلات.</span>
+        @endif
+      </div>
+    </div>
+    @endif
 
     {{-- بيان القص --}}
     <div class="card mb-3">
@@ -213,19 +291,40 @@
     </div>
 
     <div class="card mb-3">
-      <div class="card-header">بيانات تخص المنتج (الإكسسوارات)</div>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>بيانات تخص المنتج (الإكسسوارات)</span>
+        @php $hasShortage = collect($accessories)->contains(fn ($a) => $a['shortage'] > 0); @endphp
+        @if($hasShortage)
+          <form method="post" action="{{ route('work-orders.shortage-po', $row) }}"
+                onsubmit="return confirm('يتعمل طلب شراء بكل أصناف العجز وينزل للمشتريات؟')">@csrf
+            <button class="btn btn-sm btn-danger py-0">
+              <i class="bi bi-cart-plus" aria-hidden="true"></i> طلب شراء بالعجز
+            </button>
+          </form>
+        @endif
+      </div>
       <table class="table table-sm mb-0">
-        <thead><tr><th>البند</th><th>المطلوب</th><th>المتاح</th><th>الناقص</th></tr></thead>
+        <thead><tr><th>البند</th><th>كود الإكسسوار</th><th>المطلوب</th><th>الوحدة</th><th>المتاح</th><th>الناقص</th></tr></thead>
         <tbody>
         @forelse($accessories as $a)
           <tr class="{{ $a['shortage'] > 0 ? 'table-danger' : '' }}">
-            <td>{{ $a['accessory']->name }}</td>
-            <td class="num">{{ number_format($a['required'], 0) }}</td>
-            <td class="num">{{ number_format($a['available'], 0) }}</td>
-            <td class="num fw-bold">{{ $a['shortage'] > 0 ? number_format($a['shortage'], 0) : '—' }}</td>
+            <td>{{ $a['accessory']->name }}
+              @if(count($a['by_model'] ?? []) > 1)
+                <div class="hint">
+                  @foreach($a['by_model'] as $ml => $mq)
+                    {{ $ml }}: {{ rtrim(rtrim(number_format($mq, 3),'0'),'.') }}{{ !$loop->last ? ' · ' : '' }}
+                  @endforeach
+                </div>
+              @endif
+            </td>
+            <td class="num hint">{{ $a['accessory']->code }}</td>
+            <td class="num">{{ rtrim(rtrim(number_format($a['required'], 3),'0'),'.') }}</td>
+            <td>{{ $a['accessory']->unit }}</td>
+            <td class="num">{{ rtrim(rtrim(number_format($a['available'], 3),'0'),'.') }}</td>
+            <td class="num fw-bold">{{ $a['shortage'] > 0 ? rtrim(rtrim(number_format($a['shortage'], 3),'0'),'.') : '—' }}</td>
           </tr>
         @empty
-          <tr><td colspan="4" class="text-center text-muted py-3">مفيش BOM مسجّل.</td></tr>
+          <tr><td colspan="6" class="text-center text-muted py-3">مفيش BOM مسجّل للموديلات دي — سجّله من شاشة الموديلات.</td></tr>
         @endforelse
         </tbody>
       </table>
@@ -246,6 +345,10 @@
             <button class="btn btn-sm btn-plum"><i class="bi bi-truck" aria-hidden="true"></i> إرسال للمصنع</button>
           </form>
         @endif
+        @if(in_array($row->status, ['approved','sent_to_factory']))
+          <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reviseModal">
+            <i class="bi bi-arrow-repeat" aria-hidden="true"></i> نسخة معدلة</button>
+        @endif
         <a href="{{ route('work-orders.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
           <i class="bi bi-printer" aria-hidden="true"></i> طباعة ورقة المصنع</a>
         @if(!in_array($row->status, ['closed','cancelled','draft']))
@@ -254,8 +357,44 @@
         @endif
       </div>
     </div>
+
+    {{-- سجل الحالات والتغييرات --}}
+    <div class="card mt-3">
+      <div class="card-header">سجل الحالات والتغييرات</div>
+      <table class="table table-sm mb-0">
+        <thead><tr><th style="width:140px">إمتى</th><th style="width:130px">مين</th><th>إيه اللي حصل</th></tr></thead>
+        <tbody>
+        @forelse($history as $h)
+          <tr>
+            <td class="num hint">{{ $h->created_at?->format('Y-m-d H:i') }}</td>
+            <td>{{ $h->user?->name ?? 'السيستم' }}</td>
+            <td>{{ $h->title ?? $h->action }}</td>
+          </tr>
+        @empty
+          <tr><td colspan="3" class="text-center text-muted py-3">مفيش أحداث مسجلة لسه.</td></tr>
+        @endforelse
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
+
+<div class="modal fade" id="reviseModal"><div class="modal-dialog"><div class="modal-content">
+  <form method="post" action="{{ route('work-orders.revise',$row) }}">@csrf
+    <div class="modal-header"><h6 class="modal-title">نسخة معدلة من {{ $row->wo_no }}</h6>
+      <button class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button></div>
+    <div class="modal-body">
+      <p class="small">
+        الأمر المعتمد مش بيتعدل مباشرة — هتتعمل نسخة جديدة (مسودة) بكل بياناته،
+        تعدّل فيها وتبعتها للاعتماد من جديد. النسخة دي هتتعلم «استُبدل بنسخة أحدث» وتفضل محفوظة.
+      </p>
+      <label class="form-label req">سبب التعديل</label>
+      <textarea name="revision_reason" rows="3" class="form-control" required
+                placeholder="مثال: العرض الفعلي اختلف بعد الفحص / تغيير توزيع الموديلات في الفرشة"></textarea>
+    </div>
+    <div class="modal-footer"><button class="btn btn-warning btn-sm">اعمل النسخة</button></div>
+  </form>
+</div></div></div>
 
 <div class="modal fade" id="closeModal"><div class="modal-dialog"><div class="modal-content">
   <form method="post" action="{{ route('work-orders.close',$row) }}">@csrf

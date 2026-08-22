@@ -80,6 +80,9 @@ class PaperSeeder
         $this->say('إذن صرف الخام 1303774…');
         $this->materialIssue($kb106, $kb107, $mami, $tufr);
 
+        $this->say('أمر الشغل KY81 — شيت الجوب أوردر (موديلين في فرشة واحدة)…');
+        $this->ky81();
+
         return [
             'موردين'        => Supplier::count(),
             'مصانع'         => Factory::count(),
@@ -118,6 +121,7 @@ class PaperSeeder
             ['KB',  'الخطيب', 4000, 6],
             ['SIN', 'سيني',   4000, 7],
             ['KHD', 'خالد',   2500, 5],
+            ['KY',  'كيان',   3000, 6],
         ] as [$c, $n, $cap, $cycle]) {
             Factory::updateOrCreate(['code' => $c], [
                 'name' => $n, 'daily_capacity_pcs' => $cap, 'avg_cycle_days' => $cycle, 'is_active' => true,
@@ -145,6 +149,13 @@ class PaperSeeder
             'spec_width_cm' => 150, 'spec_width_min_cm' => 145,
             'max_defect_pct' => 3, 'is_active' => true,
         ]);
+        // فسكوز فل ليكرا — خامة أمر الشغل KY81 (شيت الجوب أوردر)
+        FabricType::updateOrCreate(['code' => 'VSF'], [
+            'name' => 'فسكوز فل ليكرا', 'composition' => 'فسكوز + ليكرا',
+            'spec_width_cm' => 172, 'spec_width_min_cm' => 165,
+            'spec_gsm' => 192, 'spec_gsm_min' => 180, 'spec_gsm_max' => 205,
+            'max_defect_pct' => 3, 'is_active' => true,
+        ]);
 
         // الأكواد زي ما هي على الورق
         foreach ([
@@ -164,6 +175,7 @@ class PaperSeeder
             ['1600', 'موف',        'بنفسجي', '#a98bbd', false],
             ['1700', 'لبني',       'أزرق',   '#a8c8e0', false],
             ['1800', 'أحمر',       'أحمر',   '#b5342b', false],
+            ['3_125','جريش 3_125', 'رمادي',  '#b8b2a8', false],
         ] as [$code, $name, $family, $hex, $basic]) {
             Color::updateOrCreate(['code' => $code], [
                 'name' => $name, 'family' => $family, 'hex' => $hex,
@@ -198,6 +210,13 @@ class PaperSeeder
                 ['qty_per_piece' => $per]
             );
         }
+
+        // الكتالوج الحقيقي من شيت الجوب أوردر: 49 موديل + BOM + إكسسوارات بأكوادها
+        JobOrderMaster::seed($this->log);
+
+        // متوسطات موديلات KY81 — عشان توزيع الاستهلاك يتحسب زي الميتينج
+        ProductModel::where('code', '113A')->update(['std_consumption_kg' => 0.090]); // تلبيسه كباسين
+        ProductModel::where('code', '121A')->update(['std_consumption_kg' => 0.080]); // كويتى رباط
     }
 
     // ── طلب شراء 107 ────────────────────────────────────────────
@@ -453,7 +472,7 @@ class PaperSeeder
         Consignment $c, FabricType $ft, string $colorCode, ?int $supplierId,
         ?int $store, ?int $qc, ?int $lab, ?int $wh, int $poId,
         string $docFi, string $docLb, string $docGr, string $serialGr,
-        int $rolls, float $qty, string $unit, float $width
+        int $rolls, float $qty, string $unit, float $width, float $gsm = 60
     ): void {
         $insp = FabricInspection::create([
             'doc_no' => $docFi, 'doc_date' => $c->arrival_date,
@@ -483,7 +502,7 @@ class PaperSeeder
             's2_shrink_len_pct' => 2.5, 's2_shrink_width_pct' => 1.5,
             'color_match_ok' => true, 'status' => 'approved', 'created_by' => $lab,
         ]);
-        LabGsmReading::create(['lab_report_id' => $labRep->id, 'roll_no' => '001', 'gsm' => 60]);
+        LabGsmReading::create(['lab_report_id' => $labRep->id, 'roll_no' => '001', 'gsm' => $gsm]);
         $labRep->refresh()->recalc();
         DocumentEffects::onApproved($labRep->refresh());
 
@@ -654,5 +673,107 @@ class PaperSeeder
 
         $mi->refresh()->recalcTotals();
         DocumentEffects::onApproved($mi->refresh());
+    }
+
+    /* ── أمر الشغل KY81 — شيت «Automation Job Order» بالحرف ─────────
+     |
+     | رسالة VSFL_110826_127_04 · فسكوز فل ليكرا · جريش 3_125 · 152.9 كجم
+     | فرشة 3.1 م × عرض 1.72 م × مقطع 0.192 ⇒ استهلاك القطعة 0.08531
+     | موديلين في نفس الفرشة (12 قطعة): 6 تلبيسه كباسين + 6 كويتى رباط
+     | الشيت كان بيعمّم الاستهلاك — هنا بيتوزّع بالمتوسطات (90/80 جم).
+    */
+    private function ky81(): void
+    {
+        $planner = User::where('username', 'planner')->value('id');
+        $purch   = User::where('username', 'moaz')->value('id');
+        $store   = User::where('username', 'store')->value('id');
+        $qc      = User::where('username', 'qc')->value('id');
+        $lab     = User::where('username', 'lab')->value('id');
+        $obr     = Warehouse::where('code', 'OBR')->value('id');
+        $sup     = Supplier::where('code', '043')->value('id');
+        $vsf     = FabricType::where('code', 'VSF')->first();
+        $ky      = Factory::where('code', 'KY')->value('id');
+
+        // طلب الشراء بتاع الخامة
+        $po = PurchaseOrder::create([
+            'po_no'          => 'PO-2026-00108',
+            'po_date'        => '2026-08-05',
+            'supplier_id'    => $sup,
+            'warehouse_id'   => $obr,
+            'employee_id'    => $purch,
+            'delivery_date'  => '2026-08-11',
+            'payment_method' => 'آجل 30 يوم',
+            'stage'          => 'approved',
+            'status'         => 'approved',
+            'planning_note'  => 'فسكوز فل ليكرا لأمر الشغل KY81',
+            'created_by'     => $planner,
+            'requested_by'   => $planner, 'requested_at' => '2026-08-05',
+            'sourced_by'     => $purch,   'sourced_at'   => '2026-08-06',
+        ]);
+        PurchaseOrderLine::create([
+            'purchase_order_id' => $po->id, 'line_no' => 1,
+            'fabric_type_id' => $vsf->id,
+            'color_id'       => Color::where('code', '3_125')->value('id'),
+            'qty' => 152.9, 'unit' => 'كجم',
+            'unit_price' => 120, 'line_total' => 18348, 'tolerance_pct' => 5,
+        ]);
+        $po->refresh()->recalcTotals();
+
+        // الرسالة + الفحص + الإفراج
+        $vsfl = $this->consignment(
+            'VSFL_110826_127_04', '2026-08-11', $sup, $vsf, '3_125', $obr, $po->id,
+            rolls: 8, kg: 152.9, lengthM: 463, store: $store,
+            saDoc: 'SA-2026-00003', saSerial: '41502', itemCode: '118100231701125',
+            itemName: 'فسكوز فل ليكرا جريش 3_125'
+        );
+        $this->quickApprove($vsfl, $vsf, '3_125', $sup, $store, $qc, $lab, $obr, $po->id,
+            docFi: 'FI-2026-04381', docLb: 'LB-2026-00003', docGr: 'GR-2026-1000887',
+            serialGr: '1000887', rolls: 8, qty: 152.9, unit: 'كجم', width: 172, gsm: 192);
+        $vsfl->refresh();
+
+        // أمر الشغل
+        $wo = WorkOrder::create([
+            'wo_no'         => 'KY81',
+            'wo_date'       => '2026-08-15',
+            'factory_id'    => $ky,
+            'receive_date'  => '2026-08-30',
+            'due_date'      => '2026-08-30',
+            'product_title' => 'تلبيسه كباسين + كويتى رباط (جريش 3_125)',
+            'barcode'       => '10522424012500',
+            'marker_copies' => 3,
+            'planner_id'    => $planner,
+            'cutting_notes' => 'كل قطعة في كيس - كل دستة في كيس · عمل فواصل لوجود اختلاف لون',
+            'status'        => 'sent_to_factory',
+            'created_by'    => $planner,
+        ]);
+
+        // فرشة 3.1 × 1.72 × 0.192 ⇒ استهلاك 0.08531 · 149 رقة · 1788 قطعة
+        $this->fabric($wo, 1, $vsfl, 'weight', 'كجم', 152.9, 3.1, null, 1.72, 0.192, 12, 149, 1788);
+
+        // الموديلين — التوزيع بالمتوسطات بدل تعميم الشيت
+        $m113 = ProductModel::where('code', '113A')->first();   // تلبيسه كباسين — متوسط 90 جم
+        $m121 = ProductModel::where('code', '121A')->first();   // كويتى رباط — متوسط 80 جم
+        $fab  = $wo->fabrics()->first();
+
+        $split = PlanningEngine::splitConsumption([
+            ['product_model_id' => $m113?->id, 'label' => 'تلبيسه كباسين', 'pieces_in_spread' => 6, 'avg_kg' => 0.090],
+            ['product_model_id' => $m121?->id, 'label' => 'كويتى رباط',    'pieces_in_spread' => 6, 'avg_kg' => 0.080],
+        ], (float) $fab->consumption_per_piece, (int) $fab->plies);
+
+        foreach ($split['rows'] as $r) {
+            WorkOrderLine::create([
+                'work_order_id'         => $wo->id,
+                'product_model_id'      => $r['product_model_id'],
+                'size_id'               => null,
+                'qty_per_spread'        => $r['pieces_in_spread'],
+                'planned_qty'           => $r['expected_pieces'],
+                'avg_consumption_kg'    => $r['avg_kg'],
+                'consumption_per_piece' => $r['per_piece'],
+                'planned_kg'            => $r['planned_kg'],
+            ]);
+        }
+
+        $wo->refresh()->recalc();
+        DocumentEffects::onApproved($wo->refresh());
     }
 }

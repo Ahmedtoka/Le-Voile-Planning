@@ -59,6 +59,7 @@
       @endif
     </form>
 
+    @if(!empty($extraActions)){!! $extraActions !!}@endif
     @if(!empty($createRoute) && Route::has($createRoute))
       <a href="{{ route($createRoute) }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> {{ $createLabel }}</a>
     @endif

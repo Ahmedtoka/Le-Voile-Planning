@@ -6,7 +6,8 @@
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   طلبه <b>{{ $row->requester?->name }}</b> يوم {{ $row->po_date?->format('Y-m-d') }}
-  @if($row->planning_note) — «{{ $row->planning_note }}» @endif.
+  @if($row->planning_note) — «{{ $row->planning_note }}» @endif
+  @if($row->productModel) · للموديل <b>{{ $row->productModel->label }}</b> @endif.
   حدد المورد والسعر والوحدة وتاريخ التوريد واضغط <b>«احفظ»</b> — وخلاص.
 </div>
 

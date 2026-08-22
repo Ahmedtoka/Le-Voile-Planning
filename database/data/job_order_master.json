@@ -1,0 +1,2955 @@
+{
+ "accessories": [
+  {
+   "name": "استيكر بندانه",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "81113613011432"
+  },
+  {
+   "name": "استيكر بدي كم قميصM",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 11300.0,
+   "code": "81113613036245"
+  },
+  {
+   "name": "استيكر بدي كم قميصL",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 9450.0,
+   "code": "81113613036246"
+  },
+  {
+   "name": "استيكر بدي كم قميصXL",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 10160.0,
+   "code": "81113613036247"
+  },
+  {
+   "name": "استيكر بدي برقبه قصيره (كم هاف) م1",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 12008.0,
+   "code": "81113613036262"
+  },
+  {
+   "name": "استيكر بدي برقبه قصيره (كم هاف) م2",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 10376.0,
+   "code": "81113613036263"
+  },
+  {
+   "name": "استيكر بدي برقبه قصيره (كم هاف) م3",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 9044.0,
+   "code": "81113613036264"
+  },
+  {
+   "name": "استيكر بدي بدون كم برقبه قصيره (كت هاف) م1",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 8216.0,
+   "code": "81113613036265"
+  },
+  {
+   "name": "استيكر بدي بدون كم برقبه قصيره (كت هاف) م2",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 13929.0,
+   "code": "81113613036266"
+  },
+  {
+   "name": "استيكر بدي بدون كم برقبه قصيره (كت هاف) م3",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 7314.0,
+   "code": "81113613036267"
+  },
+  {
+   "name": "استيكر بدي بدون كم برقبه قصيره (كت هاف) م4",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 929.0,
+   "code": "81113613036268"
+  },
+  {
+   "name": "استيكر بدي برقبه دائريه (كم سابرينا) م1",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 14070.0,
+   "code": "81113613036269"
+  },
+  {
+   "name": "استيكر بدي برقبه دائريه (كم سابرينا) م2",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 13496.0,
+   "code": "81113613036270"
+  },
+  {
+   "name": "استيكر بدي برقبه دائريه (كم سابرينا) م3",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 4729.0,
+   "code": "81113613036271"
+  },
+  {
+   "name": "استيكر بدي بدون كم برقبه دائريه (كت سابرينا) م1",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 5086.0,
+   "code": "81113613036272"
+  },
+  {
+   "name": "استيكر بدي بدون كم برقبه دائريه (كت سابرينا) م2",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 12736.0,
+   "code": "81113613036273"
+  },
+  {
+   "name": "استيكر بدي بدون كم برقبه دائريه (كت سابرينا) م3",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 11057.0,
+   "code": "81113613036274"
+  },
+  {
+   "name": "استيكر جيب تل",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 24012.0,
+   "code": "81113613036278"
+  },
+  {
+   "name": "استيكر جيب جوبير",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 2184.0,
+   "code": "81113613036279"
+  },
+  {
+   "name": "استيكر طرحه سريعه اللف",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "81113613042420"
+  },
+  {
+   "name": "استيكر فست باكمام (نص بدي كم)",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 16523.0,
+   "code": "81113613056275"
+  },
+  {
+   "name": "استيكر فست بدون اكمام (نص بدي كت)",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 14512.0,
+   "code": "81113613056276"
+  },
+  {
+   "name": "استيكر جيب قميص م1",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 18426.0,
+   "code": "81113613056280"
+  },
+  {
+   "name": "استيكر جيب قميص م2",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 4736.0,
+   "code": "81113613056281"
+  },
+  {
+   "name": "استيكر تلبيسه رياضيه",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 1800.0,
+   "code": "81113613057277"
+  },
+  {
+   "name": "استيكر طرحه ليكرا+بونيه برباط",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 70746.0,
+   "code": "81113613057283"
+  },
+  {
+   "name": "استيكر طرحه ليكرا+بونيه بدون",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 5918.0,
+   "code": "81113613057284"
+  },
+  {
+   "name": "استيكر بونيه حرير",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 61942.0,
+   "code": "81113613057295"
+  },
+  {
+   "name": "استيكر شعر صحي",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 27489.0,
+   "code": "81113613057296"
+  },
+  {
+   "name": "استيكر بونيه سوري مقفول",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 20474.0,
+   "code": "81113613057297"
+  },
+  {
+   "name": "استيكر بونيه سوري مفتوح",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 27838.0,
+   "code": "81113613057298"
+  },
+  {
+   "name": "استيكر بونيه بدون خياطه برباط",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 65968.0,
+   "code": "81113613057299"
+  },
+  {
+   "name": "استيكر بونيه قطن كويتي عادي",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 28899.0,
+   "code": "81113613057300"
+  },
+  {
+   "name": "استيكر بونيه قطن كويتي برباط",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 22792.0,
+   "code": "81113613057301"
+  },
+  {
+   "name": "استيكر بونيه قطن عادي برباط",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 19100.0,
+   "code": "81113613057302"
+  },
+  {
+   "name": "استيكر تلبيسه سوري قطعه واحده",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 26614.0,
+   "code": "81113613057303"
+  },
+  {
+   "name": "استيكر تلبيسه سوري قطعتين",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 28457.0,
+   "code": "81113613057304"
+  },
+  {
+   "name": "استيكر تلبيسه كامله",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 3020.0,
+   "code": "81113613057305"
+  },
+  {
+   "name": "استيكر تلبيسه كامله تركي",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "81113613057305-2"
+  },
+  {
+   "name": "استيكر تلبيسه كامله تل",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "81113613057305-3"
+  },
+  {
+   "name": "استيكر معصم رياضي",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 5105.0,
+   "code": "81113613057309"
+  },
+  {
+   "name": "استيكر معصم قميص",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 27810.0,
+   "code": "81113613057310"
+  },
+  {
+   "name": "استيكر معصم قطن",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 27358.0,
+   "code": "81113613057311"
+  },
+  {
+   "name": "استيكر تلبيسه ساده بكباسين",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 12642.0,
+   "code": "81113613058306"
+  },
+  {
+   "name": "استيكر ياقه قميص",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 20327.0,
+   "code": "81113613058307"
+  },
+  {
+   "name": "استيكر معصم رياضي 2",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 3224.0,
+   "code": "81113613058308"
+  },
+  {
+   "name": "اكياس ساده (40*60)",
+   "color": null,
+   "unit": "كيلو",
+   "stock_qty": 336.055,
+   "code": "82212215020162"
+  },
+  {
+   "name": "اكياس ساده (38*35)",
+   "color": null,
+   "unit": "كيلو",
+   "stock_qty": 1130.194,
+   "code": "82212215021163"
+  },
+  {
+   "name": "اكياس بونيه بدون خياطه",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 287736.0,
+   "code": "82212221026170"
+  },
+  {
+   "name": "اكياس مقاس 1",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 197118.0,
+   "code": "82212221027171"
+  },
+  {
+   "name": "اكياس مقاس 2",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 68267.0,
+   "code": "82212221028172"
+  },
+  {
+   "name": "اكياس مقاس 3",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 8109.0,
+   "code": "82212221029173"
+  },
+  {
+   "name": "استك مكوك",
+   "color": null,
+   "unit": "كيلو",
+   "stock_qty": 45.44,
+   "code": "83311213005127"
+  },
+  {
+   "name": "استك نسيج ابيض 5cm",
+   "color": null,
+   "unit": "كيلو",
+   "stock_qty": 0,
+   "code": "83311213006125"
+  },
+  {
+   "name": "ترانسفير فضي",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 10336.0,
+   "code": "83311920005150"
+  },
+  {
+   "name": "حشو (اساور)",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 30875.0,
+   "code": "83312313005174"
+  },
+  {
+   "name": "حشو (راس+رجل)",
+   "color": null,
+   "unit": "طقم",
+   "stock_qty": 11912.0,
+   "code": "83312313005175"
+  },
+  {
+   "name": "تكت لوفوال",
+   "color": "احمر",
+   "unit": "قطعه",
+   "stock_qty": 0.0,
+   "code": "83313319049219"
+  },
+  {
+   "name": "تكت منسوج رئيسي",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 181147.0,
+   "code": "83313323052225"
+  },
+  {
+   "name": "زراير حفر لوفوال",
+   "color": null,
+   "unit": "قطعه",
+   "stock_qty": 682317.0,
+   "code": "83313413005233"
+  },
+  {
+   "name": "كبسوله تكتاك",
+   "color": null,
+   "unit": "بكره",
+   "stock_qty": 95.0,
+   "code": "83313813005339"
+  },
+  {
+   "name": "استك 3cm",
+   "color": "ابيض",
+   "unit": "كيلو",
+   "stock_qty": 535.21,
+   "code": "ACC-001"
+  },
+  {
+   "name": "استك 1.25cm",
+   "color": null,
+   "unit": "كيلو",
+   "stock_qty": 347.96,
+   "code": "ACC-002"
+  },
+  {
+   "name": "استك 5cm",
+   "color": null,
+   "unit": "كيلو",
+   "stock_qty": 699.85,
+   "code": "ACC-003"
+  },
+  {
+   "name": "استيكر بدي نص كم م1",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-004"
+  },
+  {
+   "name": "استيكر بدي نص كم م2",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-005"
+  },
+  {
+   "name": "استيكر بدي نص كم م3",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-006"
+  },
+  {
+   "name": "استيكر بندانه المثلث",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-007"
+  },
+  {
+   "name": "استيكر بندانه طبقتين",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-008"
+  },
+  {
+   "name": "استيكر تلبيسه بكبك",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-009"
+  },
+  {
+   "name": "استيكر تلبيسه طبقتين",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-010"
+  },
+  {
+   "name": "تكت مقاس L",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-011"
+  },
+  {
+   "name": "تكت مقاس M",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-012"
+  },
+  {
+   "name": "كرتون تطبيق",
+   "color": null,
+   "unit": "قطعة",
+   "stock_qty": 0,
+   "code": "ACC-013"
+  }
+ ],
+ "models": [
+  {
+   "code": "110A",
+   "name": "بونيه عادي",
+   "fp_code": "O1",
+   "avg_kg": 0.06,
+   "photo_url": "https://levoilestores.com/cdn/shop/files/5_607381ce-8086-4776-96bc-addfe9e6d868.jpg?v=1749568340&width=900",
+   "bom": [
+    {
+     "accessory": "اكياس بونيه بدون خياطه",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "111A",
+   "name": "معصم قميص",
+   "fp_code": "E1",
+   "avg_kg": 0.03,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر معصم قميص",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    },
+    {
+     "accessory": "استك 1.25cm",
+     "qty_per_piece": 9.9e-05
+    },
+    {
+     "accessory": "زراير حفر لوفوال",
+     "qty_per_piece": 0.333333
+    },
+    {
+     "accessory": "حشو (اساور)",
+     "qty_per_piece": 2.0
+    }
+   ]
+  },
+  {
+   "code": "112A",
+   "name": "معصم قطن",
+   "fp_code": "E2",
+   "avg_kg": 0.03,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر معصم قطن",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "113A",
+   "name": "تلبيسه كباسين",
+   "fp_code": "O7",
+   "avg_kg": 0.09,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر تلبيسه ساده بكباسين",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    },
+    {
+     "accessory": "كبسوله تكتاك",
+     "qty_per_piece": 0.001852
+    }
+   ]
+  },
+  {
+   "code": "114A",
+   "name": "بونيه رباط",
+   "fp_code": "O2",
+   "avg_kg": 0.06,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بونيه بدون خياطه برباط",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    },
+    {
+     "accessory": "استك 1.25cm",
+     "qty_per_piece": 9.9e-05
+    }
+   ]
+  },
+  {
+   "code": "115A",
+   "name": "سوري مفتوح",
+   "fp_code": "O6",
+   "avg_kg": 0.07,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بونيه سوري مفتوح",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "116A",
+   "name": "سوري مقفول",
+   "fp_code": "O5",
+   "avg_kg": 0.07,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بونيه سوري مقفول",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "117A",
+   "name": "تلبيسه قطعه واحده",
+   "fp_code": "O10",
+   "avg_kg": 0.09,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر تلبيسه سوري قطعه واحده",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "118A",
+   "name": "تلبيسه قطعتين",
+   "fp_code": "O11",
+   "avg_kg": 0.09,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر تلبيسه سوري قطعتين",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "119A",
+   "name": "تلبيسه كامله",
+   "fp_code": "O12",
+   "avg_kg": 0.09,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر تلبيسه كامله",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "120A",
+   "name": "كويتي بدون رباط",
+   "fp_code": "O14",
+   "avg_kg": 0.08,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بونيه قطن كويتي عادي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    },
+    {
+     "accessory": "استك مكوك",
+     "qty_per_piece": 3.2e-05
+    },
+    {
+     "accessory": "استك نسيج ابيض 5cm",
+     "qty_per_piece": 0.00125
+    }
+   ]
+  },
+  {
+   "code": "121A",
+   "name": "كويتي رباط",
+   "fp_code": "O4",
+   "avg_kg": 0.08,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بونيه قطن كويتي برباط",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "122A",
+   "name": "نص بدي كت",
+   "fp_code": "V1",
+   "avg_kg": 0.1,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر فست بدون اكمام (نص بدي كت)",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "123A",
+   "name": "نص بدي كم",
+   "fp_code": "V2",
+   "avg_kg": 0.1,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر فست باكمام (نص بدي كم)",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "124A",
+   "name": "بدي كم هاف م 1",
+   "fp_code": "B7",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي برقبه قصيره (كم هاف) م1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "125A",
+   "name": "بدي كم هاف م 2",
+   "fp_code": "B7",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي برقبه قصيره (كم هاف) م2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "126A",
+   "name": "بدي كم هاف م 3",
+   "fp_code": "B7",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي برقبه قصيره (كم هاف) م3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "127A",
+   "name": "بدي كت هاف م1",
+   "fp_code": "B6",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي بدون كم برقبه قصيره (كت هاف) م1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "128A",
+   "name": "بدي كت هاف م2",
+   "fp_code": "B6",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي بدون كم برقبه قصيره (كت هاف) م2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "129A",
+   "name": "بدي كت هاف م3",
+   "fp_code": "B6",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي بدون كم برقبه قصيره (كت هاف) م3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "130A",
+   "name": "بدي كم سابرينا م 1",
+   "fp_code": "B9",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي برقبه دائريه (كم سابرينا) م1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "131A",
+   "name": "بدي كم سابرينا م 2",
+   "fp_code": "B9",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي برقبه دائريه (كم سابرينا) م2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "132A",
+   "name": "بدي كم سابرينا م 3",
+   "fp_code": "B9",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي برقبه دائريه (كم سابرينا) م3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "133A",
+   "name": "بدي كت سابرينا م 1",
+   "fp_code": "B8",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي بدون كم برقبه دائريه (كت سابرينا) م1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "134A",
+   "name": "بدي كت سابرينا م 2",
+   "fp_code": "B8",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي بدون كم برقبه دائريه (كت سابرينا) م2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "135A",
+   "name": "بدي كت سابرينا م 3",
+   "fp_code": "B8",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي بدون كم برقبه دائريه (كت سابرينا) م3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "136A",
+   "name": "جيب قميص م1",
+   "fp_code": "E10",
+   "avg_kg": 0.04,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر جيب قميص م1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    },
+    {
+     "accessory": "زراير حفر لوفوال",
+     "qty_per_piece": 0.333333
+    },
+    {
+     "accessory": "استك 3cm",
+     "qty_per_piece": 0.001351
+    },
+    {
+     "accessory": "تكت مقاس M",
+     "qty_per_piece": 1.0
+    }
+   ]
+  },
+  {
+   "code": "137A",
+   "name": "جيب قميص م2",
+   "fp_code": "E14",
+   "avg_kg": 0.04,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر جيب قميص م2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    },
+    {
+     "accessory": "زراير حفر لوفوال",
+     "qty_per_piece": 0.333333
+    },
+    {
+     "accessory": "استك 3cm",
+     "qty_per_piece": 0.001351
+    },
+    {
+     "accessory": "تكت مقاس L",
+     "qty_per_piece": 1.0
+    }
+   ]
+  },
+  {
+   "code": "138A",
+   "name": "تلبيسه رياضيه",
+   "fp_code": "O17",
+   "avg_kg": 0.09,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر تلبيسه رياضيه",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "139A",
+   "name": "بونيه الشعر الصحي",
+   "fp_code": "O30",
+   "avg_kg": 0.06,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر شعر صحي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    },
+    {
+     "accessory": "استك 1.25cm",
+     "qty_per_piece": 9.9e-05
+    },
+    {
+     "accessory": "استك مكوك",
+     "qty_per_piece": 3.2e-05
+    }
+   ]
+  },
+  {
+   "code": "140A",
+   "name": "جيب جوبير",
+   "fp_code": "E21",
+   "avg_kg": 0.04,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر جيب جوبير",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    },
+    {
+     "accessory": "استك 3cm",
+     "qty_per_piece": 0.001351
+    }
+   ]
+  },
+  {
+   "code": "141A",
+   "name": "جيب فستان ( تل )",
+   "fp_code": "E19",
+   "avg_kg": 0.04,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر جيب تل",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    },
+    {
+     "accessory": "استك 3cm",
+     "qty_per_piece": 0.001351
+    }
+   ]
+  },
+  {
+   "code": "142A",
+   "name": "معصم رياضي",
+   "fp_code": null,
+   "avg_kg": 0.03,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر معصم رياضي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    },
+    {
+     "accessory": "استك 1.25cm",
+     "qty_per_piece": 9.9e-05
+    },
+    {
+     "accessory": "زراير حفر لوفوال",
+     "qty_per_piece": 0.333333
+    },
+    {
+     "accessory": "حشو (اساور)",
+     "qty_per_piece": 2.0
+    }
+   ]
+  },
+  {
+   "code": "143A",
+   "name": "ياقه قميص",
+   "fp_code": "E5",
+   "avg_kg": 0.03,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر ياقه قميص",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    },
+    {
+     "accessory": "استك 1.25cm",
+     "qty_per_piece": 9.9e-05
+    },
+    {
+     "accessory": "زراير حفر لوفوال",
+     "qty_per_piece": 0.333333
+    },
+    {
+     "accessory": "حشو (راس+رجل)",
+     "qty_per_piece": 0.083333
+    },
+    {
+     "accessory": "كرتون تطبيق",
+     "qty_per_piece": 1.0
+    }
+   ]
+  },
+  {
+   "code": "144A",
+   "name": "بونيه حرير",
+   "fp_code": "O31",
+   "avg_kg": 0.06,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بونيه حرير",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "145A",
+   "name": "بونيه قطن برباط",
+   "fp_code": "O62",
+   "avg_kg": 0.06,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بونيه قطن عادي برباط",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    },
+    {
+     "accessory": "استك 1.25cm",
+     "qty_per_piece": 9.9e-05
+    }
+   ]
+  },
+  {
+   "code": "146A",
+   "name": "تلبيسه طبقتين",
+   "fp_code": "O70",
+   "avg_kg": 0.09,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر تلبيسه طبقتين",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "147A",
+   "name": "طرحه سريعه اللف",
+   "fp_code": null,
+   "avg_kg": null,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر طرحه سريعه اللف",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "148A",
+   "name": "بندانه المثلث",
+   "fp_code": null,
+   "avg_kg": null,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بندانه المثلث",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "149A",
+   "name": "بندانه",
+   "fp_code": null,
+   "avg_kg": null,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بندانه",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "150A",
+   "name": "تلبيسه كامله تركي",
+   "fp_code": null,
+   "avg_kg": 0.09,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر تلبيسه كامله تركي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "151A",
+   "name": "تلبيسه كامله تل",
+   "fp_code": null,
+   "avg_kg": 0.09,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر تلبيسه كامله تل",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "152A",
+   "name": "تلبيسه بكبك",
+   "fp_code": null,
+   "avg_kg": 0.09,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر تلبيسه بكبك",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    },
+    {
+     "accessory": "استك 1.25cm",
+     "qty_per_piece": 9.9e-05
+    }
+   ]
+  },
+  {
+   "code": "153A",
+   "name": "بندانه طبقتين",
+   "fp_code": null,
+   "avg_kg": null,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بندانه طبقتين",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "154A",
+   "name": "سوري مفتوح جل",
+   "fp_code": "O82",
+   "avg_kg": 0.07,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بونيه سوري مفتوح",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "155A",
+   "name": "سوري مقفول جل",
+   "fp_code": "O83",
+   "avg_kg": 0.07,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بونيه سوري مقفول",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (38*35)",
+     "qty_per_piece": 0.000642
+    }
+   ]
+  },
+  {
+   "code": "156A",
+   "name": "بدي نص كم م1",
+   "fp_code": "B11",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي نص كم م1",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "157A",
+   "name": "بدي نص كم م2",
+   "fp_code": "B11",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي نص كم م2",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  },
+  {
+   "code": "158A",
+   "name": "بدي نص كم م3",
+   "fp_code": "B11",
+   "avg_kg": 0.15,
+   "photo_url": null,
+   "bom": [
+    {
+     "accessory": "اكياس مقاس 3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "تكت منسوج رئيسي",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "استيكر بدي نص كم م3",
+     "qty_per_piece": 1.0
+    },
+    {
+     "accessory": "اكياس ساده (40*60)",
+     "qty_per_piece": 0.001083
+    }
+   ]
+  }
+ ],
+ "colors": [
+  {
+   "name": "ابيض",
+   "code": "001"
+  },
+  {
+   "name": "اوف وايت",
+   "code": "002"
+  },
+  {
+   "name": "بيج",
+   "code": "003"
+  },
+  {
+   "name": "بيج",
+   "code": "004"
+  },
+  {
+   "name": "بيج",
+   "code": "005"
+  },
+  {
+   "name": "بيج",
+   "code": "008"
+  },
+  {
+   "name": "بيج",
+   "code": "010"
+  },
+  {
+   "name": "روز",
+   "code": "019"
+  },
+  {
+   "name": "كشمير",
+   "code": "023"
+  },
+  {
+   "name": "كشمير",
+   "code": "029"
+  },
+  {
+   "name": "كشمير",
+   "code": "032"
+  },
+  {
+   "name": "كشمير",
+   "code": "033"
+  },
+  {
+   "name": "احمر",
+   "code": "063"
+  },
+  {
+   "name": "نبيتي",
+   "code": "082"
+  },
+  {
+   "name": "مسطرده",
+   "code": "087"
+  },
+  {
+   "name": "كشمير",
+   "code": "098"
+  },
+  {
+   "name": "كشمير",
+   "code": "100"
+  },
+  {
+   "name": "هافان",
+   "code": "110"
+  },
+  {
+   "name": "رمادي",
+   "code": "121"
+  },
+  {
+   "name": "رمادي",
+   "code": "123"
+  },
+  {
+   "name": "رمادي",
+   "code": "125"
+  },
+  {
+   "name": "رمادي",
+   "code": "127"
+  },
+  {
+   "name": "رمادي",
+   "code": "128"
+  },
+  {
+   "name": "رمادي",
+   "code": "132"
+  },
+  {
+   "name": "فيروز",
+   "code": "134"
+  },
+  {
+   "name": "زيتي",
+   "code": "166"
+  },
+  {
+   "name": "زيتي",
+   "code": "171"
+  },
+  {
+   "name": "زيتي",
+   "code": "172"
+  },
+  {
+   "name": "بيبي بلو",
+   "code": "177"
+  },
+  {
+   "name": "بترولي",
+   "code": "186"
+  },
+  {
+   "name": "لافندر",
+   "code": "187"
+  },
+  {
+   "name": "بترولي",
+   "code": "200"
+  },
+  {
+   "name": "كحلي",
+   "code": "214"
+  },
+  {
+   "name": "اسود",
+   "code": "217"
+  },
+  {
+   "name": "كافيه",
+   "code": "218"
+  },
+  {
+   "name": "بيج",
+   "code": "229"
+  },
+  {
+   "name": "كافيه",
+   "code": "231"
+  },
+  {
+   "name": "رمادي",
+   "code": "249"
+  },
+  {
+   "name": "بيج",
+   "code": "258"
+  },
+  {
+   "name": "بيج",
+   "code": "259"
+  },
+  {
+   "name": "بيج",
+   "code": "260"
+  },
+  {
+   "name": "بيج",
+   "code": "261"
+  },
+  {
+   "name": "رمادي",
+   "code": "265"
+  },
+  {
+   "name": "شانيه",
+   "code": "323"
+  },
+  {
+   "name": "بيج",
+   "code": "357"
+  },
+  {
+   "name": "بيج",
+   "code": "358"
+  },
+  {
+   "name": "رمادي",
+   "code": "417"
+  },
+  {
+   "name": "روز",
+   "code": "020"
+  },
+  {
+   "name": "بنفسجي",
+   "code": "078"
+  },
+  {
+   "name": "نبيتي",
+   "code": "084"
+  },
+  {
+   "name": "كافيه",
+   "code": "093"
+  },
+  {
+   "name": "كافيه",
+   "code": "113"
+  },
+  {
+   "name": "زيتي",
+   "code": "114"
+  },
+  {
+   "name": "منت",
+   "code": "143"
+  },
+  {
+   "name": "منت",
+   "code": "158"
+  },
+  {
+   "name": "زيتي",
+   "code": "165"
+  },
+  {
+   "name": "زيتي",
+   "code": "168"
+  },
+  {
+   "name": "بترولي",
+   "code": "178"
+  },
+  {
+   "name": "زيتي",
+   "code": "223"
+  },
+  {
+   "name": "اصفر",
+   "code": "251"
+  },
+  {
+   "name": "بيج",
+   "code": "356"
+  },
+  {
+   "name": "رمادي",
+   "code": "359"
+  },
+  {
+   "name": "نبيتي",
+   "code": "413"
+  },
+  {
+   "name": "بيج",
+   "code": "443"
+  },
+  {
+   "name": "رمادي",
+   "code": "444"
+  },
+  {
+   "name": "بيج",
+   "code": "445"
+  },
+  {
+   "name": "رمادي",
+   "code": "446"
+  },
+  {
+   "name": "بيج",
+   "code": "463"
+  },
+  {
+   "name": "كحلي",
+   "code": "474"
+  },
+  {
+   "name": "زيتي",
+   "code": "475"
+  },
+  {
+   "name": "رمادي",
+   "code": "477"
+  },
+  {
+   "name": "موف",
+   "code": "198"
+  },
+  {
+   "name": "بيج",
+   "code": "006"
+  },
+  {
+   "name": "عسلي",
+   "code": "009"
+  },
+  {
+   "name": "بيج",
+   "code": "012"
+  },
+  {
+   "name": "كافيه",
+   "code": "014"
+  },
+  {
+   "name": "كشمير",
+   "code": "030"
+  },
+  {
+   "name": "فوشيا",
+   "code": "045"
+  },
+  {
+   "name": "فوشيا",
+   "code": "048"
+  },
+  {
+   "name": "طوبي",
+   "code": "071"
+  },
+  {
+   "name": "بنفسجي",
+   "code": "074"
+  },
+  {
+   "name": "بنفسجي",
+   "code": "076"
+  },
+  {
+   "name": "كشمير",
+   "code": "118"
+  },
+  {
+   "name": "موف",
+   "code": "119"
+  },
+  {
+   "name": "رمادي",
+   "code": "122"
+  },
+  {
+   "name": "رمادي",
+   "code": "129"
+  },
+  {
+   "name": "بنفسجي",
+   "code": "204"
+  },
+  {
+   "name": "كحلي",
+   "code": "213"
+  },
+  {
+   "name": "بني",
+   "code": "221"
+  },
+  {
+   "name": "كشمير",
+   "code": "230"
+  },
+  {
+   "name": "بيج",
+   "code": "232"
+  },
+  {
+   "name": "فوشيا",
+   "code": "238"
+  },
+  {
+   "name": "بيج",
+   "code": "241"
+  },
+  {
+   "name": "كافيه",
+   "code": "243"
+  },
+  {
+   "name": "بيج",
+   "code": "245"
+  },
+  {
+   "name": "كشمير",
+   "code": "289"
+  },
+  {
+   "name": "كافيه",
+   "code": "302"
+  },
+  {
+   "name": "كافيه",
+   "code": "307"
+  },
+  {
+   "name": "كافيه",
+   "code": "308"
+  },
+  {
+   "name": "كافيه",
+   "code": "316"
+  },
+  {
+   "name": "كافيه",
+   "code": "320"
+  },
+  {
+   "name": "رمادي",
+   "code": "328"
+  },
+  {
+   "name": "كافيه",
+   "code": "338"
+  },
+  {
+   "name": "جملي",
+   "code": "355"
+  },
+  {
+   "name": "شانيه",
+   "code": "364"
+  },
+  {
+   "name": "بيج",
+   "code": "367"
+  },
+  {
+   "name": "بيج",
+   "code": "368"
+  },
+  {
+   "name": "كافيه",
+   "code": "369"
+  },
+  {
+   "name": "بيج",
+   "code": "377"
+  },
+  {
+   "name": "كافيه",
+   "code": "386"
+  },
+  {
+   "name": "بيج",
+   "code": "390"
+  },
+  {
+   "name": "رمادي",
+   "code": "394"
+  },
+  {
+   "name": "زيتي",
+   "code": "398"
+  },
+  {
+   "name": "كافيه",
+   "code": "418"
+  },
+  {
+   "name": "كحلي",
+   "code": "462"
+  },
+  {
+   "name": "بني",
+   "code": "482"
+  },
+  {
+   "name": "كافيه",
+   "code": "516"
+  },
+  {
+   "name": "رمادي",
+   "code": "519"
+  },
+  {
+   "name": "بيج",
+   "code": "521"
+  },
+  {
+   "name": "رمادي",
+   "code": "586"
+  },
+  {
+   "name": "بيج",
+   "code": "591"
+  },
+  {
+   "name": "كافيه",
+   "code": "592"
+  },
+  {
+   "name": "بيج",
+   "code": "605"
+  },
+  {
+   "name": "بيج",
+   "code": "611"
+  },
+  {
+   "name": "سيمون",
+   "code": "018"
+  },
+  {
+   "name": "روز",
+   "code": "027"
+  },
+  {
+   "name": "كشمير",
+   "code": "036"
+  },
+  {
+   "name": "كشمير",
+   "code": "081"
+  },
+  {
+   "name": "رمادي",
+   "code": "124"
+  },
+  {
+   "name": "رمادي",
+   "code": "131"
+  },
+  {
+   "name": "اخضر",
+   "code": "150"
+  },
+  {
+   "name": "زيتي",
+   "code": "154"
+  },
+  {
+   "name": "منت",
+   "code": "160"
+  },
+  {
+   "name": "موف",
+   "code": "197"
+  },
+  {
+   "name": "رمادي",
+   "code": "248"
+  },
+  {
+   "name": "بيج",
+   "code": "262"
+  },
+  {
+   "name": "بيج",
+   "code": "264"
+  },
+  {
+   "name": "بيج",
+   "code": "267"
+  },
+  {
+   "name": "كافيه",
+   "code": "410"
+  },
+  {
+   "name": "بنفسجي",
+   "code": "077"
+  },
+  {
+   "name": "هافان",
+   "code": "091"
+  },
+  {
+   "name": "مسطرده",
+   "code": "092"
+  },
+  {
+   "name": "هافان",
+   "code": "111"
+  },
+  {
+   "name": "كافيه",
+   "code": "115"
+  },
+  {
+   "name": "اصفر",
+   "code": "161"
+  },
+  {
+   "name": "زيتي",
+   "code": "173"
+  },
+  {
+   "name": "لافندر",
+   "code": "188"
+  },
+  {
+   "name": "تركواز",
+   "code": "205"
+  },
+  {
+   "name": "بطيخي",
+   "code": "228"
+  },
+  {
+   "name": "بيج",
+   "code": "255"
+  },
+  {
+   "name": "روز",
+   "code": "021"
+  },
+  {
+   "name": "طوبي",
+   "code": "068"
+  },
+  {
+   "name": "زهري",
+   "code": "207"
+  },
+  {
+   "name": "كافيه",
+   "code": "275"
+  },
+  {
+   "name": "بيج",
+   "code": "518"
+  },
+  {
+   "name": "بستاج",
+   "code": "159"
+  },
+  {
+   "name": "باذنجاني",
+   "code": "285"
+  },
+  {
+   "name": "روز",
+   "code": "024"
+  },
+  {
+   "name": "طوبي",
+   "code": "069"
+  },
+  {
+   "name": "فيروز",
+   "code": "136"
+  },
+  {
+   "name": "بيبي بلو",
+   "code": "176"
+  },
+  {
+   "name": "كافيه",
+   "code": "254"
+  },
+  {
+   "name": "بيج",
+   "code": "266"
+  },
+  {
+   "name": "كشمير",
+   "code": "489"
+  },
+  {
+   "name": "سماوي",
+   "code": "183"
+  },
+  {
+   "name": "سماوي",
+   "code": "184"
+  },
+  {
+   "name": "بيج",
+   "code": "013"
+  },
+  {
+   "name": "تركواز",
+   "code": "138"
+  },
+  {
+   "name": "زيتي",
+   "code": "164"
+  },
+  {
+   "name": "بترولي",
+   "code": "185"
+  },
+  {
+   "name": "موف",
+   "code": "192"
+  },
+  {
+   "name": "بيج",
+   "code": "256"
+  },
+  {
+   "name": "رمادي",
+   "code": "270"
+  },
+  {
+   "name": "بيج",
+   "code": "271"
+  },
+  {
+   "name": "كافيه",
+   "code": "272"
+  },
+  {
+   "name": "رمادي",
+   "code": "126"
+  },
+  {
+   "name": "رصاصي",
+   "code": "527"
+  },
+  {
+   "name": "سيمون",
+   "code": "017"
+  },
+  {
+   "name": "نبيتي",
+   "code": "065"
+  },
+  {
+   "name": "فيروز",
+   "code": "135"
+  },
+  {
+   "name": "فيروز",
+   "code": "140"
+  },
+  {
+   "name": "لافندر",
+   "code": "190"
+  },
+  {
+   "name": "زهري",
+   "code": "208"
+  },
+  {
+   "name": "كحلي",
+   "code": "215"
+  },
+  {
+   "name": "بنفسجي",
+   "code": "075"
+  },
+  {
+   "name": "نبيتي",
+   "code": "083"
+  },
+  {
+   "name": "مسطرده",
+   "code": "089"
+  },
+  {
+   "name": "كافيه",
+   "code": "095"
+  },
+  {
+   "name": "كشمير",
+   "code": "102"
+  },
+  {
+   "name": "بيج",
+   "code": "471"
+  },
+  {
+   "name": "بترولي",
+   "code": "174"
+  },
+  {
+   "name": "بترولي",
+   "code": "175"
+  },
+  {
+   "name": "بيج",
+   "code": "242"
+  },
+  {
+   "name": "بنفسجي",
+   "code": "073"
+  },
+  {
+   "name": "بيج",
+   "code": "555"
+  },
+  {
+   "name": "كافيه",
+   "code": "094"
+  },
+  {
+   "name": "بيج",
+   "code": "263"
+  },
+  {
+   "name": "زيتي",
+   "code": "170"
+  },
+  {
+   "name": "روز",
+   "code": "028"
+  },
+  {
+   "name": "بنفسجي",
+   "code": "080"
+  },
+  {
+   "name": "منت",
+   "code": "162"
+  },
+  {
+   "name": "بستاج",
+   "code": "163"
+  },
+  {
+   "name": "زيتي",
+   "code": "169"
+  },
+  {
+   "name": "بترولي",
+   "code": "199"
+  },
+  {
+   "name": "زهري",
+   "code": "210"
+  },
+  {
+   "name": "بيج",
+   "code": "257"
+  },
+  {
+   "name": "كافيه",
+   "code": "274"
+  },
+  {
+   "name": "زيتي",
+   "code": "379"
+  },
+  {
+   "name": "زهري",
+   "code": "209"
+  },
+  {
+   "name": "هافان",
+   "code": "051"
+  },
+  {
+   "name": "زهري",
+   "code": "212"
+  },
+  {
+   "name": "كشمير",
+   "code": "031"
+  },
+  {
+   "name": "هافان",
+   "code": "050"
+  },
+  {
+   "name": "طوبي",
+   "code": "070"
+  },
+  {
+   "name": "اخضر",
+   "code": "279"
+  },
+  {
+   "name": "اسود",
+   "code": "400"
+  },
+  {
+   "name": "سيمون",
+   "code": "043"
+  },
+  {
+   "name": "فوشيا",
+   "code": "046"
+  },
+  {
+   "name": "فيروز",
+   "code": "133"
+  },
+  {
+   "name": "كافيه",
+   "code": "011"
+  },
+  {
+   "name": "كشمير",
+   "code": "035"
+  },
+  {
+   "name": "هافان",
+   "code": "052"
+  },
+  {
+   "name": "هافان",
+   "code": "053"
+  },
+  {
+   "name": "هافان",
+   "code": "055"
+  },
+  {
+   "name": "اورانج",
+   "code": "062"
+  },
+  {
+   "name": "كناري",
+   "code": "085"
+  },
+  {
+   "name": "مسطرده",
+   "code": "086"
+  },
+  {
+   "name": "مسطرده",
+   "code": "090"
+  },
+  {
+   "name": "كشمير",
+   "code": "097"
+  },
+  {
+   "name": "كشمير",
+   "code": "099"
+  },
+  {
+   "name": "كشمير",
+   "code": "103"
+  },
+  {
+   "name": "سكري",
+   "code": "237"
+  },
+  {
+   "name": "كشمير",
+   "code": "294"
+  },
+  {
+   "name": "بني",
+   "code": "219"
+  },
+  {
+   "name": "بني",
+   "code": "220"
+  },
+  {
+   "name": "زيتي",
+   "code": "224"
+  },
+  {
+   "name": "جنزاري",
+   "code": "225"
+  },
+  {
+   "name": "بيج",
+   "code": "490"
+  },
+  {
+   "name": "كافيه",
+   "code": "506"
+  },
+  {
+   "name": "رمادي",
+   "code": "593"
+  },
+  {
+   "name": "بيج",
+   "code": "595"
+  },
+  {
+   "name": "بيج",
+   "code": "596"
+  },
+  {
+   "name": "نبيتي",
+   "code": "614"
+  },
+  {
+   "name": "بيج",
+   "code": "746"
+  },
+  {
+   "name": "حديدي",
+   "code": "736"
+  },
+  {
+   "name": "كافيه",
+   "code": "638"
+  },
+  {
+   "name": "بيج",
+   "code": "747"
+  },
+  {
+   "name": "رمادي",
+   "code": "749"
+  },
+  {
+   "name": "بيج",
+   "code": "751"
+  },
+  {
+   "name": "كشمير",
+   "code": "738"
+  },
+  {
+   "name": "كافيه",
+   "code": "676"
+  },
+  {
+   "name": "رمادي",
+   "code": "761"
+  },
+  {
+   "name": "بيج",
+   "code": "760"
+  },
+  {
+   "name": "شانيه",
+   "code": "481"
+  },
+  {
+   "name": "كافيه",
+   "code": "768"
+  },
+  {
+   "name": "كشمير",
+   "code": "757"
+  },
+  {
+   "name": "كافيه",
+   "code": "766"
+  },
+  {
+   "name": "كافيه",
+   "code": "799"
+  },
+  {
+   "name": "بيج",
+   "code": "798"
+  },
+  {
+   "name": "كشمير",
+   "code": "759"
+  },
+  {
+   "name": "رمادي",
+   "code": "667"
+  },
+  {
+   "name": "بيج",
+   "code": "712"
+  },
+  {
+   "name": "كشمير",
+   "code": "025"
+  },
+  {
+   "name": "بيج",
+   "code": "724"
+  },
+  {
+   "name": "نبيتي",
+   "code": "774"
+  },
+  {
+   "name": "بني",
+   "code": "651"
+  },
+  {
+   "name": "كحلي غ",
+   "code": "637"
+  },
+  {
+   "name": "زيتي",
+   "code": "153"
+  },
+  {
+   "name": "جملي",
+   "code": "365"
+  },
+  {
+   "name": "كشمير (غ)",
+   "code": "626"
+  },
+  {
+   "name": "بيج",
+   "code": "733"
+  },
+  {
+   "name": "رمادي",
+   "code": "741"
+  },
+  {
+   "name": "بيج 7",
+   "code": "510"
+  },
+  {
+   "name": "زتوني",
+   "code": "167"
+  },
+  {
+   "name": "بيج 10",
+   "code": "389"
+  },
+  {
+   "name": "رمادي ف",
+   "code": "420"
+  }
+ ]
+}

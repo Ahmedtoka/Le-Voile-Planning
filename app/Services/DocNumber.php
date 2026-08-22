@@ -38,13 +38,16 @@ class DocNumber
         $like   = "{$prefix}-{$year}-%";
 
         return DB::transaction(function () use ($table, $column, $prefix, $year, $like) {
-            $last = DB::table($table)
+            /* أكبر رقم «عدديًا» مش «نصيًا» — المستندات الورقية المدخلة بأرقامها
+               الحقيقية (زي GR-2026-1000885) كانت بتكسب المقارنة النصية وبتخلي
+               كل الأرقام الجديدة تطلع نفس الرقم ⇒ unique violation من تاني مستند. */
+            $max = DB::table($table)
                 ->where($column, 'like', $like)
-                ->orderByDesc($column)
                 ->lockForUpdate()
-                ->value($column);
+                ->selectRaw("MAX(CAST(SUBSTRING_INDEX({$column}, '-', -1) AS UNSIGNED)) AS m")
+                ->value('m');
 
-            $seq = $last ? ((int) substr($last, -5)) + 1 : 1;
+            $seq = (int) $max + 1;
 
             return sprintf('%s-%d-%05d', $prefix, $year, $seq);
         });

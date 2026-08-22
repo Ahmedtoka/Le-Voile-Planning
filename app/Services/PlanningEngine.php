@@ -408,12 +408,81 @@ class PlanningEngine
     }
 
     /**
+     * توزيع الاستهلاك الفعلي على الموديلات المشتركة في نفس الفرشة.
+     *
+     * الورقة القديمة كانت بتعمّم استهلاك واحد على كل الموديلات — والبادي
+     * مش زي المعصم. الطريقة المتفق عليها في الميتينج: كل موديل له متوسط
+     * استهلاك تاريخي، والاستهلاك الفعلي اللي طلع من الفرشة بيتوزّع عليهم
+     * بنسبة متوسطاتهم:
+     *
+     *   المتوسط المرجّح = Σ(قطع الموديل × متوسطه) ÷ إجمالي القطع
+     *   استهلاك قطعة الموديل = الاستهلاك الفعلي × (متوسط الموديل ÷ المتوسط المرجّح)
+     *
+     * كده مجموع (قطع × استهلاك) لكل موديل = إجمالي المستهلك بالظبط.
+     *
+     * @param array $models كل عنصر: [product_model_id, label, pieces_in_spread, avg_kg]
+     * @param float $actualPerPiece الاستهلاك الفعلي للقطعة (من حسبة الخامة)
+     * @param int   $plies عدد الرِقّات المتوقع
+     */
+    public static function splitConsumption(array $models, float $actualPerPiece, int $plies): array
+    {
+        $rows = array_values(array_filter($models, fn ($m) => (int) ($m['pieces_in_spread'] ?? 0) > 0));
+        $warnings = [];
+
+        if (!$rows) {
+            return ['ok' => false, 'rows' => [], 'warnings' => [], 'total_pps' => 0];
+        }
+
+        $totalPps = array_sum(array_map(fn ($m) => (int) $m['pieces_in_spread'], $rows));
+
+        // لو فيه موديل من غير متوسط — مش هنعرف نفرّق، بنرجع للتعميم وبننبّه
+        $missing = array_values(array_filter($rows, fn ($m) => (float) ($m['avg_kg'] ?? 0) <= 0));
+        $uniform = count($missing) > 0;
+        if ($uniform && count($rows) > 1) {
+            $names = implode('، ', array_map(fn ($m) => $m['label'] ?? '؟', $missing));
+            $warnings[] = ['level' => 'warning', 'text' =>
+                "مفيش متوسط استهلاك مسجّل للموديل: {$names} — الاستهلاك اتعمّم بالتساوي. "
+                . 'سجّل المتوسطات في شاشة الموديلات عشان التوزيع يبقى مظبوط.'];
+        }
+
+        $weighted = 0.0;
+        if (!$uniform) {
+            foreach ($rows as $m) {
+                $weighted += (int) $m['pieces_in_spread'] * (float) $m['avg_kg'];
+            }
+            $weighted = $weighted / max(1, $totalPps);
+        }
+
+        $out = [];
+        foreach ($rows as $m) {
+            $pps    = (int) $m['pieces_in_spread'];
+            $ratio  = (!$uniform && $weighted > 0) ? ((float) $m['avg_kg'] / $weighted) : 1.0;
+            $per    = round($actualPerPiece * $ratio, 5);
+            $pieces = $plies * $pps;
+
+            $out[] = [
+                'product_model_id' => $m['product_model_id'] ?? null,
+                'label'            => $m['label'] ?? '',
+                'pieces_in_spread' => $pps,
+                'avg_kg'           => (float) ($m['avg_kg'] ?? 0) ?: null,
+                'ratio'            => round($ratio, 4),
+                'per_piece'        => $per,
+                'expected_pieces'  => $pieces,
+                'expected_dozens'  => round($pieces / 12, 2),
+                'planned_kg'       => round($per * $pieces, 3),
+            ];
+        }
+
+        return ['ok' => true, 'rows' => $out, 'warnings' => $warnings, 'total_pps' => $totalPps];
+    }
+
+    /**
      * انفجار الإكسسوارات (BOM) لأمر شغل.
      * بيرجع: [accessory_id => ['required' => x, 'available' => y, 'shortage' => z]]
      */
     public static function explodeAccessories(WorkOrder $workOrder): array
     {
-        $workOrder->loadMissing('lines.productModel');
+        $workOrder->loadMissing('lines.productModel', 'lines.size');
         $out = [];
 
         foreach ($workOrder->lines as $line) {
@@ -437,9 +506,12 @@ class PlanningEngine
                         'required'  => 0.0,
                         'available' => (float) $bom->accessory->stock_qty,
                         'shortage'  => 0.0,
+                        'by_model'  => [],   // مساهمة كل موديل في الإجمالي — الإكسسوار المشترك بيتجمع بس التفصيل محفوظ
                     ];
                 }
                 $out[$id]['required'] += $need;
+                $label = $model->name . ($line->size?->name ? ' — ' . $line->size->name : '');
+                $out[$id]['by_model'][$label] = round(($out[$id]['by_model'][$label] ?? 0) + $need, 3);
             }
         }
 

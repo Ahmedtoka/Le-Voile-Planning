@@ -19,12 +19,20 @@
   </div>
 @endif
 
-<div class="note-box mb-3">
-  <b>ده أول مستند في دورة القماش.</b>
-  اعتماد الإذن ده بيولّد الحوض (الرسالة) وبيدخّل الكمية المخزن <b>محجوزة تحت الفحص</b> —
-  ممنوع تشغيلها. الإفراج بيحصل بإذن الاستلام الخام بعد ما الفحص والمعمل يخلّصوا.
-  <br><b>مهم:</b> اكتب عدد الأتواب صح — الفحص هيجرد عليه.
-</div>
+@if(old('receipt_type', $row->receipt_type ?? 'normal') === 'container')
+  <div class="note-box mb-3">
+    <b>استلام حاويات — بدون دورة فحص.</b>
+    الإذن ده هو الاستلام النهائي: البضاعة بتدخل المخزن <b>مُفرَج عنها ومتاحة للتشغيل فورًا</b>.
+    لو محتاجين بيانات العرض والبنشر، الجودة تقدر تفحص 5-6 أتواب استدلاليًا — مش للرفض.
+  </div>
+@else
+  <div class="note-box mb-3">
+    <b>ده أول مستند في دورة القماش.</b>
+    اعتماد الإذن ده بيولّد الحوض (الرسالة) وبيدخّل الكمية المخزن <b>محجوزة تحت الفحص</b> —
+    ممنوع تشغيلها. الإفراج بيحصل بإذن الاستلام الخام بعد ما الفحص والمعمل يخلّصوا.
+    <br><b>مهم:</b> اكتب عدد الأتواب صح — الفحص هيجرد عليه.
+  </div>
+@endif
 
 <form method="post" action="{{ $mode==='create' ? route('stock-additions.store') : route('stock-additions.update',$row) }}">
   @csrf @if($mode==='edit') @method('PUT') @endif
@@ -57,7 +65,7 @@
         <div class="col-md-4"><label class="form-label">طلب الشراء</label>
           <select name="purchase_order_id" class="form-select form-select-sm"
                   @if($mode==='create')
-                    onchange="if(this.value) location='{{ route('stock-additions.create') }}?purchase_order_id='+this.value"
+                    onchange="if(this.value) location='{{ route('stock-additions.create') }}?purchase_order_id='+this.value+'&type='+(document.querySelector('[name=receipt_type]')?.value||'normal')"
                   @endif>
             <option value="">— بدون طلب —</option>
             @foreach($pos as $k=>$v)<option value="{{ $k }}" @selected(old('purchase_order_id',$row->purchase_order_id)==$k)>{{ $v }}</option>@endforeach
@@ -68,6 +76,18 @@
           <input name="consignment_no" class="form-control form-control-sm" value="{{ old('consignment_no',$row->consignment_no) }}"
                  placeholder="سيبه فاضي والسيستم هيولّده">
           <div class="hint">النمط: BUPL-090826-043-00</div></div>
+        <div class="col-md-3"><label class="form-label">رقم إذن المورد</label>
+          <input name="supplier_doc_no" class="form-control form-control-sm" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
+                 placeholder="اختياري">
+          <div class="hint">للعلم بس — عشان المطابقة مع المورد بعدين</div></div>
+        <div class="col-md-3"><label class="form-label">نوع الاستلام</label>
+          <select name="receipt_type" class="form-select form-select-sm"
+                  @if($mode==='create')
+                    onchange="var po=document.querySelector('[name=purchase_order_id]')?.value; location='{{ route('stock-additions.create') }}?type='+this.value+(po?'&purchase_order_id='+po:'')"
+                  @endif>
+            <option value="normal" @selected(old('receipt_type',$row->receipt_type ?? 'normal')==='normal')>عادي — يدخل الفحص</option>
+            <option value="container" @selected(old('receipt_type',$row->receipt_type ?? 'normal')==='container')>حاويات — بدون فحص</option>
+          </select></div>
         <div class="col-md-6"><label class="form-label">ملاحظات</label>
           <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
       </div>
@@ -125,4 +145,15 @@
 @endif
 
 @include('partials.lines_js',['startIndex'=>max(count($lines),1)])
+<script>
+  // انحراف اللون: أول ما اللون الفعلي يختلف عن المطلوب في الـPO يظهر سؤال القرار
+  document.getElementById('lines')?.addEventListener('change', function (e) {
+    if (!e.target.name || !/\[color_id\]$/.test(e.target.name)) return;
+    var box = e.target.closest('td')?.querySelector('.color-mismatch');
+    if (!box) return;
+    var diff = e.target.value && e.target.value != box.dataset.pocolor;
+    box.style.display = diff ? '' : 'none';
+    if (!diff) { var s = box.querySelector('select'); if (s) s.value = ''; }
+  });
+</script>
 @endsection

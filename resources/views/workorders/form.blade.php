@@ -119,15 +119,19 @@
     </div>
     <div class="card-body pb-0">
       <div class="hint mb-2">
-        <b>لازم سطر واحد على الأقل.</b> من غيره مش هتقدر تعمل بيان قص ولا استلام إنتاج،
-        ومش هتطلع احتياجات الإكسسوارات. سيب الكمية فاضية والسيستم هيوزّع المستهدف.
+        <b>لازم سطر واحد على الأقل.</b> اكتب <b>قطع الموديل في الفرشة</b> (6 تلبيسة + 6 كويتي مثلًا =
+        نفس إجمالي قطع الفرشة اللي فوق) — والسيستم هيوزّع الاستهلاك الفعلي على كل موديل بنسبة
+        متوسطه التاريخي بدل ما يعمّم رقم واحد، وهيحسب كمية كل موديل من الرِقّات تلقائيًا.
+        سيب الكمية فاضية والسيستم هيحسبها.
       </div>
     </div>
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
         <thead><tr>
           <th style="width:35px">م</th><th>الموديل</th>
-          <th style="width:160px">المقاس</th><th style="width:140px">الكمية</th><th style="width:40px"></th>
+          <th style="width:150px">المقاس</th>
+          <th style="width:120px">قطعه في الفرشة</th>
+          <th style="width:130px">الكمية</th><th style="width:40px"></th>
         </tr></thead>
         <tbody id="products">
           @foreach($prods as $i => $l) @include('workorders.product_row', ['i'=>$i,'l'=>$l]) @endforeach
@@ -171,6 +175,28 @@ const LVF = (function () {
   const CSRF = document.querySelector('meta[name="csrf-token"]').content;
   const nf = n => n === null || n === undefined ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 4});
   let timer = null;
+
+  /* التخطيط بالكمية المستهدفة: قطع مطلوبة ⇒ رقات كاملة ⇒ كمية خامة.
+     رقات = سقف(القطع ÷ قطع الفرشة) · الكمية = رقات × (طول×عرض×بنشر) أو رقات × الطول */
+  function target(el) {
+    const r = el.closest('tr');
+    const pcs = Number(el.value) || 0;
+    const pps = Number(r.querySelector('.f-pps')?.value) || 0;
+    const sp  = Number(r.querySelector('.f-sps')?.value) || Number(r.querySelector('.f-sp')?.value) || 0;
+    const mode = r.querySelector('.f-mode')?.value || 'weight';
+    if (!pcs || !pps || !sp) return;
+
+    let perPly = sp;
+    if (mode === 'weight') {
+      const wd = Number(r.querySelector('.f-wd')?.value) || 0;
+      const g  = Number(r.querySelector('.f-gsm')?.value) || 0;
+      if (!wd || !g) return;
+      perPly = sp * wd * g;
+    }
+    const plies = Math.ceil(pcs / pps);
+    const qty = r.querySelector('.f-qty');
+    if (qty) { qty.value = (plies * perPly).toFixed(3); calc(); }
+  }
 
   function pick(sel) {
     const o = sel.selectedOptions[0], row = sel.closest('tr');
@@ -242,7 +268,7 @@ const LVF = (function () {
   }
 
   document.addEventListener('DOMContentLoaded', () => setTimeout(run, 200));
-  return {pick, calc};
+  return {pick, calc, target};
 })();
 </script>
 @endpush

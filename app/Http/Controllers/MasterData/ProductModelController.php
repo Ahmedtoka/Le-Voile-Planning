@@ -27,7 +27,11 @@ class ProductModelController extends BaseCrudController
             ['name' => 'category',          'label' => 'الفئة',            'type' => 'text',     'rules' => ['nullable','string','max:191'], 'list' => true, 'filter' => false],
             ['name' => 'fabric_type_id',    'label' => 'الخامة',           'type' => 'select',   'options_from' => 'fabricTypes', 'rules' => ['nullable','exists:fabric_types,id'], 'list' => true, 'relation' => 'fabricType'],
             ['name' => 'pcs_per_dozen',     'label' => 'قطع الدستة',       'type' => 'number',   'rules' => ['required','integer','min:1'], 'list' => true],
-            ['name' => 'std_consumption_kg','label' => 'استهلاك معياري (كجم/قطعة)', 'type' => 'number', 'step' => '0.0001', 'rules' => ['nullable','numeric','min:0']],
+            ['name' => 'std_consumption_kg','label' => 'متوسط الاستهلاك (كجم/قطعة)', 'type' => 'number', 'step' => '0.0001', 'rules' => ['nullable','numeric','min:0'], 'list' => true,
+             'hint' => 'ده اللي بيتوزّع بيه الاستهلاك لما الموديل يشارك موديلات تانية في نفس الفرشة'],
+            ['name' => 'fp_code',           'label' => 'F.P CODE',         'type' => 'text',     'rules' => ['nullable','string','max:20'], 'list' => true],
+            ['name' => 'barcode',           'label' => 'الباركود',          'type' => 'text',     'rules' => ['nullable','string','max:80']],
+            ['name' => 'photo_url',         'label' => 'لينك صورة الموديل', 'type' => 'text',     'rules' => ['nullable','string','max:500']],
             ['name' => 'is_active',         'label' => 'نشط',              'type' => 'checkbox', 'rules' => ['boolean'], 'list' => true],
             ['name' => 'notes',             'label' => 'ملاحظات',          'type' => 'textarea', 'rules' => ['nullable','string']],
         ];

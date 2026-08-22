@@ -19,7 +19,7 @@ class WorkOrder extends Model
     use HasApproval, HasDocumentStatus, HasComments;
 
     protected $guarded = [];
-    protected $casts = ['wo_date' => 'date', 'due_date' => 'date'];
+    protected $casts = ['wo_date' => 'date', 'due_date' => 'date', 'receive_date' => 'date'];
 
     public const DOC_TYPE = 'work_order';
 
@@ -35,6 +35,7 @@ class WorkOrder extends Model
         'partially_received' => 'مستلم جزئيًا',
         'closed'             => 'مقفول',
         'cancelled'          => 'ملغي',
+        'superseded'         => 'استُبدل بنسخة أحدث',
     ];
 
     public const VARIANCE_FLAGS = [
@@ -57,6 +58,8 @@ class WorkOrder extends Model
     public function cutDeclarations(){ return $this->hasMany(CutDeclaration::class); }
     public function receipts()      { return $this->hasMany(ProductionReceipt::class); }
     public function accessoryRequirements() { return $this->hasMany(AccessoryRequirement::class); }
+    public function revisedFrom() { return $this->belongsTo(self::class, 'revised_from_id'); }
+    public function revisions()   { return $this->hasMany(self::class, 'revised_from_id'); }
 
     public function getStatusNameAttribute(): string
     {
@@ -65,7 +68,7 @@ class WorkOrder extends Model
 
     public function scopeOpen($q)
     {
-        return $q->whereNotIn('status', ['closed', 'cancelled', 'draft']);
+        return $q->whereNotIn('status', ['closed', 'cancelled', 'draft', 'superseded']);
     }
 
     public function scopeLate($q)

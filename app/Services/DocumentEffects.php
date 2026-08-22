@@ -55,6 +55,12 @@ class DocumentEffects
 
             $fabricLines = $sa->lines->filter(fn ($l) => $l->fabric_type_id);
 
+            /* استلام مباشر (حاويات / طلب معفي من الفحص):
+               الإضافة نفسها هي النهائية — البضاعة بتدخل مُفرَج عنها على طول،
+               والفحص لو حصل بيبقى استدلالي (عرض/بنشر) مش للرفض. */
+            $direct = $sa->receipt_type === 'container'
+                   || (bool) $sa->purchaseOrder?->inspection_exempt;
+
             // ── تكوين الحوض ──
             if ($fabricLines->isNotEmpty()) {
                 $first = $fabricLines->first();
@@ -80,13 +86,14 @@ class DocumentEffects
                         'warehouse_id'      => $sa->warehouse_id,
                         'total_kg'          => $totalKg,
                         'rolls_count'       => $totalRolls,
-                        'hold_kg'           => $totalKg,
-                        'released_kg'       => 0,
-                        'remaining_kg'      => 0,     // ممنوع التشغيل قبل الإفراج
-                        'status'            => 'under_inspection',
+                        'hold_kg'           => $direct ? 0 : $totalKg,
+                        'released_kg'       => $direct ? $totalKg : 0,
+                        'remaining_kg'      => $direct ? $totalKg : 0,  // المباشر متاح فورًا — غيره ممنوع قبل الإفراج
+                        'status'            => $direct ? 'released' : 'under_inspection',
                         'created_by'        => $sa->created_by,
                     ]
                 );
+                if ($direct) $consignment->recalcRemaining();
 
                 $sa->forceFill(['consignment_id' => $consignment->id, 'consignment_no' => $no])->saveQuietly();
 
@@ -103,10 +110,18 @@ class DocumentEffects
                     }
                 }
 
-                Notifier::broadcastToRole('inspector', 'inspection_due',
-                    'حوض جديد محتاج فحص',
-                    'الرسالة ' . $no . ' — ' . number_format($totalKg, 0) . ' كجم · ' . $totalRolls . ' توب',
-                    null, 'warning');
+                if ($direct) {
+                    // فحص استدلالي اختياري: 5-6 أتواب لأخذ العرض والبنشر — مش للرفض
+                    Notifier::broadcastToRole('inspector', 'inspection_due',
+                        'استلام مباشر (بدون دورة فحص)',
+                        'الرسالة ' . $no . ' دخلت المخزن مُفرَج عنها — لو محتاجين بيانات العرض والبنشر، افحصوا 5-6 أتواب استدلاليًا.',
+                        null, 'info');
+                } else {
+                    Notifier::broadcastToRole('inspector', 'inspection_due',
+                        'حوض جديد محتاج فحص',
+                        'الرسالة ' . $no . ' — ' . number_format($totalKg, 0) . ' كجم · ' . $totalRolls . ' توب',
+                        null, 'warning');
+                }
             }
 
             /* ── الاستلام الجزئي على طلب الشراء ──────────────────
@@ -118,8 +133,19 @@ class DocumentEffects
 
                 foreach ($sa->lines as $line) {
                     if (!$line->fabric_type_id) continue;
+
+                    /* انحراف اللون: طلبت بيج 3 ووصل بيج 4؟
+                       - «تسكين» → بيتحسب على سطر اللون الأصلي والمخزن بياخد اللون الفعلي.
+                       - «طلب جديد» → السطر الأصلي بيفضل مطلوب زي ما هو،
+                         والوارد بيتوثّق بطلب شراء تلقائي مقفول (شوف تحت). */
+                    if ($line->color_action === 'new_po') continue;
+
+                    $matchColor = $line->color_action === 'substitute' && $line->po_color_id
+                        ? $line->po_color_id
+                        : $line->color_id;
+
                     $poLine = $po->lines->first(fn ($l) =>
-                        $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $line->color_id);
+                        $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $matchColor);
                     if ($poLine) {
                         $poLine->increment('received_qty', self::toUnit($line->qty, $line->unit, $poLine->unit));
                     }
@@ -135,6 +161,52 @@ class DocumentEffects
                 ])->save();
             }
 
+            /* طلب شراء تلقائي للألوان اللي دخلت «كطلب جديد»:
+               طلبت بيج 3 ووصل بيج 4 والقرار إنه يدخل لوحده؟ السطر الأصلي
+               بيفضل مطلوب زي ما هو، والوارد الفعلي بيتوثّق بطلب مستقل
+               مقفول باستلامه — عشان أرقام المشتريات تفضل مطابقة للمخزن. */
+            $newPoLines = $sa->lines->filter(fn ($l) =>
+                $l->fabric_type_id && $l->color_action === 'new_po');
+
+            if ($newPoLines->isNotEmpty()) {
+                $auto = PurchaseOrder::create([
+                    'po_no'         => DocNumber::next('purchase_order', 'purchase_orders', 'po_no'),
+                    'po_date'       => $sa->doc_date,
+                    'supplier_id'   => $sa->supplier_id,
+                    'warehouse_id'  => $sa->warehouse_id,
+                    'delivery_date' => $sa->doc_date,
+                    'stage'         => 'closed',
+                    'status'        => 'received',
+                    'planning_note' => 'اتفتح تلقائيًا من الإذن ' . $sa->doc_no
+                        . ' — وصل لون مختلف عن المطلوب'
+                        . ($sa->purchaseOrder ? ' في ' . $sa->purchaseOrder->po_no : '')
+                        . '، والقرار كان يدخل كطلب جديد والأصلي يفضل مطلوب.',
+                    'created_by'    => $sa->created_by,
+                    'requested_by'  => $sa->created_by,
+                    'requested_at'  => now(),
+                ]);
+
+                foreach ($newPoLines->values() as $i => $l) {
+                    \App\Models\PurchaseOrderLine::create([
+                        'purchase_order_id' => $auto->id,
+                        'line_no'           => $i + 1,
+                        'fabric_type_id'    => $l->fabric_type_id,
+                        'color_id'          => $l->color_id,
+                        'item_name'         => $l->item_name,
+                        'qty'               => $l->qty,
+                        'unit'              => $l->unit,
+                        'received_qty'      => $l->qty,
+                    ]);
+                }
+                $auto->recalcTotals();
+
+                Notifier::broadcastToRole('planner', 'po_sourcing',
+                    'لون مختلف دخل بطلب جديد',
+                    'الإذن ' . $sa->doc_no . ' فيه لون مختلف عن المطلوب — اتفتح له الطلب '
+                        . $auto->po_no . ' تلقائيًا، والسطر الأصلي لسه مطلوب من المورد.',
+                    null, 'warning');
+            }
+
             // ── حركة المخزون: داخل ومحجوز ──
             foreach ($sa->lines as $line) {
                 StockMovement::create([
@@ -146,7 +218,8 @@ class DocumentEffects
                     'accessory_id'   => $line->accessory_id,
                     'consignment_id' => $sa->consignment_id,
                     'direction'      => 'in',
-                    'quality_state'  => $line->accessory_id ? 'released' : 'hold',
+                    // الإكسسوارات والاستلام المباشر بيدخلوا متاحين — القماش العادي محجوز لحد الإفراج
+                    'quality_state'  => ($line->accessory_id || $direct) ? 'released' : 'hold',
                     'qty'            => $line->qty,
                     'unit'           => $line->unit,
                     'source_type'    => StockAddition::class,

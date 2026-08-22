@@ -31,6 +31,9 @@
   $emptyText  = 'مفيش أذون إضافة. ابدأ بواحد لما يوصل قماش.';
   $footNote   = 'حالة الحوض بتوريك الحوض واقف فين في الدورة.';
   $createRoute='stock-additions.create'; $createLabel='إذن إضافة';
+  // استلام الحاويات: بدون دورة فحص — البضاعة بتدخل مُفرَج عنها فورًا
+  $extraActions = '<a href="'.route('stock-additions.create', ['type' => 'container']).'"'
+                .' class="btn btn-sm btn-outline-plum"><i class="bi bi-box-seam"></i> استلام حاويات</a>';
   $editRoute='stock-additions.edit'; $printRoute='stock-additions.print';
   $cols=['رقم الإذن','المسلسل الورقي','التاريخ','المورد','المخزن','رقم الرسالة','الأتواب','الكمية','حالة الحوض','الحالة'];
   $rowRenderer=function($r){

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Color;
 use App\Models\FabricType;
+use App\Models\ProductModel;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\Supplier;
@@ -118,6 +119,7 @@ class PurchaseOrderController extends Controller
             'title'            => 'طلب شراء جديد',
             'colors'           => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
             'fabricTypes'      => FabricType::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
+            'models'           => ProductModel::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
             'defaultTolerance' => config('lvplanning.default_po_tolerance_pct', 5),
         ]);
     }
@@ -339,8 +341,9 @@ class PurchaseOrderController extends Controller
     private function validatePlanning(Request $request): array
     {
         $v = $request->validate([
-            'planning_note' => ['nullable', 'string'],
-            'notes'         => ['nullable', 'string'],
+            'planning_note'    => ['nullable', 'string'],
+            'product_model_id' => ['nullable', 'exists:product_models,id'],   // الطلب لموديل معين
+            'notes'            => ['nullable', 'string'],
 
             'lines'                  => ['required', 'array', 'min:1'],
             'lines.*.color_id'       => ['required', 'exists:colors,id'],

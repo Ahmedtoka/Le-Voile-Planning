@@ -75,7 +75,12 @@ class StockAdditionController extends Controller
      */
     public function create(Request $request)
     {
-        $row    = new StockAddition(['doc_date' => now()->toDateString(), 'status' => 'draft']);
+        $row = new StockAddition([
+            'doc_date'     => now()->toDateString(),
+            'status'       => 'draft',
+            // «استلام حاويات» = بدون دورة فحص — الإذن نفسه هو النهائي
+            'receipt_type' => $request->get('type') === 'container' ? 'container' : 'normal',
+        ]);
         $preset = [];
         $po     = null;
 
@@ -102,6 +107,7 @@ class StockAdditionController extends Controller
                     'item_name'      => trim(($l->fabricType?->name ?? '') . ' ' . ($l->color?->name ?? '')),
                     'fabric_type_id' => $l->fabric_type_id,
                     'color_id'       => $l->color_id,
+                    'po_color_id'    => $l->color_id,   // اللون المطلوب — لو الفعلي اختلف بيظهر سؤال القرار
                     'rolls_count'    => '',
                     'qty'            => $qty,
                     'unit'           => $isMeter ? 'متر' : 'كجم',
@@ -162,12 +168,37 @@ class StockAdditionController extends Controller
             return back()->withErrors(['msg' => 'مينفعش ترسل إذن فاضي.']);
         }
 
-        // لازم عدد أتواب على كل سطر قماش — الفحص هيجرد عليه
+        // لازم عدد أتواب على كل سطر قماش — الفحص (أو الجرد) بيتم عليه
         $missing = $stock_addition->lines()
             ->whereNotNull('fabric_type_id')->where('rolls_count', '<=', 0)->count();
 
         if ($missing) {
-            return back()->withErrors(['msg' => 'لازم تكتب عدد الأتواب لكل صنف قماش — الفحص هيجرد عليه.']);
+            return back()->withErrors(['msg' => $stock_addition->receipt_type === 'container'
+                ? 'لازم تكتب عدد الأتواب لكل صنف قماش — الجرد والفحص الاستدلالي بيتم عليه.'
+                : 'لازم تكتب عدد الأتواب لكل صنف قماش — الفحص هيجرد عليه.']);
+        }
+
+        /* الرسالة (الحوض) بتتولد بلون واحد — أكتر من لون في نفس الإذن
+           هيتسجل كله على لون أول سطر ويبوّظ التتبع. كل لون بإذن منفصل. */
+        $fabricColors = $stock_addition->lines
+            ->filter(fn ($l) => $l->fabric_type_id)
+            ->pluck('color_id')->filter()->unique();
+
+        if ($fabricColors->count() > 1) {
+            return back()->withErrors(['msg' =>
+                'الإذن فيه أكتر من لون قماش — الرسالة بتتولد بلون واحد. '
+                . 'اعمل إذن إضافة منفصل لكل لون (سيب في الإذن ده لون واحد بس).']);
+        }
+
+        /* انحراف اللون: لو الفعلي مختلف عن المطلوب في الطلب، لازم قرار —
+           تسكين مكان القديم، أو طلب جديد والأصلي يفضل مطلوب. */
+        foreach ($stock_addition->lines as $line) {
+            if ($line->fabric_type_id && $line->po_color_id
+                && $line->color_id != $line->po_color_id && !$line->color_action) {
+                return back()->withErrors(['msg' =>
+                    'فيه صنف وصل بلون مختلف عن المطلوب في الطلب — افتح الإذن واختار القرار: '
+                    . 'تسكينه مكان اللون المطلوب، أو فتح طلب جديد والأصلي يفضل مطلوب.']);
+            }
         }
 
         /* حارس نسبة الزيادة: الوصول هو الاستلام الفعلي على الطلب.
@@ -176,8 +207,13 @@ class StockAdditionController extends Controller
             $po->load('lines');
             foreach ($stock_addition->lines as $line) {
                 if (!$line->fabric_type_id) continue;
+                if ($line->color_action === 'new_po') continue;   // مش بيتحسب على الطلب الأصلي
+
+                $matchColor = $line->color_action === 'substitute' && $line->po_color_id
+                    ? $line->po_color_id : $line->color_id;
+
                 $poLine = $po->lines->first(fn ($l) =>
-                    $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $line->color_id);
+                    $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $matchColor);
                 if (!$poLine) continue;
 
                 $qty = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
@@ -235,6 +271,8 @@ class StockAdditionController extends Controller
             'warehouse_id'      => ['required', 'exists:warehouses,id'],
             'purchase_order_id' => ['nullable', 'exists:purchase_orders,id'],
             'consignment_no'    => ['nullable', 'string', 'max:60'],
+            'supplier_doc_no'   => ['nullable', 'string', 'max:60'],
+            'receipt_type'      => ['nullable', 'in:normal,container'],
             'notes'             => ['nullable', 'string'],
 
             'lines'                  => ['required', 'array', 'min:1'],
@@ -242,6 +280,8 @@ class StockAdditionController extends Controller
             'lines.*.item_name'      => ['nullable', 'string', 'max:191'],
             'lines.*.fabric_type_id' => ['nullable', 'exists:fabric_types,id'],
             'lines.*.color_id'       => ['nullable', 'exists:colors,id'],
+            'lines.*.po_color_id'    => ['nullable', 'exists:colors,id'],
+            'lines.*.color_action'   => ['nullable', 'in:substitute,new_po'],
             'lines.*.accessory_id'   => ['nullable', 'exists:accessories,id'],
             'lines.*.rolls_count'    => ['nullable', 'integer', 'min:0'],
             'lines.*.qty'            => ['required', 'numeric', 'min:0.001'],
@@ -264,8 +304,25 @@ class StockAdditionController extends Controller
     {
         if ($replace) $sa->lines()->delete();
 
+        /* السطور المضافة يدوي على إذن مربوط بطلب: بنكمّل po_color_id تلقائيًا
+           عشان انحراف اللون ما يتسرّبش من غير قرار —
+           لو اللون موجود في الطلب ⇒ مطابق، ولو الخامة موجودة بألوان تانية بس
+           ⇒ بنسجل المطلوب وبيظهر سؤال القرار في الشاشة. */
+        $poLines = $sa->purchase_order_id
+            ? \App\Models\PurchaseOrderLine::where('purchase_order_id', $sa->purchase_order_id)->get()
+            : collect();
+
         foreach ($lines as $l) {
             $l['rolls_count'] = $l['rolls_count'] ?? 0;
+
+            if (empty($l['po_color_id']) && !empty($l['fabric_type_id']) && $poLines->isNotEmpty()) {
+                $sameFabric = $poLines->where('fabric_type_id', $l['fabric_type_id']);
+                if ($sameFabric->isNotEmpty()) {
+                    $exact = $sameFabric->first(fn ($p) => $p->color_id == ($l['color_id'] ?? null));
+                    $l['po_color_id'] = $exact ? $exact->color_id : $sameFabric->first()->color_id;
+                }
+            }
+
             StockAdditionLine::create(['stock_addition_id' => $sa->id] + $l);
         }
     }

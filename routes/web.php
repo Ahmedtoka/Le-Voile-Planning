@@ -167,6 +167,8 @@ Route::middleware('auth.user')->group(function () {
         Route::delete('work-orders/{work_order}',     [WorkOrderController::class, 'destroy'])->name('work-orders.destroy');
         Route::post('work-orders/{work_order}/submit',[WorkOrderController::class, 'submit'])->name('work-orders.submit');
         Route::post('work-orders/{work_order}/send',  [WorkOrderController::class, 'sendToFactory'])->name('work-orders.send');
+        Route::post('work-orders/{work_order}/revise',[WorkOrderController::class, 'revise'])->name('work-orders.revise');
+        Route::post('work-orders/{work_order}/shortage-po', [WorkOrderController::class, 'shortagePo'])->name('work-orders.shortage-po');
     });
 
     Route::post('work-orders/{work_order}/close', [WorkOrderController::class, 'close'])

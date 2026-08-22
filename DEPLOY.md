@@ -223,3 +223,13 @@ php artisan config:clear && php artisan route:clear && php artisan view:clear
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 php artisan lv:doctor
 ```
+
+## الاختبارات
+
+قبل أي رفعة شغّل من فولدر المشروع:
+
+```
+php artisan test
+```
+
+بيشغّل اختبارات محرك الحسابات (توزيع الماركر المختلط، حسبة الفرشة بالوزن والطول، الانحراف، تحويل الوحدات). كلها لازم تعدي قبل الرفع.
