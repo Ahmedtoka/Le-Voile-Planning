@@ -340,7 +340,12 @@ th[aria-sort] .th-sort{font-weight:800}
 .line-table input,.line-table select{border:1px solid #DDD2DA;border-radius:6px;padding:4px 6px;
   font-size:.8rem;width:100%;background:var(--lv-white);min-height:30px}
 .line-table td{padding:.25rem}
-.num{font-variant-numeric:tabular-nums;direction:ltr;text-align:center;display:inline-block}
+/* أرقام مصفوفة: عرض ثابت لكل رقم + اتجاه لاتيني.
+   ممنوع تغيير الـdisplay هنا — الكلاس ده بيتحط على <td> نفسه في 200+ مكان،
+   وأي display غير table-cell بيخرّج الخلية من الجدول وينثر الصفوف. */
+.num{font-variant-numeric:tabular-nums;direction:ltr;text-align:center}
+span.num,b.num,strong.num,small.num,div.num{display:inline-block}
+td.num,th.num{display:table-cell}
 .page-item.active .page-link{background:var(--lv-brand);border-color:var(--lv-brand)}
 .page-link{color:var(--lv-brand);min-width:34px;min-height:34px}
 .accordion-button:not(.collapsed){background:var(--lv-tint);color:var(--lv-brand-ink)}

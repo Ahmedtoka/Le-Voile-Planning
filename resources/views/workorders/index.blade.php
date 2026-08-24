@@ -63,7 +63,7 @@
           <td class="num fw-bold"><a href="{{ route('work-orders.show',$r) }}">{{ $r->wo_no }}</a></td>
           <td class="num">{{ $r->wo_date?->format('Y-m-d') }}</td>
           <td>{{ Str::limit($r->product_title, 28) ?: '—' }}</td>
-          <td class="num hint">
+          <td class="hint">
             {{ $r->fabrics->pluck('consignment.consignment_no')->filter()->implode('، ') ?: '—' }}
             @if($r->fabrics->count() > 1)
               <div><span class="badge bg-light text-dark">{{ $r->fabrics->count() }} خامات</span></div>
