@@ -38,7 +38,6 @@
       </form>
     </div>
 
-    <div class="col-lg-5">
     <div class="card mb-3">
       <div class="card-header text-success">
         <i class="bi bi-database-add" aria-hidden="true"></i> ① ديمو كامل — بيانات مولّدة للتجربة
