@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class StockAdditionLine extends Model
 {
     protected $guarded = [];
+    protected $casts = ['remainder_eta' => 'date'];
     public function stockAddition() { return $this->belongsTo(StockAddition::class); }
     public function fabricType()    { return $this->belongsTo(FabricType::class); }
     public function color()         { return $this->belongsTo(Color::class); }

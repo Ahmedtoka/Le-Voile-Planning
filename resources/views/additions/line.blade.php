@@ -69,6 +69,16 @@
     <span class="q-left hint">—</span>
   </td>
 
+  {{-- الباقي بتاع السطر ده هيوصل إمتى؟ بيظهر بس لما يبقى فيه باقي فعلًا --}}
+  <td>
+    <div class="r-eta" style="{{ ($l['remainder_eta'] ?? null) ? '' : 'display:none' }}">
+      <input type="date" name="lines[{{ $i }}][remainder_eta]" class="form-control form-control-sm mb-1"
+             value="{{ $l['remainder_eta'] ?? '' }}" aria-label="الباقي هيوصل إمتى">
+      <input name="lines[{{ $i }}][remainder_note]" class="form-control form-control-sm"
+             value="{{ $l['remainder_note'] ?? '' }}" placeholder="ملاحظة (اختياري)" aria-label="ملاحظة على الباقي">
+    </div>
+  </td>
+
 @else
   {{-- ═══ سطر حر (إذن من غير طلب) ═══ --}}
   <td class="text-center row-no">{{ is_numeric($i)?$i+1:1 }}</td>

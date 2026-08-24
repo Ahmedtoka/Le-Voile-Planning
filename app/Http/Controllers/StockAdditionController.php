@@ -114,6 +114,7 @@ class StockAdditionController extends Controller
             'mode'   => 'create',
             'preset' => $preset,
             'poInfo' => $po,
+            'consignmentPreview' => $po ? $this->consignmentPreview($po) : null,
         ]));
     }
 
@@ -146,7 +147,9 @@ class StockAdditionController extends Controller
         // نفس شكل بيانات الإنشاء — عشان الشاشة ترسم السطور المرتبطة بالطلب صح
         $saved = $stock_addition->lines->map(function ($l) {
             $base = $l->only(['id', 'item_code', 'item_name', 'fabric_type_id', 'color_id',
-                              'po_color_id', 'po_line_id', 'color_action', 'rolls_count', 'qty', 'unit']);
+                              'po_color_id', 'po_line_id', 'color_action', 'rolls_count', 'qty', 'unit',
+                              'remainder_note']);
+            $base['remainder_eta'] = $l->remainder_eta?->format('Y-m-d');
             return $l->poLine ? $this->poLineArray($l->poLine) + $base : $base;
         })->all();
 
@@ -154,7 +157,18 @@ class StockAdditionController extends Controller
             'row'    => $stock_addition,
             'mode'   => 'edit',
             'preset' => $saved,
+            'consignmentPreview' => !$stock_addition->consignment_no && $stock_addition->purchaseOrder
+                ? $this->consignmentPreview($stock_addition->purchaseOrder) : null,
         ]));
+    }
+
+    /** معاينة رقم الرسالة — النمط نفسه، والرقم النهائي بيتأكد عند الاعتماد */
+    private function consignmentPreview(PurchaseOrder $po): string
+    {
+        $prefix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $po->supplier?->code ?? 'CN'), 0, 4)) ?: 'CN';
+        $seq    = \App\Models\Consignment::whereDate('arrival_date', now()->toDateString())->count();
+
+        return DocNumber::consignmentNo($prefix, now(), $po->po_no, $seq);
     }
 
     /** بيانات سطر الطلب اللي بتتعرض كليبلات ثابتة في الإذن */
@@ -229,44 +243,35 @@ class StockAdditionController extends Controller
             }
         }
 
-        /* الاستلام الجزئي: طالب 50 ووصل 30؟ لازم نعرف الباقي هيوصل إمتى.
-           الرقم ده كان بيضيع في التليفونات — دلوقتي بيتسجّل على الإذن.
-           بنقيس بنفس مسطرة الإقفال (الحد الأدنى المقبول = الكمية ناقص نسبة
-           الزيادة) — عشان توريد كامل بفرق طبيعي ما يطلبش تاريخ لباقي مش موجود. */
+        /* الاستلام الجزئي — لاين لاين: كل صنف اتستلم أقل من المطلوب لازم
+           يبقى على سطره «الباقي هيوصل إمتى». بنقيس بمسطرة الإقفال نفسها
+           (الحد الأدنى المقبول = الكمية ناقص نسبة الزيادة) — عشان توريد
+           كامل بفرق طبيعي ما يطلبش تاريخ لباقي مش موجود. */
         if ($po = $stock_addition->purchaseOrder) {
             $po->load('lines');
 
-            $remainingAfter = 0.0;
-            $remUnit = '';
-            foreach ($po->lines as $poLine) {
-                $incoming = 0.0;
-                foreach ($stock_addition->lines as $line) {
-                    if (!$line->fabric_type_id || $line->color_action === 'new_po') continue;
+            foreach ($stock_addition->lines as $line) {
+                if (!$line->fabric_type_id || $line->color_action === 'new_po') continue;
 
-                    // الربط المباشر بسطر الطلب هو الأدق — الفولباك للخامة واللون للسطور القديمة
-                    $hit = $line->po_line_id
-                        ? $line->po_line_id == $poLine->id
-                        : $line->fabric_type_id == $poLine->fabric_type_id
-                          && ($line->color_action === 'substitute' && $line->po_color_id
-                                ? $line->po_color_id : $line->color_id) == $poLine->color_id;
+                $poLine = $line->po_line_id
+                    ? $po->lines->firstWhere('id', $line->po_line_id)
+                    : $po->lines->first(fn ($l) =>
+                        $l->fabric_type_id == $line->fabric_type_id
+                        && ($line->color_action === 'substitute' && $line->po_color_id
+                              ? $line->po_color_id : $line->color_id) == $l->color_id);
+                if (!$poLine) continue;
 
-                    if ($hit) {
-                        $incoming += \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
-                    }
-                }
+                $incoming = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
                 $left = max(0, (float) $poLine->min_allowed_qty - (float) $poLine->received_qty - $incoming);
-                if ($left > 0.0001) {
-                    $remainingAfter += $left;
-                    $remUnit = $remUnit ?: $poLine->unit;
-                }
-            }
 
-            if ($remainingAfter > 0.0001 && !$stock_addition->remainder_eta) {
-                return back()->withErrors(['msg' =>
-                    'ده استلام جزئي — هيفضل باقي '
-                    . rtrim(rtrim(number_format($remainingAfter, 3), '0'), '.') . ' ' . $remUnit
-                    . ' على الطلب ' . $po->po_no . '. حدد «الباقي هيوصل إمتى؟» قبل الإرسال '
-                    . '(لو المورد مش محدد، حط تاريخ تقديري واكتب السبب في الملاحظة).']);
+                if ($left > 0.0001 && !$line->remainder_eta) {
+                    $name = trim(($poLine->fabricType?->name ?? '') . ' ' . ($poLine->color?->code ?? ''));
+                    return back()->withErrors(['msg' =>
+                        'الصنف «' . $name . '» اتستلم جزئي — باقي '
+                        . rtrim(rtrim(number_format($left, 3), '0'), '.') . ' ' . $poLine->unit
+                        . '. حدد على السطر «الباقي هيوصل إمتى؟» قبل الإرسال '
+                        . '(لو المورد مش محدد، حط تاريخ تقديري واكتب السبب في الملاحظة).']);
+                }
             }
         }
 
@@ -359,6 +364,8 @@ class StockAdditionController extends Controller
                 \Illuminate\Validation\Rule::exists('purchase_order_lines', 'id')
                     ->where('purchase_order_id', (int) $request->input('purchase_order_id'))],
             'lines.*.color_action'   => ['nullable', 'in:substitute,new_po'],
+            'lines.*.remainder_eta'  => ['nullable', 'date'],
+            'lines.*.remainder_note' => ['nullable', 'string', 'max:191'],
             'lines.*.accessory_id'   => ['nullable', 'exists:accessories,id'],
             'lines.*.rolls_count'    => ['nullable', 'integer', 'min:0'],
             // السطر الفاضي = الصنف ده ما وصلش المرة دي — بيتشال لوحده

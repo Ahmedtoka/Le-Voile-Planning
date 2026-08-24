@@ -171,11 +171,14 @@ class DocumentEffects
                 $fully = $po->lines->every(fn ($l) =>
                     (float) $l->received_qty >= (float) $l->min_allowed_qty);
 
+                /* موعد الباقي على مستوى الطلب = أقرب تاريخ من سطور الإذن —
+                   ده اللي بيظهر في الطوابير كـ«أقرب دفعة جاية» */
+                $lineEta = $sa->lines->pluck('remainder_eta')->filter()->min();
+
                 $po->forceFill([
                     'stage'  => $fully ? 'closed' : 'receiving',
                     'status' => $fully ? 'received' : 'partially_received',
-                    // موعد الباقي بيتنقل للطلب عشان يفضل ظاهر في الطوابير
-                    'remainder_eta' => $fully ? null : ($sa->remainder_eta ?: $po->remainder_eta),
+                    'remainder_eta' => $fully ? null : ($lineEta ?: $sa->remainder_eta ?: $po->remainder_eta),
                 ])->save();
 
                 if (!$fully) {
