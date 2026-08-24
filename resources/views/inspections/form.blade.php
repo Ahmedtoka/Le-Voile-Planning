@@ -20,8 +20,11 @@
   @endphp
   <div class="card mb-3" style="border-color:var(--lv-soft)">
     <div class="card-body py-2 d-flex gap-4 flex-wrap align-items-center">
-      <span><b>الرسالة:</b> <span class="num">{{ $arrived->consignment_no }}</span></span>
-      <span><b>وصل:</b> <span class="num fw-bold">{{ rtrim(rtrim(number_format((float)$arrived->total_kg,2),'0'),'.') }} كجم</span>
+      <div>
+        <div class="fw-bold num" style="font-size:1.15rem;color:var(--lv-brand-ink)">{{ $arrived->consignment_no }}</div>
+        <div class="hint">{{ $arrived->fabricType?->name ?? '—' }} · {{ $arrived->color?->label ?? $arrived->color?->code ?? '—' }}</div>
+      </div>
+      <span><b>وصل في الرسالة دي:</b> <span class="num fw-bold">{{ rtrim(rtrim(number_format((float)$arrived->total_kg,2),'0'),'.') }} كجم</span>
         · <span class="num">{{ (int) $arrived->rolls_count }} توب</span></span>
       <span><b>المورد:</b> {{ $arrived->supplier?->name ?? '—' }}</span>
       @if($arrivedPo)
@@ -63,49 +66,83 @@
       </div>
     </div>
     <div class="card-body"><fieldset @disabled(!$editable)>
-      <div class="row g-3">
-        <div class="col-md-2"><label class="form-label req">التاريخ</label>
-          <input type="date" name="doc_date" class="form-control form-control-sm" value="{{ old('doc_date',$row->doc_date?->format('Y-m-d') ?? $row->doc_date) }}" required></div>
-        <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
-          <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="04619"></div>
-        <div class="col-md-3"><label class="form-label req">الحوض (الرسالة)</label>
-          <select name="consignment_id" class="form-select form-select-sm" required><option value="">—</option>
-            @foreach($consignments as $k=>$v)<option value="{{ $k }}" @selected(old('consignment_id',$row->consignment_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-2"><label class="form-label">الصنف</label>
-          <select name="fabric_type_id" class="form-select form-select-sm"><option value="">—</option>
-            @foreach($fabricTypes as $k=>$v)<option value="{{ $k }}" @selected(old('fabric_type_id',$row->fabric_type_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-3"><label class="form-label">كود اللون</label>
-          <select name="color_id" class="form-select form-select-sm"><option value="">—</option>
-            @foreach($colors as $k=>$v)<option value="{{ $k }}" @selected(old('color_id',$row->color_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-3"><label class="form-label">اسم المورد</label>
-          <select name="supplier_id" class="form-select form-select-sm"><option value="">—</option>
-            @foreach($suppliers as $k=>$v)<option value="{{ $k }}" @selected(old('supplier_id',$row->supplier_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-3"><label class="form-label">الفاحص</label>
-          <select name="inspector_id" class="form-select form-select-sm"><option value="">—</option>
-            @foreach($inspectors as $k=>$v)<option value="{{ $k }}" @selected(old('inspector_id',$row->inspector_id ?? auth()->id())==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-2"><label class="form-label">أتواب حسب إذن الإضافة</label>
-          <input type="number" name="declared_rolls" class="form-control form-control-sm"
-                 value="{{ old('declared_rolls',$row->declared_rolls) }}" readonly style="background:#F8F4F1">
-          <div class="hint">اللي المورد قال عليه</div></div>
-        <div class="col-md-2"><label class="form-label req">الأتواب المجرودة فعليًا</label>
-          <input type="number" name="counted_rolls" class="form-control form-control-sm"
-                 value="{{ old('counted_rolls',$row->counted_rolls) }}" required>
-          <div class="hint">الجرد الحقيقي</div></div>
-        <div class="col-md-2"><label class="form-label">الوزن المجرود (كجم)</label>
-          <input type="number" step="0.001" name="counted_kg" class="form-control form-control-sm"
-                 value="{{ old('counted_kg',$row->counted_kg) }}"></div>
-        <div class="col-md-2"><label class="form-label req">النتيجة</label>
-          <select name="result" class="form-select form-select-sm" required>
-            @foreach($results as $k=>$v)<option value="{{ $k }}" @selected(old('result',$row->result)===$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-6"><label class="form-label">ملاحظات</label>
-          <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
-      </div>
+      @if(($arrived ?? null))
+        {{-- الفحص على رسالة محددة: بياناتها ثابتة من إذن الإضافة — الفاحص بيجرد ويقيس بس --}}
+        <input type="hidden" name="doc_date"       value="{{ old('doc_date', $row->doc_date?->format('Y-m-d') ?? now()->toDateString()) }}">
+        <input type="hidden" name="consignment_id" value="{{ old('consignment_id', $row->consignment_id ?? $arrived->id) }}">
+        <input type="hidden" name="fabric_type_id" value="{{ old('fabric_type_id', $row->fabric_type_id ?? $arrived->fabric_type_id) }}">
+        <input type="hidden" name="color_id"       value="{{ old('color_id', $row->color_id ?? $arrived->color_id) }}">
+        <input type="hidden" name="supplier_id"    value="{{ old('supplier_id', $row->supplier_id ?? $arrived->supplier_id) }}">
+        <input type="hidden" name="inspector_id"   value="{{ old('inspector_id', $row->inspector_id ?? auth()->id()) }}">
+        <input type="hidden" name="declared_rolls" value="{{ old('declared_rolls', $row->declared_rolls ?? $arrived->rolls_count) }}">
+
+        <div class="row g-3">
+          <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
+            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="04619"></div>
+          <div class="col-md-2"><label class="form-label">أتواب حسب الإذن</label>
+            <div class="form-control form-control-sm num" style="background:var(--lv-offwhite)">{{ (int) ($row->declared_rolls ?? $arrived->rolls_count) }}</div>
+            <div class="hint">اللي جه في إذن الإضافة</div></div>
+          <div class="col-md-2"><label class="form-label req">الأتواب المجرودة فعليًا</label>
+            <input type="number" name="counted_rolls" class="form-control form-control-sm"
+                   value="{{ old('counted_rolls',$row->counted_rolls) }}" required>
+            <div class="hint">الجرد الحقيقي</div></div>
+          <div class="col-md-2"><label class="form-label">الوزن المجرود (كجم)</label>
+            <input type="number" step="0.001" name="counted_kg" class="form-control form-control-sm"
+                   value="{{ old('counted_kg',$row->counted_kg) }}"></div>
+          <div class="col-md-2"><label class="form-label req">النتيجة</label>
+            <select name="result" class="form-select form-select-sm" required>
+              @foreach($results as $k=>$v)<option value="{{ $k }}" @selected(old('result',$row->result)===$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-2"><label class="form-label">الفاحص</label>
+            <div class="form-control form-control-sm" style="background:var(--lv-offwhite)">{{ auth()->user()?->name }}</div></div>
+          <div class="col-md-12"><label class="form-label">ملاحظات</label>
+            <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
+        </div>
+      @else
+        <div class="row g-3">
+          <div class="col-md-2"><label class="form-label req">التاريخ</label>
+            <input type="date" name="doc_date" class="form-control form-control-sm" value="{{ old('doc_date',$row->doc_date?->format('Y-m-d') ?? $row->doc_date) }}" required></div>
+          <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
+            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="04619"></div>
+          <div class="col-md-3"><label class="form-label req">الحوض (الرسالة)</label>
+            <select name="consignment_id" class="form-select form-select-sm" required><option value="">—</option>
+              @foreach($consignments as $k=>$v)<option value="{{ $k }}" @selected(old('consignment_id',$row->consignment_id)==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-2"><label class="form-label">الصنف</label>
+            <select name="fabric_type_id" class="form-select form-select-sm"><option value="">—</option>
+              @foreach($fabricTypes as $k=>$v)<option value="{{ $k }}" @selected(old('fabric_type_id',$row->fabric_type_id)==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-3"><label class="form-label">كود اللون</label>
+            <select name="color_id" class="form-select form-select-sm"><option value="">—</option>
+              @foreach($colors as $k=>$v)<option value="{{ $k }}" @selected(old('color_id',$row->color_id)==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-3"><label class="form-label">اسم المورد</label>
+            <select name="supplier_id" class="form-select form-select-sm"><option value="">—</option>
+              @foreach($suppliers as $k=>$v)<option value="{{ $k }}" @selected(old('supplier_id',$row->supplier_id)==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-3"><label class="form-label">الفاحص</label>
+            <select name="inspector_id" class="form-select form-select-sm"><option value="">—</option>
+              @foreach($inspectors as $k=>$v)<option value="{{ $k }}" @selected(old('inspector_id',$row->inspector_id ?? auth()->id())==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-2"><label class="form-label">أتواب حسب إذن الإضافة</label>
+            <input type="number" name="declared_rolls" class="form-control form-control-sm"
+                   value="{{ old('declared_rolls',$row->declared_rolls) }}" readonly style="background:#F8F4F1">
+            <div class="hint">اللي المورد قال عليه</div></div>
+          <div class="col-md-2"><label class="form-label req">الأتواب المجرودة فعليًا</label>
+            <input type="number" name="counted_rolls" class="form-control form-control-sm"
+                   value="{{ old('counted_rolls',$row->counted_rolls) }}" required>
+            <div class="hint">الجرد الحقيقي</div></div>
+          <div class="col-md-2"><label class="form-label">الوزن المجرود (كجم)</label>
+            <input type="number" step="0.001" name="counted_kg" class="form-control form-control-sm"
+                   value="{{ old('counted_kg',$row->counted_kg) }}"></div>
+          <div class="col-md-2"><label class="form-label req">النتيجة</label>
+            <select name="result" class="form-select form-select-sm" required>
+              @foreach($results as $k=>$v)<option value="{{ $k }}" @selected(old('result',$row->result)===$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-6"><label class="form-label">ملاحظات</label>
+            <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
+        </div>
+      @endif
     </fieldset></div>
 
     @if($mode==='edit')

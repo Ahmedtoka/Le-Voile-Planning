@@ -116,7 +116,7 @@ class FabricInspectionController extends Controller
             'mode'      => 'create',
             'preset'    => $preset,
             'arrivedPo' => isset($c) ? $c->purchaseOrder?->load('lines') : null,
-            'arrived'   => $c ?? null,
+            'arrived'   => isset($c) ? $c->load('fabricType', 'color', 'supplier') : null,
         ]));
     }
 
@@ -140,7 +140,8 @@ class FabricInspectionController extends Controller
 
     public function edit(FabricInspection $inspection)
     {
-        $inspection->load(['rolls', 'consignment.purchaseOrder.lines', 'approval.steps']);
+        $inspection->load(['rolls', 'consignment.purchaseOrder.lines',
+            'consignment.fabricType', 'consignment.color', 'consignment.supplier', 'approval.steps']);
 
         return view('inspections.form', $this->formData([
             'row'       => $inspection,

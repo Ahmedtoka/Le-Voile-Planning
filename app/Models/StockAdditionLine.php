@@ -13,5 +13,6 @@ class StockAdditionLine extends Model
     public function color()         { return $this->belongsTo(Color::class); }
     public function poColor()       { return $this->belongsTo(Color::class, 'po_color_id'); }
     public function poLine()        { return $this->belongsTo(PurchaseOrderLine::class, 'po_line_id'); }
+    public function consignment()   { return $this->belongsTo(Consignment::class); }
     public function accessory()     { return $this->belongsTo(Accessory::class); }
 }

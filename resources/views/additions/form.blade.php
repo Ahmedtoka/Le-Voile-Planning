@@ -56,8 +56,8 @@
 @else
   <div class="note-box mb-3">
     <b>ده أول مستند في دورة القماش.</b>
-    اعتماد الإذن ده بيولّد الحوض (الرسالة) وبيدخّل الكمية المخزن <b>محجوزة تحت الفحص</b> —
-    ممنوع تشغيلها. الإفراج بيحصل بإذن الاستلام الخام بعد ما الفحص والمعمل يخلّصوا.
+    «نزّل للفحص» بيولّد <b>رسالة (حوض) لكل لون</b> وبينزّل القماش طابور الفحص فورًا —
+    الكمية بتدخل المخزن <b>محجوزة</b> والإفراج بيحصل بإذن الاستلام الخام بعد الفحص والمعمل.
     <br><b>مهم:</b> اكتب عدد الأتواب صح — الفحص هيجرد عليه.
   </div>
 @endif
@@ -210,25 +210,47 @@
 
   @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
+    <button type="button" class="btn btn-success btn-sm"
+            onclick="if(confirm('هيتولّد لكل لون رسالة (حوض) وينزل طابور الفحص فورًا. متأكد؟')) document.getElementById('submitForm').submit()">
+      <i class="bi bi-send" aria-hidden="true"></i> نزّل للفحص</button>
   @endif
 </form>
 @if($mode==='edit' && $row->isEditable())
   <form id="submitForm" method="post" action="{{ route('stock-additions.submit',$row) }}" class="d-none">@csrf</form>
 @endif
 
-@if($row->consignment)
+@php
+  $saConsignments = $mode === 'edit'
+      ? $row->lines->pluck('consignment')->filter()->unique('id')->values()
+      : collect();
+  if ($saConsignments->isEmpty() && $row->consignment) $saConsignments = collect([$row->consignment]);
+@endphp
+@if($saConsignments->isNotEmpty())
   <div class="card mt-3">
-    <div class="card-header">الحوض اللي اتولّد</div>
-    <div class="card-body d-flex gap-3 align-items-center flex-wrap">
-      <a href="{{ route('consignments.show', $row->consignment) }}" class="fw-bold num">{{ $row->consignment->consignment_no }}</a>
-      <span class="badge bg-{{ $row->consignment->status_color }}">{{ $row->consignment->status_name }}</span>
-      <span class="hint">{{ number_format((float)$row->consignment->total_kg,1) }} كجم · {{ $row->consignment->rolls_count }} توب</span>
-      @if($row->consignment->status === 'under_inspection')
-        <a href="{{ route('inspections.create', ['consignment_id'=>$row->consignment->id]) }}"
-           class="btn btn-sm btn-outline-plum ms-auto">الخطوة الجاية: تقرير فحص</a>
-      @endif
+    <div class="card-header">
+      {{ $saConsignments->count() > 1 ? 'الرسايل اللي اتولّدت — رسالة لكل لون' : 'الرسالة اللي اتولّدت' }}
     </div>
+    <table class="table table-sm mb-0">
+      <thead><tr><th>رقم الرسالة</th><th>الصنف</th><th>اللون</th><th>الكمية</th><th>الأتواب</th><th>الحالة</th><th></th></tr></thead>
+      <tbody>
+      @foreach($saConsignments as $c)
+        <tr>
+          <td class="num fw-bold"><a href="{{ route('consignments.show', $c) }}">{{ $c->consignment_no }}</a></td>
+          <td>{{ $c->fabricType?->name ?? '—' }}</td>
+          <td>{{ $c->color?->label ?? $c->color?->code ?? '—' }}</td>
+          <td class="num">{{ rtrim(rtrim(number_format((float)$c->total_kg,1),'0'),'.') }} كجم</td>
+          <td class="num">{{ (int) $c->rolls_count }}</td>
+          <td><span class="badge bg-{{ $c->status_color }}">{{ $c->status_name }}</span></td>
+          <td>
+            @if($c->status === 'under_inspection')
+              <a href="{{ route('inspections.create', ['consignment_id'=>$c->id]) }}"
+                 class="btn btn-sm btn-plum py-0">افحص</a>
+            @endif
+          </td>
+        </tr>
+      @endforeach
+      </tbody>
+    </table>
   </div>
 @endif
 

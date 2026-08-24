@@ -77,7 +77,9 @@ class GoodsReceiptController extends Controller
                 $row->supplier_id         = $c->supplier_id;
                 $row->warehouse_id        = $c->warehouse_id;
                 $row->purchase_order_id   = $c->purchase_order_id;
-                $row->stock_addition_id   = $c->stockAdditions()->latest('id')->value('id');
+                // الحوض ممكن يكون من استلامة متعددة الألوان — الربط الأدق من سطر الإذن
+                $row->stock_addition_id   = $c->stockAdditions()->latest('id')->value('id')
+                    ?: \App\Models\StockAdditionLine::where('consignment_id', $c->id)->value('stock_addition_id');
                 $row->fabric_inspection_id = $c->inspections->first()?->id;
             }
         }

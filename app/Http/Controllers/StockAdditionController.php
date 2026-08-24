@@ -11,7 +11,6 @@ use App\Models\StockAddition;
 use App\Models\StockAdditionLine;
 use App\Models\Supplier;
 use App\Models\Warehouse;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
 use App\Services\FlowMessage;
 use App\Support\FiltersIndex;
@@ -141,6 +140,7 @@ class StockAdditionController extends Controller
         $stock_addition->load([
             'lines.color', 'lines.fabricType', 'lines.accessory',
             'lines.poLine.color', 'lines.poLine.fabricType',
+            'lines.consignment.fabricType', 'lines.consignment.color',
             'approval.steps', 'consignment',
         ]);
 
@@ -220,16 +220,21 @@ class StockAdditionController extends Controller
                 : 'لازم تكتب عدد الأتواب لكل صنف قماش — الفحص هيجرد عليه.']);
         }
 
-        /* الرسالة (الحوض) بتتولد بلون واحد — أكتر من لون في نفس الإذن
-           هيتسجل كله على لون أول سطر ويبوّظ التتبع. كل لون بإذن منفصل. */
-        $fabricColors = $stock_addition->lines
-            ->filter(fn ($l) => $l->fabric_type_id)
-            ->pluck('color_id')->filter()->unique();
+        // أكتر من لون في نفس الاستلامة عادي — كل لون بياخد رسالته (حوضه) لوحده
 
-        if ($fabricColors->count() > 1) {
-            return back()->withErrors(['msg' =>
-                'الإذن فيه أكتر من لون قماش — الرسالة بتتولد بلون واحد. '
-                . 'اعمل إذن إضافة منفصل لكل لون (سيب في الإذن ده لون واحد بس).']);
+        /* رقم رسالة مكتوب يدوي؟ لازم ما يكونش مستخدم قبل كده —
+           وإلا هيدمج الاستلامة دي في حوض استلامة تانية ويبوّظ الاتنين. */
+        $manualNo = trim((string) $stock_addition->consignment_no);
+        if ($manualNo !== '') {
+            $taken = \App\Models\Consignment::where('consignment_no', $manualNo)
+                ->when($stock_addition->consignment_id, fn ($q) =>
+                    $q->where('id', '!=', $stock_addition->consignment_id))
+                ->exists();
+            if ($taken) {
+                return back()->withErrors(['msg' =>
+                    'رقم الرسالة «' . $manualNo . '» مستخدم قبل كده لاستلامة تانية — '
+                    . 'سيبه فاضي والسيستم هيولّد رقم جديد، أو اكتب رقم مختلف.']);
+            }
         }
 
         /* انحراف اللون الأول — لازم قرار قبل أي حسبة على الطلب،
@@ -303,8 +308,21 @@ class StockAdditionController extends Controller
                 }
             }
         }
-        ApprovalEngine::submit($stock_addition);
-        return back()->with(FlowMessage::flash('addition.submitted', $stock_addition));
+        /* مفيش دورة اعتماد هنا — القماش وصل فعلًا والفاحص مستنيه.
+           «نزّل للفحص» بيعتمد الإذن فورًا: بيولّد الأحواض (رسالة لكل لون)،
+           بيحدّث الطلب، وبينزل طابور الفحص في نفس اللحظة. */
+        DB::transaction(function () use ($stock_addition) {
+            $stock_addition->forceFill(['status' => 'approved'])->save();
+            \App\Services\DocumentEffects::onApproved($stock_addition->refresh());
+        });
+
+        $consignments = $stock_addition->lines()->whereNotNull('consignment_id')
+            ->pluck('consignment_id')->unique()->count();
+
+        \App\Services\ActivityLogger::log('approved', $stock_addition,
+            'الإذن ' . $stock_addition->doc_no . ' اتنزّل للفحص — اتولّد ' . $consignments . ' رسالة');
+
+        return back()->with(FlowMessage::flash('addition.approved', $stock_addition));
     }
 
     public function print(StockAddition $stock_addition)

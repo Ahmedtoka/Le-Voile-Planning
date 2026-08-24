@@ -62,62 +62,78 @@ class DocumentEffects
             $direct = $sa->receipt_type === 'container'
                    || (bool) $sa->purchaseOrder?->inspection_exempt;
 
-            // ── تكوين الحوض ──
+            /* ── تكوين الأحواض ─────────────────────────────────────
+               الاستلامة الواحدة ممكن تجيب أكتر من لون — وكل (خامة + لون)
+               بيبقى **حوض (رسالة) مستقل** برقمه وكميته وأتوابه، عشان الفحص
+               والماركر والتشغيل كلهم شغالين على اللون الواحد.
+               رقم الإذن اللي كتبه المستخدم بيتاخد للحوض الأول، والباقي
+               بياخدوا نفس النمط بتسلسل -01 -02… */
             if ($fabricLines->isNotEmpty()) {
-                $first = $fabricLines->first();
+                $groups = $fabricLines->groupBy(fn ($l) => $l->fabric_type_id . '|' . ($l->color_id ?? 0));
 
-                $no = trim((string) $sa->consignment_no);
-                if ($no === '') {
-                    $prefix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $sa->supplier?->code ?? 'CN'), 0, 4)) ?: 'CN';
-                    $seq = Consignment::whereDate('arrival_date', $sa->doc_date)->count();
-                    $no  = DocNumber::consignmentNo($prefix, $sa->doc_date, $sa->purchaseOrder?->po_no, $seq);
-                }
+                $prefix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $sa->supplier?->code ?? 'CN'), 0, 4)) ?: 'CN';
+                $seq    = Consignment::whereDate('arrival_date', $sa->doc_date)->count();
+                $manual = trim((string) $sa->consignment_no);
 
-                // السطور بوحدة الطلب (طن/كجم/متر) — الحوض بيتحاسب بالكيلو دايمًا
-                $totalKg    = (float) $fabricLines->sum(fn ($l) => self::toUnit($l->qty, $l->unit, 'كجم'));
-                $totalRolls = (int) $fabricLines->sum('rolls_count');
+                $arrived = ['count' => 0, 'kg' => 0.0, 'rolls' => 0, 'first' => null];
 
-                $consignment = Consignment::updateOrCreate(
-                    ['consignment_no' => $no],
-                    [
-                        'arrival_date'      => $sa->doc_date,
-                        'purchase_order_id' => $sa->purchase_order_id,
-                        'supplier_id'       => $sa->supplier_id,
-                        'fabric_type_id'    => $first->fabric_type_id,
-                        'color_id'          => $first->color_id,
-                        'warehouse_id'      => $sa->warehouse_id,
-                        'total_kg'          => $totalKg,
-                        'rolls_count'       => $totalRolls,
-                        'hold_kg'           => $direct ? 0 : $totalKg,
-                        'released_kg'       => $direct ? $totalKg : 0,
-                        'remaining_kg'      => $direct ? $totalKg : 0,  // المباشر متاح فورًا — غيره ممنوع قبل الإفراج
-                        'status'            => $direct ? 'released' : 'under_inspection',
-                        'created_by'        => $sa->created_by,
-                    ]
-                );
-                if ($direct) $consignment->recalcRemaining();
+                foreach ($groups->values() as $g => $lines) {
+                    $first = $lines->first();
 
-                $sa->forceFill(['consignment_id' => $consignment->id, 'consignment_no' => $no])->saveQuietly();
+                    $no = ($g === 0 && $manual !== '')
+                        ? $manual
+                        : DocNumber::consignmentNo($prefix, $sa->doc_date, $sa->purchaseOrder?->po_no, $seq + $g);
 
-                // سجل لكل توب — العرض والطول الحقيقيين بييجوا من الفحص
-                if ($consignment->rolls()->count() === 0 && $totalRolls > 0) {
-                    $avgKg = round($totalKg / $totalRolls, 3);
-                    for ($i = 1; $i <= $totalRolls; $i++) {
-                        FabricRoll::create([
-                            'consignment_id' => $consignment->id,
-                            'roll_no'        => str_pad((string) $i, 3, '0', STR_PAD_LEFT),
-                            'net_kg'         => $avgKg,
-                            'status'         => 'in_stock',
-                        ]);
+                    // السطور بوحدة الطلب (طن/كجم/متر) — الحوض بيتحاسب بالكيلو دايمًا
+                    $kg    = (float) $lines->sum(fn ($l) => self::toUnit($l->qty, $l->unit, 'كجم'));
+                    $rolls = (int) $lines->sum('rolls_count');
+
+                    $consignment = Consignment::updateOrCreate(
+                        ['consignment_no' => $no],
+                        [
+                            'arrival_date'      => $sa->doc_date,
+                            'purchase_order_id' => $sa->purchase_order_id,
+                            'supplier_id'       => $sa->supplier_id,
+                            'fabric_type_id'    => $first->fabric_type_id,
+                            'color_id'          => $first->color_id,
+                            'warehouse_id'      => $sa->warehouse_id,
+                            'total_kg'          => $kg,
+                            'rolls_count'       => $rolls,
+                            'hold_kg'           => $direct ? 0 : $kg,
+                            'released_kg'       => $direct ? $kg : 0,
+                            'remaining_kg'      => $direct ? $kg : 0,  // المباشر متاح فورًا — غيره ممنوع قبل الإفراج
+                            'status'            => $direct ? 'released' : 'under_inspection',
+                            'created_by'        => $sa->created_by,
+                        ]
+                    );
+                    if ($direct) $consignment->recalcRemaining();
+
+                    // كل سطر بيتربط بحوضه — الحركات والفحص بيمشوا عليه
+                    foreach ($lines as $l) {
+                        $l->forceFill(['consignment_id' => $consignment->id])->saveQuietly();
                     }
-                }
 
-                $arrived = [
-                    'no'    => $no,
-                    'kg'    => $totalKg,
-                    'rolls' => $totalRolls,
-                    'cid'   => $consignment->id,
-                ];
+                    // سجل لكل توب — العرض والطول الحقيقيين بييجوا من الفحص
+                    if ($consignment->rolls()->count() === 0 && $rolls > 0) {
+                        $avgKg = round($kg / $rolls, 3);
+                        for ($i = 1; $i <= $rolls; $i++) {
+                            FabricRoll::create([
+                                'consignment_id' => $consignment->id,
+                                'roll_no'        => str_pad((string) $i, 3, '0', STR_PAD_LEFT),
+                                'net_kg'         => $avgKg,
+                                'status'         => 'in_stock',
+                            ]);
+                        }
+                    }
+
+                    if ($g === 0) {
+                        $sa->forceFill(['consignment_id' => $consignment->id, 'consignment_no' => $no])->saveQuietly();
+                        $arrived['first'] = ['no' => $no, 'cid' => $consignment->id];
+                    }
+                    $arrived['count']++;
+                    $arrived['kg']    += $kg;
+                    $arrived['rolls'] += $rolls;
+                }
             }
 
             /* ── الاستلام الجزئي على طلب الشراء ──────────────────
@@ -197,25 +213,31 @@ class DocumentEffects
             /* ── إشعار الفحص ────────────────────────────────────
                الفاحص لازم يشوف إن ده وصول جزئي وكام باقي وهيوصل إمتى،
                عشان يعرف يفحص دلوقتي ولا يستنى الشحنة تكمل. */
-            if ($arrived) {
+            if ($arrived && $arrived['count'] > 0) {
+                $etaLine = $sa->lines->pluck('remainder_eta')->filter()->min();
                 $partial = isset($arrivedRemainder)
                     ? ' · جزئي — باقي ' . $arrivedRemainder
-                      . ($sa->remainder_eta ? ' متوقع ' . $sa->remainder_eta->format('Y-m-d') : ' (الموعد مش محدد)')
+                      . ($etaLine ? ' متوقع ' . $etaLine->format('Y-m-d') : ' (الموعد مش محدد)')
                     : '';
+
+                $what = $arrived['count'] > 1
+                    ? $arrived['count'] . ' رسايل (أولها ' . $arrived['first']['no'] . ')'
+                    : 'الرسالة ' . $arrived['first']['no'];
 
                 if ($direct) {
                     Notifier::broadcastToRole('inspector', 'inspection_due',
                         'استلام مباشر (بدون دورة فحص)',
-                        'الرسالة ' . $arrived['no'] . ' دخلت المخزن مُفرَج عنها' . $partial
+                        $what . ' دخلت المخزن مُفرَج عنها' . $partial
                             . ' — لو محتاجين بيانات العرض والبنشر، افحصوا 5-6 أتواب استدلاليًا.',
                         null, 'info');
                 } else {
                     Notifier::broadcastToRole('inspector', 'inspection_due',
                         'قماش وصل ومحتاج فحص',
-                        'الرسالة ' . $arrived['no'] . ' — '
+                        $what . ' — '
                             . rtrim(rtrim(number_format($arrived['kg'], 2), '0'), '.') . ' كجم · '
-                            . $arrived['rolls'] . ' توب' . $partial,
-                        route('inspections.create', ['consignment_id' => $arrived['cid']]), 'warning');
+                            . $arrived['rolls'] . ' توب' . $partial
+                            . ($arrived['count'] > 1 ? ' · كل لون برسالته وفحصه' : ''),
+                        route('inspections.index'), 'warning');
                 }
             }
 
@@ -274,7 +296,7 @@ class DocumentEffects
                     'fabric_type_id' => $line->fabric_type_id,
                     'color_id'       => $line->color_id,
                     'accessory_id'   => $line->accessory_id,
-                    'consignment_id' => $sa->consignment_id,
+                    'consignment_id' => $line->consignment_id ?: $sa->consignment_id,
                     'direction'      => 'in',
                     // الإكسسوارات والاستلام المباشر بيدخلوا متاحين — القماش العادي محجوز لحد الإفراج
                     'quality_state'  => ($line->accessory_id || $direct) ? 'released' : 'hold',
