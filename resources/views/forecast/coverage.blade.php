@@ -10,7 +10,7 @@
 <div class="card">
   <div class="card-header d-flex justify-content-between">
     <span>{{ $title }}</span>
-    <a href="{{ route('io.export.coverage') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download"></i> تصدير</a>
+    <a href="{{ route('io.export.coverage') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download" aria-hidden="true"></i> تصدير</a>
   </div>
   <div class="table-responsive">
     <table class="table table-sm">
@@ -33,9 +33,12 @@
           <td class="num hint">{{ $r['last_pull'] ?? '—' }}</td>
         </tr>
       @empty
-        <tr><td colspan="10" class="text-center text-muted py-4">
-          مفيش موديلات نشطة، أو لسه مفيش داتا مبيعات/أرصدة. ارفعها من شاشة الاستيراد.
-        </td></tr>
+        <tr><td colspan="10">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش موديلات نشطة، أو لسه مفيش داتا مبيعات/أرصدة. ارفعها من شاشة الاستيراد.</div>
+            </div>
+          </td></tr>
       @endforelse
       </tbody>
     </table>

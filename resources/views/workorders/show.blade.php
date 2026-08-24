@@ -5,6 +5,8 @@
   $target = $row->target_qty;
 @endphp
 
+@include('partials.flow_bar', ['flow' => 'prod', 'step' => 'wo'])
+
 @include('partials.approval_box')
 
 {{-- النسخ المعدلة --}}
@@ -207,7 +209,12 @@
             <td><span class="badge bg-{{ $c->status_color }}">{{ $c->status_label }}</span></td>
           </tr>
         @empty
-          <tr><td colspan="6" class="text-center text-muted py-3">مفيش بيان قص لسه.</td></tr>
+          <tr><td colspan="6">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش بيان قص لسه.</div>
+            </div>
+          </td></tr>
         @endforelse
         </tbody>
       </table>
@@ -234,7 +241,12 @@
             <td><span class="badge bg-{{ $p->status_color }}">{{ $p->status_label }}</span></td>
           </tr>
         @empty
-          <tr><td colspan="5" class="text-center text-muted py-3">مفيش استلامات لسه.</td></tr>
+          <tr><td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش استلامات لسه.</div>
+            </div>
+          </td></tr>
         @endforelse
         </tbody>
       </table>
@@ -284,7 +296,12 @@
             <td><span class="badge bg-{{ $l->materialIssue?->status_color }}">{{ $l->materialIssue?->status_label }}</span></td>
           </tr>
         @empty
-          <tr><td colspan="5" class="text-center text-muted py-3">لسه ما اتصرفش خامة للمصنع.</td></tr>
+          <tr><td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">لسه ما اتصرفش خامة للمصنع.</div>
+            </div>
+          </td></tr>
         @endforelse
         </tbody>
       </table>
@@ -324,7 +341,12 @@
             <td class="num fw-bold">{{ $a['shortage'] > 0 ? rtrim(rtrim(number_format($a['shortage'], 3),'0'),'.') : '—' }}</td>
           </tr>
         @empty
-          <tr><td colspan="6" class="text-center text-muted py-3">مفيش BOM مسجّل للموديلات دي — سجّله من شاشة الموديلات.</td></tr>
+          <tr><td colspan="6">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش BOM مسجّل للموديلات دي — سجّله من شاشة الموديلات.</div>
+            </div>
+          </td></tr>
         @endforelse
         </tbody>
       </table>
@@ -371,7 +393,12 @@
             <td>{{ $h->title ?? $h->action }}</td>
           </tr>
         @empty
-          <tr><td colspan="3" class="text-center text-muted py-3">مفيش أحداث مسجلة لسه.</td></tr>
+          <tr><td colspan="3">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش أحداث مسجلة لسه.</div>
+            </div>
+          </td></tr>
         @endforelse
         </tbody>
       </table>
@@ -409,5 +436,4 @@
   </form>
 </div></div></div>
 
-@include('partials.comments')
 @endsection

@@ -9,7 +9,7 @@
         @foreach($statuses as $k=>$v)<option value="{{ $k }}" @selected(request('status')===$k)>{{ $v }}</option>@endforeach
       </select>
     </form>
-    <a href="{{ route('markers.requests.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> طلب ماركر</a>
+    <a href="{{ route('markers.requests.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg" aria-hidden="true"></i> طلب ماركر</a>
   </div>
   <div class="table-responsive">
     <table class="table table-sm">
@@ -33,7 +33,12 @@
           <td><span class="badge bg-{{ $r->status==='delivered'?'success':($r->status==='cancelled'?'secondary':'warning') }}">{{ $r->status_name }}</span></td>
         </tr>
       @empty
-        <tr><td colspan="10" class="text-center text-muted py-4">مفيش طلبات ماركر.</td></tr>
+        <tr><td colspan="10">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش طلبات ماركر.</div>
+            </div>
+          </td></tr>
       @endforelse
       </tbody>
     </table>

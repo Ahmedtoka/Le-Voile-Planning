@@ -53,8 +53,8 @@
           </table>
         </div>
         <div class="card-footer bg-white d-flex gap-2">
-          <button class="btn btn-plum btn-sm"><i class="bi bi-save"></i> حفظ النسب</button>
-          <button type="button" class="btn btn-outline-plum btn-sm" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg"></i> لون</button>
+          <button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ النسب</button>
+          <button type="button" class="btn btn-outline-plum btn-sm" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> لون</button>
         </div>
       </div>
     </form>
@@ -83,8 +83,11 @@
             <td class="num">{{ $pct }}</td>
           </tr>
         @empty
-          <tr><td colspan="2" class="text-center text-muted py-3">
-            مفيش حركة صرف مسجلة للموديل ده في {{ $year }} — دخّل النسب يدوي.
+          <tr><td colspan="2">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش حركة صرف مسجلة للموديل ده في {{ $year }} — دخّل النسب يدوي.</div>
+            </div>
           </td></tr>
         @endforelse
         </tbody>

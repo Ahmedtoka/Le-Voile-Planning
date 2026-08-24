@@ -19,7 +19,7 @@ class StockAddition extends Model
     use HasApproval, HasDocumentStatus, HasComments;
 
     protected $guarded = [];
-    protected $casts = ['doc_date' => 'date'];
+    protected $casts = ['doc_date' => 'date', 'remainder_eta' => 'date'];
 
     public const DOC_TYPE = 'stock_addition';
 

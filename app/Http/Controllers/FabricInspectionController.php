@@ -43,13 +43,23 @@ class FabricInspectionController extends Controller
         );
         if ($request->boolean('variance')) $q->where('rolls_variance', '!=', 0);
 
-        $base    = FabricInspection::query();
+        $base = FabricInspection::query();
+
+        /* طابور الفحص: القماش اللي وصل بإذن إضافة ولسه ما اتفحصش.
+           بيوري كمان إن ده وصول جزئي وكام باقي على الطلب وهيوصل إمتى،
+           عشان الفاحص يعرف يبدأ دلوقتي ولا يستنى الشحنة تكمل. */
+        $awaiting = Consignment::with(['fabricType', 'color', 'supplier', 'purchaseOrder.lines', 'stockAdditions'])
+            ->where('status', 'under_inspection')
+            ->whereDoesntHave('inspections', fn ($x) => $x->whereIn('status', ['pending', 'approved']))
+            ->latest('id')->limit(10)->get();
+
         $waiting = Consignment::where('status', 'under_inspection')
             ->whereDoesntHave('inspections', fn ($x) => $x->whereIn('status', ['pending','approved']))->count();
 
         return view('inspections.index', [
-            'title'   => 'تقارير فحص القماش',
-            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'title'    => 'تقارير فحص القماش',
+            'awaiting' => $awaiting,
+            'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','counted_rolls','min_width_cm','defect_pct','result','status'])->paginate(25)->withQueryString(),
             'results' => FabricInspection::RESULTS,
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
@@ -80,6 +90,8 @@ class FabricInspectionController extends Controller
             'consignment_id' => $request->get('consignment_id'),
         ]);
 
+        $preset = [];
+
         if ($row->consignment_id && $c = Consignment::find($row->consignment_id)) {
             $row->fabric_type_id  = $c->fabric_type_id;
             $row->color_id        = $c->color_id;
@@ -87,9 +99,25 @@ class FabricInspectionController extends Controller
             $row->declared_rolls  = $c->rolls_count;   // اللي جه في إذن الإضافة
             $row->counted_rolls   = $c->rolls_count;   // الفاحص يصححه بعد الجرد
             $row->counted_kg      = $c->total_kg;
+
+            /* سطر جاهز لكل توب وصل — الفاحص بيكتب الطول والعرض وخلاص.
+               اللي مش هيقيسه يمسحه، والباقي بيتحسب عيّنة تلقائيًا. */
+            foreach ($c->rolls()->orderBy('roll_no')->get() as $r) {
+                $preset[] = [
+                    'roll_no'  => $r->roll_no,
+                    'length_m' => $r->length_m,
+                    'width_cm' => $r->width_cm,
+                ];
+            }
         }
 
-        return view('inspections.form', $this->formData(['row' => $row, 'mode' => 'create']));
+        return view('inspections.form', $this->formData([
+            'row'       => $row,
+            'mode'      => 'create',
+            'preset'    => $preset,
+            'arrivedPo' => isset($c) ? $c->purchaseOrder?->load('lines') : null,
+            'arrived'   => $c ?? null,
+        ]));
     }
 
     public function store(Request $request)
@@ -112,8 +140,14 @@ class FabricInspectionController extends Controller
 
     public function edit(FabricInspection $inspection)
     {
-        $inspection->load(['rolls', 'consignment', 'approval.steps']);
-        return view('inspections.form', $this->formData(['row' => $inspection, 'mode' => 'edit']));
+        $inspection->load(['rolls', 'consignment.purchaseOrder.lines', 'approval.steps']);
+
+        return view('inspections.form', $this->formData([
+            'row'       => $inspection,
+            'mode'      => 'edit',
+            'arrived'   => $inspection->consignment,
+            'arrivedPo' => $inspection->consignment?->purchaseOrder,
+        ]));
     }
 
     public function update(Request $request, FabricInspection $inspection)
@@ -176,6 +210,9 @@ class FabricInspectionController extends Controller
             'suppliers'    => Supplier::orderBy('name')->pluck('name', 'id'),
             'inspectors'   => User::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'results'      => FabricInspection::RESULTS,
+            'preset'       => [],
+            'arrivedPo'    => null,
+            'arrived'      => null,
         ], $extra);
     }
 
@@ -195,10 +232,11 @@ class FabricInspectionController extends Controller
             'result'         => ['required', 'in:pending,accepted,accepted_with_notes,rejected'],
             'notes'          => ['nullable', 'string'],
 
+            // السطور بتيجي جاهزة بعدد أتواب الرسالة — اللي ما اتقاسش بيتساب
             'rolls'                   => ['required', 'array', 'min:1'],
             'rolls.*.roll_no'         => ['nullable', 'string', 'max:40'],
-            'rolls.*.length_m'        => ['required', 'numeric', 'min:0.01'],
-            'rolls.*.width_cm'        => ['required', 'numeric', 'min:1'],
+            'rolls.*.length_m'        => ['nullable', 'numeric', 'min:0'],
+            'rolls.*.width_cm'        => ['nullable', 'numeric', 'min:0'],
             'rolls.*.gsm'             => ['nullable', 'numeric', 'min:0'],
             'rolls.*.defects_count'   => ['nullable', 'integer', 'min:0'],
             'rolls.*.defect_desc'     => ['nullable', 'string'],
@@ -215,6 +253,15 @@ class FabricInspectionController extends Controller
         $rolls = $v['rolls'];
         unset($v['rolls']);
 
+        // لازم توب واحد متقاس على الأقل (طول + عرض) — من غيره مفيش أقل عرض
+        $measured = collect($rolls)->filter(fn ($r) =>
+            (float) ($r['length_m'] ?? 0) > 0 && (float) ($r['width_cm'] ?? 0) > 0)->count();
+
+        if (!$measured) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                'لازم تقيس توب واحد على الأقل (الطول والعرض) — منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.']);
+        }
+
         $v['total_rolls'] = $v['counted_rolls'];   // المرجع هو المجرود مش المصرّح
 
         return ['header' => $v, 'rolls' => $rolls];
@@ -225,14 +272,18 @@ class FabricInspectionController extends Controller
         if ($replace) $insp->rolls()->delete();
 
         foreach ($rolls as $i => $r) {
-            $len = (float) $r['length_m'];
+            $len = (float) ($r['length_m'] ?? 0);
             $def = (int) ($r['defects_count'] ?? 0);
+
+            /* السطور الجاهزة اللي الفاحص ما قاسهاش بتتساب — العيّنة =
+               الأتواب اللي اتقاست فعلًا، مش كل أتواب الرسالة. */
+            if ($len <= 0 && (float) ($r['width_cm'] ?? 0) <= 0 && $def === 0) continue;
 
             InspectionRoll::create([
                 'fabric_inspection_id' => $insp->id,
                 'roll_no'       => $r['roll_no'] ?? str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
                 'length_m'      => $len,
-                'width_cm'      => $r['width_cm'],
+                'width_cm'      => $r['width_cm'] ?? null,
                 'gsm'           => $r['gsm'] ?? null,
                 'defects_count' => $def,
                 'defect_pct'    => $len > 0 ? round(($def / $len) * 100, 3) : null,

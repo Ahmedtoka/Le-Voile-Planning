@@ -1,5 +1,7 @@
 @extends('layouts.app')
 @section('content')
+
+@include('partials.flow_bar', ['flow' => 'prod', 'step' => 'marker'])
 <div class="card">
   <div class="card-header d-flex gap-2 align-items-center">
     <span>{{ $title }} <span class="hint">({{ $rows->total() }})</span></span>
@@ -13,7 +15,7 @@
       </select>
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
-    <a href="{{ route('markers.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> ماركر</a>
+    <a href="{{ route('markers.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg" aria-hidden="true"></i> ماركر</a>
   </div>
   <div class="table-responsive">
     <table class="table table-sm">
@@ -38,7 +40,12 @@
           <td><a href="{{ route('markers.edit',$r) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="تعديل" title="تعديل"><i class="bi bi-pencil" aria-hidden="true"></i></a></td>
         </tr>
       @empty
-        <tr><td colspan="10" class="text-center text-muted py-4">مفيش ماركرات.</td></tr>
+        <tr><td colspan="10">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش ماركرات.</div>
+            </div>
+          </td></tr>
       @endforelse
       </tbody>
     </table>

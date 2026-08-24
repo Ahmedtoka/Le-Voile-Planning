@@ -1,8 +1,44 @@
 @extends('layouts.app')
 @section('content')
-@php $rolls = old('rolls', $row->rolls?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
+@php
+  $rolls = old('rolls', ($preset ?? null) ?: ($row->rolls?->toArray() ?? []));
+  $editable = $row->isEditable() || $mode==='create';
+@endphp
+
+@include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'inspection'])
 
 @include('partials.approval_box')
+
+{{-- إيه اللي وصل بالظبط، وكام لسه باقي على الطلب --}}
+@if(($arrived ?? null))
+  @php
+    $rem = 0; $unit = '';
+    foreach (($arrivedPo?->lines ?? collect()) as $l) {
+      $left = max(0, (float) $l->min_allowed_qty - (float) $l->received_qty);
+      if ($left > 0.0001) { $rem += $left; $unit = $unit ?: $l->unit; }
+    }
+  @endphp
+  <div class="card mb-3" style="border-color:var(--lv-soft)">
+    <div class="card-body py-2 d-flex gap-4 flex-wrap align-items-center">
+      <span><b>الرسالة:</b> <span class="num">{{ $arrived->consignment_no }}</span></span>
+      <span><b>وصل:</b> <span class="num fw-bold">{{ rtrim(rtrim(number_format((float)$arrived->total_kg,2),'0'),'.') }} كجم</span>
+        · <span class="num">{{ (int) $arrived->rolls_count }} توب</span></span>
+      <span><b>المورد:</b> {{ $arrived->supplier?->name ?? '—' }}</span>
+      @if($arrivedPo)
+        <span><b>الطلب:</b> <span class="num">{{ $arrivedPo->po_no }}</span></span>
+        @if($rem > 0)
+          <span class="text-danger fw-bold">
+            وصول جزئي — باقي {{ rtrim(rtrim(number_format($rem,3),'0'),'.') }} {{ $unit }}
+            {{ $arrivedPo->remainder_eta ? '· متوقع ' . $arrivedPo->remainder_eta->format('Y-m-d') : '· الموعد مش محدد' }}
+          </span>
+        @else
+          <span class="text-success fw-bold">الطلب اكتمل</span>
+        @endif
+      @endif
+      <span class="hint ms-auto">افحص اللي وصل دلوقتي — الباقي هيتفحص برسالته لما يوصل</span>
+    </div>
+  </div>
+@endif
 
 <div class="note-box mb-3">
   التقرير ده بيعمل حاجتين:
@@ -108,10 +144,20 @@
   </div>
 
   <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between">
-      <span>الأتواب المفحوصة</span>
-      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg"></i> توب</button>@endif
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>الأتواب المفحوصة
+        <span class="hint">— اكتب طول وعرض كل توب قسته، وامسح السطور اللي ما قستهاش</span>
+      </span>
+      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> توب</button>@endif
     </div>
+    @if($editable && ($preset ?? null))
+      <div class="card-body py-2 pb-0">
+        <div class="hint">
+          السطور دي اتملت بأتواب الرسالة اللي وصلت ({{ count($preset) }} توب).
+          عدد الأتواب اللي قستها فعلًا = عدد السطور اللي فيها طول وعرض — والسيستم بيحسب نسبة العيّنة منها لوحده.
+        </div>
+      </div>
+    @endif
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
         <thead><tr>
@@ -127,9 +173,9 @@
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save"></i> حفظ واحتساب</button>@endif
+  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ واحتساب</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send"></i> إرسال للاعتماد</button>
+    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
   @endif
 </form>
 @if($mode==='edit' && $row->isEditable())
@@ -137,9 +183,5 @@
 @endif
 
 <template id="lineTpl">@include('inspections.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
-@if($mode === 'edit')
-  @include('partials.comments')
-@endif
-
 @include('partials.lines_js',['startIndex'=>max(count($rolls),1)])
 @endsection

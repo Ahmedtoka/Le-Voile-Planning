@@ -35,4 +35,24 @@ trait FiltersIndex
 
         return $q;
     }
+
+    /**
+     * ترتيب الأعمدة.
+     *
+     * العمود لازم يكون في القايمة المسموح بيها — عشان محدش يبعت اسم عمود
+     * من عنده. ولو مفيش ترتيب مطلوب، بنرجع للافتراضي (الأحدث الأول).
+     *
+     * @param array $allowed أسماء أعمدة الجدول المسموح الترتيب بيها
+     */
+    protected function applySort(Builder $q, Request $request, array $allowed, string $default = 'id', string $defaultDir = 'desc'): Builder
+    {
+        $col = (string) $request->get('sort');
+        $dir = strtolower((string) $request->get('dir')) === 'asc' ? 'asc' : 'desc';
+
+        if ($col !== '' && in_array($col, $allowed, true)) {
+            return $q->orderBy($col, $dir)->orderBy('id', 'desc');
+        }
+
+        return $q->orderBy($default, $defaultDir);
+    }
 }

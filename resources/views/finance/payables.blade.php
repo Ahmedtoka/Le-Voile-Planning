@@ -1,6 +1,8 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'buy', 'step' => 'finance'])
+
 <div class="note-box mb-3">
   الشاشة دي <b>متابعة بس — مفيش أي إجراء مطلوب منك</b>. أول ما المشتريات تسعّر طلب،
   الترانزاكشن بتنزل هنا تلقائيًا: المستحق، المورد، طريقة الدفع، وتاريخ التوريد.
@@ -54,7 +56,12 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="7" class="text-center text-muted py-4">مفيش مستحقات متوقعة.</td></tr>
+            <tr><td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش مستحقات متوقعة.</div>
+            </div>
+          </td></tr>
           @endforelse
           </tbody>
         </table>
@@ -76,7 +83,12 @@
             <td class="num fw-bold">{{ number_format((float)$s->total, 0) }}</td>
           </tr>
         @empty
-          <tr><td colspan="3" class="text-center text-muted py-3">—</td></tr>
+          <tr><td colspan="3">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">—</div>
+            </div>
+          </td></tr>
         @endforelse
         </tbody>
       </table>

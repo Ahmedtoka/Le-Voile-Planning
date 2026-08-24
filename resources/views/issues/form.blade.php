@@ -2,6 +2,8 @@
 @section('content')
 @php $lines = old('lines', $preset ?: []); $editable = $row->isEditable() || $mode==='create'; @endphp
 
+@include('partials.flow_bar', ['flow' => 'prod', 'step' => 'issue'])
+
 @include('partials.approval_box')
 
 <div class="note-box mb-3">
@@ -97,10 +99,6 @@
 
 @if($mode==='edit' && $row->isEditable())
   <form id="submitForm" method="post" action="{{ route('material-issues.submit',$row) }}" class="d-none">@csrf</form>
-@endif
-
-@if($mode === 'edit')
-  @include('partials.comments')
 @endif
 
 <template id="lineTpl">@include('issues.line', ['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>

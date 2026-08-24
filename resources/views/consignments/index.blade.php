@@ -1,8 +1,10 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'consign'])
+
 <div class="note-box mb-3">
-  <i class="bi bi-info-circle"></i>
+  <i class="bi bi-info-circle" aria-hidden="true"></i>
   <b>الحوض (الرسالة)</b> هو وحدة الشغل الأساسية: مجموعة أتواب اتنسجت واتصبغت مع بعض ⇒ نفس اللون
   ونفس البنشر. ممنوع تخلط حوضين في قطعة واحدة. الحوض بيتولّد من إذن الإضافة، وبيفضل
   <b>محجوز</b> لحد ما يتفحص وييجي له تقرير معمل ويتفرج عنه بإذن استلام.
@@ -38,7 +40,7 @@
       </div>
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
-    <a href="{{ route('io.export.consignments') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download"></i></a>
+    <a href="{{ route('io.export.consignments') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download" aria-hidden="true"></i></a>
   </div>
   <div class="table-responsive">
     <table class="table table-sm">
@@ -65,18 +67,23 @@
             <a href="{{ route('consignments.show',$r) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="عرض" title="عرض"><i class="bi bi-eye" aria-hidden="true"></i></a>
             @php $next = $r->nextStep(); @endphp
             @if($next === 'inspection')
-              <a href="{{ route('inspections.create', ['consignment_id'=>$r->id]) }}" class="btn btn-sm btn-outline-warning py-0" title="محتاج فحص"><i class="bi bi-search"></i></a>
+              <a href="{{ route('inspections.create', ['consignment_id'=>$r->id]) }}" class="btn btn-sm btn-outline-warning py-0" title="محتاج فحص"><i class="bi bi-search" aria-hidden="true"></i></a>
             @elseif($next === 'lab')
-              <a href="{{ route('lab-reports.create', ['consignment_id'=>$r->id]) }}" class="btn btn-sm btn-outline-warning py-0" title="محتاج معمل"><i class="bi bi-thermometer-half"></i></a>
+              <a href="{{ route('lab-reports.create', ['consignment_id'=>$r->id]) }}" class="btn btn-sm btn-outline-warning py-0" title="محتاج معمل"><i class="bi bi-thermometer-half" aria-hidden="true"></i></a>
             @elseif($next === 'receipt')
-              <a href="{{ route('goods-receipts.create', ['consignment_id'=>$r->id]) }}" class="btn btn-sm btn-outline-success py-0" title="محتاج إذن استلام (إفراج)"><i class="bi bi-truck"></i></a>
+              <a href="{{ route('goods-receipts.create', ['consignment_id'=>$r->id]) }}" class="btn btn-sm btn-outline-success py-0" title="محتاج إذن استلام (إفراج)"><i class="bi bi-truck" aria-hidden="true"></i></a>
             @elseif($r->is_ready)
-              <a href="{{ route('work-orders.create', ['consignment_id'=>$r->id]) }}" class="btn btn-sm btn-success py-0" title="أمر شغل"><i class="bi bi-hammer"></i></a>
+              <a href="{{ route('work-orders.create', ['consignment_id'=>$r->id]) }}" class="btn btn-sm btn-success py-0" title="أمر شغل"><i class="bi bi-hammer" aria-hidden="true"></i></a>
             @endif
           </td>
         </tr>
       @empty
-        <tr><td colspan="13" class="text-center text-muted py-4">مفيش أحواض. الحوض بيتولّد لوحده من إذن الإضافة.</td></tr>
+        <tr><td colspan="13">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش أحواض. الحوض بيتولّد لوحده من إذن الإضافة.</div>
+            </div>
+          </td></tr>
       @endforelse
       </tbody>
     </table>

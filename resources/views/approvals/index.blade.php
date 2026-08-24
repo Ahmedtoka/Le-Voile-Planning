@@ -2,7 +2,7 @@
 @section('content')
 
 <div class="card mb-3">
-  <div class="card-header"><i class="bi bi-inbox"></i> مستني اعتمادك ({{ $mine->total() }})</div>
+  <div class="card-header"><i class="bi bi-inbox" aria-hidden="true"></i> مستني اعتمادك ({{ $mine->total() }})</div>
   <div class="table-responsive">
     <table class="table table-sm">
       <thead><tr><th>نوع المستند</th><th>رقم المستند</th><th>الخطوة</th><th>مقدّم الطلب</th><th>منذ</th><th style="width:340px"></th></tr></thead>
@@ -19,10 +19,10 @@
             <div class="d-flex gap-1">
               <form method="post" action="{{ route('approvals.approve',$a) }}" class="d-flex gap-1 flex-grow-1">@csrf
                 <input name="comment" class="form-control form-control-sm" placeholder="تعليق">
-                <button class="btn btn-success btn-sm text-nowrap"><i class="bi bi-check-lg"></i></button>
+                <button class="btn btn-success btn-sm text-nowrap"><i class="bi bi-check-lg" aria-hidden="true"></i></button>
               </form>
               <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rej{{ $a->id }}">
-                <i class="bi bi-x-lg"></i>
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
               </button>
             </div>
           </td>
@@ -39,7 +39,13 @@
           </form>
         </div></div></div>
       @empty
-        <tr><td colspan="6" class="text-center text-muted py-4">مفيش حاجة مستنية اعتمادك.</td></tr>
+        <tr><td colspan="6">
+          <div class="empty-state">
+            <i class="bi bi-check2-circle ico" aria-hidden="true"></i>
+            <div class="t">مفيش حاجة مستنية اعتمادك.</div>
+            <div>كل اللي وصلك اتعمد — لما يجيلك جديد هيبان هنا وفي المنيو برقم أحمر.</div>
+          </div>
+        </td></tr>
       @endforelse
       </tbody>
     </table>

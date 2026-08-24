@@ -1,6 +1,8 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'buy', 'step' => 'request'])
+
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   الدورة: <b>التخطيط</b> يكتب الأصناف والكميات ← <b>المشتريات</b> تحدد المورد والسعر والوحدة
@@ -46,6 +48,8 @@
         <input class="form-check-input" type="checkbox" name="mine" value="1" id="mine" @checked(request('mine')) onchange="this.form.submit()">
         <label class="form-check-label small" for="mine">طلباتي</label>
       </div>
+      @if(request('sort'))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
+      @if(request('dir'))<input type="hidden" name="dir" value="{{ request('dir') }}">@endif
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
     @if(auth()->user()->can2('po.request'))
@@ -53,11 +57,17 @@
     @endif
   </div>
 
+  @include('partials.date_chips')
+
   <div class="table-responsive">
     <table class="table table-sm">
       <thead><tr>
-        <th>رقم الطلب</th><th>حالة الطلب</th><th>المورد</th><th>الأصناف</th><th>الإجمالي</th>
-        <th>متوقع وصوله</th><th>آخر أبديت</th><th>مين عمله</th><th style="width:90px"></th>
+        @include('partials.th_sort', ['label'=>'رقم الطلب','col'=>'po_no'])
+        @include('partials.th_sort', ['label'=>'حالة الطلب','col'=>'stage'])
+        <th>المورد</th><th>الأصناف</th>
+        @include('partials.th_sort', ['label'=>'الإجمالي','col'=>'total'])
+        @include('partials.th_sort', ['label'=>'متوقع وصوله','col'=>'delivery_date'])
+        <th>آخر أبديت</th><th>مين عمله</th><th style="width:90px"><span class="visually-hidden">إجراءات</span></th>
       </tr></thead>
       <tbody>
       @forelse($rows as $r)
@@ -110,7 +120,12 @@
           </td>
         </tr>
       @empty
-        <tr><td colspan="9" class="text-center text-muted py-4">مفيش طلبات في المرحلة دي.</td></tr>
+        <tr><td colspan="9">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش طلبات في المرحلة دي.</div>
+            </div>
+          </td></tr>
       @endforelse
       </tbody>
     </table>

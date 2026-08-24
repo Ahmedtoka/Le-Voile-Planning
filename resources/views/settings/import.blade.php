@@ -4,7 +4,7 @@
 
   <div class="col-lg-4">
     <div class="card h-100">
-      <div class="card-header"><i class="bi bi-palette"></i> استيراد الألوان</div>
+      <div class="card-header"><i class="bi bi-palette" aria-hidden="true"></i> استيراد الألوان</div>
       <form method="post" action="{{ route('io.import.colors') }}" enctype="multipart/form-data" class="card-body">@csrf
         <div class="hint mb-2">
           الأعمدة: <code>code, name, family, hex, is_basic, legacy_code, merged_into</code><br>
@@ -22,7 +22,7 @@
 
   <div class="col-lg-4">
     <div class="card h-100">
-      <div class="card-header"><i class="bi bi-cash-coin"></i> استيراد المبيعات</div>
+      <div class="card-header"><i class="bi bi-cash-coin" aria-hidden="true"></i> استيراد المبيعات</div>
       <form method="post" action="{{ route('io.import.sales') }}" enctype="multipart/form-data" class="card-body">@csrf
         <div class="hint mb-2">
           الأعمدة: <code>model_code, qty, unit</code>.
@@ -49,7 +49,7 @@
 
   <div class="col-lg-4">
     <div class="card h-100">
-      <div class="card-header"><i class="bi bi-boxes"></i> استيراد الأرصدة</div>
+      <div class="card-header"><i class="bi bi-boxes" aria-hidden="true"></i> استيراد الأرصدة</div>
       <form method="post" action="{{ route('io.import.stock') }}" enctype="multipart/form-data" class="card-body">@csrf
         <div class="hint mb-2">
           الأعمدة: <code>model_code, color_code, warehouse_code, qty</code>.
@@ -76,7 +76,7 @@
 
   <div class="col-12">
     <div class="card">
-      <div class="card-header"><i class="bi bi-download"></i> تصدير</div>
+      <div class="card-header"><i class="bi bi-download" aria-hidden="true"></i> تصدير</div>
       <div class="card-body d-flex gap-2 flex-wrap">
         <a href="{{ route('io.export.colors') }}" class="btn btn-outline-plum btn-sm">الألوان</a>
         <a href="{{ route('io.export.consignments') }}" class="btn btn-outline-plum btn-sm">الأحواض</a>

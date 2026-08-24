@@ -34,7 +34,7 @@
           </select>
           <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
         </form>
-        <a href="{{ route('io.export.colors') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download"></i></a>
+        <a href="{{ route('io.export.colors') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download" aria-hidden="true"></i></a>
       </div>
 
       <div class="table-responsive">
@@ -60,7 +60,7 @@
               <td class="num">{{ $c->mergedInto?->code ?: '—' }}</td>
               <td class="text-nowrap">
                 <button class="btn btn-sm btn-outline-plum py-0" data-bs-toggle="modal" data-bs-target="#ed{{ $c->id }}">
-                  <i class="bi bi-pencil"></i>
+                  <i class="bi bi-pencil" aria-hidden="true"></i>
                 </button>
                 @if($c->status !== 'merged')
                   <form method="post" action="{{ route('colors.toggle', $c->id) }}" class="d-inline">@csrf
@@ -97,7 +97,12 @@
               </div></div>
             </div>
           @empty
-            <tr><td colspan="7" class="text-center text-muted py-4">مفيش ألوان — ابدأ بالاستيراد من إكسيل.</td></tr>
+            <tr><td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش ألوان — ابدأ بالاستيراد من إكسيل.</div>
+            </div>
+          </td></tr>
           @endforelse
           </tbody>
         </table>
@@ -123,7 +128,7 @@
     </div>
 
     <div class="card">
-      <div class="card-header text-warning"><i class="bi bi-arrow-left-right"></i> دمج لونين</div>
+      <div class="card-header text-warning"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> دمج لونين</div>
       <form method="post" action="{{ route('colors.merge') }}" class="card-body">@csrf
         <div class="hint mb-2">الكود المدموج هيفضل موجود ويشاور على الهدف — مش هيتحذف.</div>
         <div class="mb-2">

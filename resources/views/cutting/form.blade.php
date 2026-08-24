@@ -2,6 +2,8 @@
 @section('content')
 @php $lines = old('lines', $row->lines?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
 
+@include('partials.flow_bar', ['flow' => 'prod', 'step' => 'cut'])
+
 @include('partials.approval_box')
 
 <div class="note-box mb-3">
@@ -88,16 +90,12 @@
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save"></i> حفظ واحتساب الانحراف</button>@endif
+  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ واحتساب الانحراف</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send"></i> إرسال للاعتماد</button>
+    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
   @endif
 </form>
 @if($mode==='edit' && $row->isEditable())
   <form id="submitForm" method="post" action="{{ route('cut-declarations.submit',$row) }}" class="d-none">@csrf</form>
 @endif
-@if($mode === 'edit')
-  @include('partials.comments')
-@endif
-
 @endsection

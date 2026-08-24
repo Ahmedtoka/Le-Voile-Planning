@@ -8,13 +8,13 @@
 @if($ckey)
 <div class="card mt-3" id="discussion">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-chat-dots"></i> نقاش المستند <span class="hint">({{ $comments->count() }})</span></span>
+    <span><i class="bi bi-chat-dots" aria-hidden="true"></i> نقاش المستند <span class="hint">({{ $comments->count() }})</span></span>
     <span class="hint">إثباتات ومراسلات — زي التيكيت</span>
   </div>
 
   <div class="card-body pb-2">
     <div class="hint mb-3">
-      <i class="bi bi-info-circle"></i>
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
       المكان ده لكل الأخذ والرد على المستند: استفسار من قسم لقسم، صورة إثبات (قماش، عيب، ورقة أصلية)،
       أو قرار متسجّل. التعليقات <b>ما بتتحذفش بعد ربع ساعة</b> — دي سجل المستند.
     </div>
@@ -60,7 +60,7 @@
                 </a>
               @else
                 <a href="{{ asset('storage/'.$c->attachment_path) }}" target="_blank" class="btn btn-sm btn-outline-plum py-0">
-                  <i class="bi bi-paperclip"></i> {{ $c->attachment_name }}
+                  <i class="bi bi-paperclip" aria-hidden="true"></i> {{ $c->attachment_name }}
                 </a>
               @endif
             </div>
@@ -105,7 +105,7 @@
           <input type="file" name="attachment" accept="image/*,.pdf" class="form-control form-control-sm">
         </div>
         <div class="col-md-2">
-          <button class="btn btn-plum btn-sm w-100"><i class="bi bi-send"></i> إرسال</button>
+          <button class="btn btn-plum btn-sm w-100"><i class="bi bi-send" aria-hidden="true"></i> إرسال</button>
         </div>
       </div>
     </form>

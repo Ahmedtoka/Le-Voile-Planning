@@ -37,7 +37,7 @@ class ProductionReceiptController extends Controller
 
         return view('production.index', [
             'title'   => 'استلامات الإنتاج',
-            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'rows'    => $this->applySort($q, $request, ['doc_no','doc_date','total_pieces','status'])->paginate(25)->withQueryString(),
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
                 ['name' => 'factory_id', 'label' => 'كل المصانع', 'options' => \App\Models\Factory::orderBy('name')->pluck('name','id'), 'width' => 150],

@@ -2,6 +2,8 @@
 @section('content')
 @php $readings = old('readings', $row->readings?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
 
+@include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'lab'])
+
 @include('partials.approval_box')
 
 <div class="note-box mb-3">
@@ -102,7 +104,7 @@
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between">
       <span>قراءات وزن البنشر</span>
-      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg"></i> قراءة</button>@endif
+      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> قراءة</button>@endif
     </div>
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
@@ -115,9 +117,9 @@
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save"></i> حفظ واحتساب</button>@endif
+  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ واحتساب</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send"></i> إرسال للاعتماد</button>
+    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
   @endif
 </form>
 @if($mode==='edit' && $row->isEditable())
@@ -125,9 +127,5 @@
 @endif
 
 <template id="lineTpl">@include('lab.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
-@if($mode === 'edit')
-  @include('partials.comments')
-@endif
-
 @include('partials.lines_js',['startIndex'=>max(count($readings),1)])
 @endsection

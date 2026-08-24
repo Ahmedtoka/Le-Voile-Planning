@@ -1,6 +1,8 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'fabric', 'step' => ''])
+
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   الاستلام مش «قبول كله أو رفض كله». الورق بيسجّل على نفس الإذن:
@@ -96,9 +98,12 @@
         </div></div></div>
         @endif
       @empty
-        <tr><td colspan="10" class="text-center text-muted py-4">
-          مفيش مرفوضات ولا بنود معلّقة. تمام.
-        </td></tr>
+        <tr><td colspan="10">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش مرفوضات ولا بنود معلّقة. تمام.</div>
+            </div>
+          </td></tr>
       @endforelse
       </tbody>
     </table>

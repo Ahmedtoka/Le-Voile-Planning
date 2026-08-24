@@ -6,17 +6,19 @@
   $note = $note ?? null;
   $sub  = $sub  ?? null;
 
+  // اللون + أيقونة + شريط جانبي — الحالة مش بلون لوحده
   $tones = [
-    'ink'    => ['#3B092F', null],
-    'brand'  => ['#9D197E', null],
-    'muted'  => ['#6B606A', null],
-    'ok'     => ['#1B7A50', 'bi-check-circle'],
-    'warn'   => ['#9A6410', 'bi-exclamation-circle'],
-    'danger' => ['#B5342B', 'bi-exclamation-triangle-fill'],
+    'ink'    => ['var(--lv-brand-ink)', null,                          'var(--lv-line)'],
+    'brand'  => ['var(--lv-brand)',     null,                          'var(--lv-brand)'],
+    'muted'  => ['var(--lv-muted)',     null,                          'var(--lv-line)'],
+    'ok'     => ['var(--lv-ok)',        'bi-check-circle',             'var(--lv-ok)'],
+    'warn'   => ['var(--lv-warn)',      'bi-exclamation-circle',       'var(--lv-warn)'],
+    'danger' => ['var(--lv-danger)',    'bi-exclamation-triangle-fill','var(--lv-danger)'],
   ];
-  [$color, $icon] = $tones[$tone] ?? $tones['ink'];
+  [$color, $icon, $bar] = $tones[$tone] ?? $tones['ink'];
 @endphp
-<div class="stat h-100 d-flex flex-column">
+<div class="stat h-100 d-flex flex-column"
+     style="border-inline-start:3px solid {{ $bar }}">
   <div class="d-flex align-items-baseline gap-2">
     @if($icon)<i class="bi {{ $icon }}" style="color:{{ $color }};font-size:.95rem" aria-hidden="true"></i>@endif
     <div class="v num" style="color:{{ $color }}">{{ $value }}</div>

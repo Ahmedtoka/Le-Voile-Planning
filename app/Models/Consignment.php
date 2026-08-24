@@ -54,6 +54,7 @@ class Consignment extends Model
     public function color()         { return $this->belongsTo(Color::class); }
     public function warehouse()     { return $this->belongsTo(Warehouse::class); }
     public function rolls()         { return $this->hasMany(FabricRoll::class); }
+    public function stockAdditions(){ return $this->hasMany(StockAddition::class); }
     public function inspections()   { return $this->hasMany(FabricInspection::class); }
     public function labReports()    { return $this->hasMany(LabReport::class); }
     public function workOrders()      { return $this->hasMany(WorkOrder::class); }

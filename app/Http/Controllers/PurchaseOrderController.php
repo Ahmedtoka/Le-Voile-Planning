@@ -14,6 +14,7 @@ use App\Services\ActivityLogger;
 use App\Services\DocNumber;
 use App\Services\FlowMessage;
 use App\Services\Notifier;
+use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -29,9 +30,14 @@ use Illuminate\Support\Facades\DB;
  */
 class PurchaseOrderController extends Controller
 {
+    use FiltersIndex;
+
+    /** الأعمدة اللي مسموح الترتيب بيها في شاشات الطلبات */
+    private const SORTABLE = ['po_no','po_date','delivery_date','total','total_qty','stage','status'];
+
     public function index(Request $request)
     {
-        $q = PurchaseOrder::with(['supplier', 'requester', 'sourcer', 'financer', 'lines'])->latest('id');
+        $q = PurchaseOrder::with(['supplier', 'requester', 'sourcer', 'financer', 'lines']);
 
         if ($s = $request->get('stage'))         $q->where('stage', $s);
         if ($sup = $request->get('supplier_id')) $q->where('supplier_id', $sup);
@@ -45,7 +51,7 @@ class PurchaseOrderController extends Controller
 
         return view('po.index', [
             'title'     => 'طلبات الشراء',
-            'rows'      => $q->paginate(25)->withQueryString(),
+            'rows'      => $this->applySort($q, $request, self::SORTABLE)->paginate(25)->withQueryString(),
             'summary'   => [
                 ['label' => 'مفتوحة', 'value' => $b()->whereNotIn('stage',['closed','cancelled'])->count(), 'tone' => 'brand',
                  'note' => 'لسه ما اتقفلتش.'],
@@ -88,7 +94,7 @@ class PurchaseOrderController extends Controller
             'title'      => 'المشتريات',
             'state'      => $state,
             // الأحدث فوق — آخر طلب معمول هو أول واحد
-            'rows'       => $q->latest('id')->paginate(25)->withQueryString(),
+            'rows'       => $this->applySort($q, $request, self::SORTABLE)->paginate(25)->withQueryString(),
             'requesters' => User::whereIn('id', PurchaseOrder::whereNotNull('requested_by')
                                 ->pluck('requested_by')->unique())->pluck('name', 'id'),
             'counts'     => [

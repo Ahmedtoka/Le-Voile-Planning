@@ -49,7 +49,12 @@
               <td class="hint">{{ $r->notes }}</td>
             </tr>
           @empty
-            <tr><td colspan="6" class="text-center text-muted py-4">مفيش مخزون أمان محدد.</td></tr>
+            <tr><td colspan="6">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش مخزون أمان محدد.</div>
+            </div>
+          </td></tr>
           @endforelse
           </tbody>
         </table>

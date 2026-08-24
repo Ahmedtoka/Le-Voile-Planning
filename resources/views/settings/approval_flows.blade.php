@@ -48,7 +48,7 @@
               <option value="">— أو مستخدم بعينه —</option>
               @foreach($users as $k=>$v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
             </select></div>
-          <div class="col-2"><button class="btn btn-plum btn-sm w-100"><i class="bi bi-plus-lg"></i></button></div>
+          <div class="col-2"><button class="btn btn-plum btn-sm w-100"><i class="bi bi-plus-lg" aria-hidden="true"></i></button></div>
         </form>
       </div>
     </div>

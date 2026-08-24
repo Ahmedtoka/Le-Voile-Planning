@@ -1,5 +1,7 @@
 @extends('partials.doc_index')
 @php
+  $flow='prod'; $flowStep='receive';
+  $sortable=['رقم الاستلام'=>'doc_no','التاريخ'=>'doc_date','القطع'=>'total_pieces','الحالة'=>'status'];
   $intro = 'استلام المنتج التام من المصنع — جزئي ومتكرر. كل استلام بيتخصم من المقصوص، '
          . 'ولما المتبقي يوصل صفر أمر الشغل بيتقفل تلقائيًا.';
   $searchHint = 'رقم الاستلام أو أمر الشغل…';

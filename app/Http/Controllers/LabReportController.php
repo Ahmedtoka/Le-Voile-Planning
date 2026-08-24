@@ -36,7 +36,7 @@ class LabReportController extends Controller
 
         return view('lab.index', [
             'title'   => 'تقارير المعمل',
-            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'rows'    => $this->applySort($q, $request, ['doc_no','doc_date','avg_gsm','status'])->paginate(25)->withQueryString(),
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
                 ['name' => 'fabric_type_id', 'label' => 'كل الخامات', 'options' => FabricType::orderBy('name')->pluck('name','id'), 'width' => 160],

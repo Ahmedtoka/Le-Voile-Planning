@@ -44,7 +44,7 @@ class MaterialIssueController extends Controller
 
         return view('issues.index', [
             'title'   => 'أذون صرف الخام',
-            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','total_qty','status'])->paginate(25)->withQueryString(),
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات',
                  'options' => ['draft' => 'مسودة', 'pending' => 'تحت الاعتماد', 'approved' => 'معتمد', 'rejected' => 'مرفوض']],

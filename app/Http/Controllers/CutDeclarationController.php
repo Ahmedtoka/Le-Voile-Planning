@@ -38,7 +38,7 @@ class CutDeclarationController extends Controller
 
         return view('cutting.index', [
             'title'   => 'بيانات القص',
-            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'rows'    => $this->applySort($q, $request, ['doc_no','doc_date','total_pieces','variance_pct','status'])->paginate(25)->withQueryString(),
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
                 ['name' => 'factory_id', 'label' => 'كل المصانع', 'options' => \App\Models\Factory::orderBy('name')->pluck('name','id'), 'width' => 150],

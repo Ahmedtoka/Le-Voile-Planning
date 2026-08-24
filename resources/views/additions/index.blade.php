@@ -1,9 +1,11 @@
 @extends('partials.doc_index')
 @php
+  $flow='fabric'; $flowStep='addition';
+  $sortable=['رقم الإذن'=>'doc_no','المسلسل الورقي'=>'paper_serial','التاريخ'=>'doc_date','الأتواب'=>'total_rolls','الكمية'=>'total_qty','الحالة'=>'status'];
   // الطلبات اللي اتسعّرت ومستنية القماش يوصل — زرار «استلم» بيفتح إذن إضافة متملي
   $topTable = [
     'title' => 'طلبات شراء مستنية الاستلام — دوس «استلم» والإذن يتملى من الطلب',
-    'cols'  => ['رقم الطلب','الحالة','المورد','توريد متوقع','مستلم',''],
+    'cols'  => ['رقم الطلب','الحالة','المورد','توريد متوقع','مستلم','الباقي هيوصل',''],
     'empty' => 'مفيش طلبات مستنية استلام.',
     'rows'  => ($awaitingPos ?? collect())->map(function ($p) {
         $eta  = $p->delivery_date;
@@ -21,6 +23,11 @@
                  .($eta ? $eta->format('Y-m-d').($late ? ' — متأخر' : '') : '—').'</td>'
              . '<td class="num">'.rtrim(rtrim(number_format($rec,2),'0'),'.').' / '
                  .rtrim(rtrim(number_format($tot,2),'0'),'.').'</td>'
+             . '<td class="num">'.($p->remainder_eta
+                 ? ($p->remainder_eta->isBefore(today())
+                     ? '<span class="text-danger fw-bold">'.$p->remainder_eta->format('Y-m-d').' — فات</span>'
+                     : $p->remainder_eta->format('Y-m-d'))
+                 : '<span class="hint">مش محدد</span>').'</td>'
              . '<td><a href="'.route('stock-additions.create', ['purchase_order_id' => $p->id]).'"'
                  .' class="btn btn-sm btn-plum py-0">'.($p->stage === 'receiving' ? 'استلم الباقي' : 'استلم').'</a></td>';
     })->all(),
@@ -33,7 +40,7 @@
   $createRoute='stock-additions.create'; $createLabel='إذن إضافة';
   // استلام الحاويات: بدون دورة فحص — البضاعة بتدخل مُفرَج عنها فورًا
   $extraActions = '<a href="'.route('stock-additions.create', ['type' => 'container']).'"'
-                .' class="btn btn-sm btn-outline-plum"><i class="bi bi-box-seam"></i> استلام حاويات</a>';
+                .' class="btn btn-sm btn-outline-plum"><i class="bi bi-box-seam" aria-hidden="true"></i> استلام حاويات</a>';
   $editRoute='stock-additions.edit'; $printRoute='stock-additions.print';
   $cols=['رقم الإذن','المسلسل الورقي','التاريخ','المورد','المخزن','رقم الرسالة','الأتواب','الكمية','حالة الحوض','الحالة'];
   $rowRenderer=function($r){

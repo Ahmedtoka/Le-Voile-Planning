@@ -22,13 +22,19 @@
         <span class="hint">{{ $n->created_at->diffForHumans() }}</span>
         @if(!$n->read_at)
           <form method="post" action="{{ route('notifications.read',$n->id) }}" class="d-inline">@csrf
-            <button class="btn btn-sm btn-light py-0"><i class="bi bi-check"></i></button>
+            <button class="btn btn-sm btn-light py-0"><i class="bi bi-check" aria-hidden="true"></i></button>
           </form>
         @endif
       </div>
     </li>
   @empty
-    <li class="list-group-item text-center text-muted py-4">مفيش إشعارات.</li>
+    <li class="list-group-item">
+      <div class="empty-state">
+        <i class="bi bi-bell-slash ico" aria-hidden="true"></i>
+        <div class="t">مفيش إشعارات.</div>
+        <div>أي حاجة محتاجة منك أكشن هتوصلك هنا.</div>
+      </div>
+    </li>
   @endforelse
   </ul>
   <div class="card-footer bg-white">{{ $rows->links() }}</div>

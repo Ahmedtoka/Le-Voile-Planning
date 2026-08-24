@@ -46,7 +46,7 @@ class StockAdditionController extends Controller
             'awaitingPos' => PurchaseOrder::with(['supplier', 'lines'])
                 ->whereIn('stage', ['approved', 'receiving'])
                 ->orderBy('delivery_date')->limit(8)->get(),
-            'rows'    => $q->latest('id')->paginate(25)->withQueryString(),
+            'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','total_qty','total_rolls','status','consignment_no'])->paginate(25)->withQueryString(),
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
                 ['name' => 'supplier_id', 'label' => 'كل الموردين', 'options' => \App\Models\Supplier::orderBy('name')->pluck('name','id'), 'width' => 160],
@@ -190,14 +190,49 @@ class StockAdditionController extends Controller
                 . 'اعمل إذن إضافة منفصل لكل لون (سيب في الإذن ده لون واحد بس).']);
         }
 
-        /* انحراف اللون: لو الفعلي مختلف عن المطلوب في الطلب، لازم قرار —
-           تسكين مكان القديم، أو طلب جديد والأصلي يفضل مطلوب. */
+        /* انحراف اللون الأول — لازم قرار قبل أي حسبة على الطلب،
+           لأن القرار نفسه هو اللي بيحدد السطر اللي الكمية هتتحسب عليه. */
         foreach ($stock_addition->lines as $line) {
             if ($line->fabric_type_id && $line->po_color_id
                 && $line->color_id != $line->po_color_id && !$line->color_action) {
                 return back()->withErrors(['msg' =>
                     'فيه صنف وصل بلون مختلف عن المطلوب في الطلب — افتح الإذن واختار القرار: '
                     . 'تسكينه مكان اللون المطلوب، أو فتح طلب جديد والأصلي يفضل مطلوب.']);
+            }
+        }
+
+        /* الاستلام الجزئي: طالب 50 ووصل 30؟ لازم نعرف الباقي هيوصل إمتى.
+           الرقم ده كان بيضيع في التليفونات — دلوقتي بيتسجّل على الإذن.
+           بنقيس بنفس مسطرة الإقفال (الحد الأدنى المقبول = الكمية ناقص نسبة
+           الزيادة) — عشان توريد كامل بفرق طبيعي ما يطلبش تاريخ لباقي مش موجود. */
+        if ($po = $stock_addition->purchaseOrder) {
+            $po->load('lines');
+
+            $remainingAfter = 0.0;
+            $remUnit = '';
+            foreach ($po->lines as $poLine) {
+                $incoming = 0.0;
+                foreach ($stock_addition->lines as $line) {
+                    if (!$line->fabric_type_id || $line->color_action === 'new_po') continue;
+                    $match = $line->color_action === 'substitute' && $line->po_color_id
+                        ? $line->po_color_id : $line->color_id;
+                    if ($line->fabric_type_id == $poLine->fabric_type_id && $match == $poLine->color_id) {
+                        $incoming += \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
+                    }
+                }
+                $left = max(0, (float) $poLine->min_allowed_qty - (float) $poLine->received_qty - $incoming);
+                if ($left > 0.0001) {
+                    $remainingAfter += $left;
+                    $remUnit = $remUnit ?: $poLine->unit;
+                }
+            }
+
+            if ($remainingAfter > 0.0001 && !$stock_addition->remainder_eta) {
+                return back()->withErrors(['msg' =>
+                    'ده استلام جزئي — هيفضل باقي '
+                    . rtrim(rtrim(number_format($remainingAfter, 3), '0'), '.') . ' ' . $remUnit
+                    . ' على الطلب ' . $po->po_no . '. حدد «الباقي هيوصل إمتى؟» قبل الإرسال '
+                    . '(لو المورد مش محدد، حط تاريخ تقديري واكتب السبب في الملاحظة).']);
             }
         }
 
@@ -273,6 +308,8 @@ class StockAdditionController extends Controller
             'consignment_no'    => ['nullable', 'string', 'max:60'],
             'supplier_doc_no'   => ['nullable', 'string', 'max:60'],
             'receipt_type'      => ['nullable', 'in:normal,container'],
+            'remainder_eta'     => ['nullable', 'date'],
+            'remainder_note'    => ['nullable', 'string', 'max:191'],
             'notes'             => ['nullable', 'string'],
 
             'lines'                  => ['required', 'array', 'min:1'],

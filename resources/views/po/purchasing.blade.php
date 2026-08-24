@@ -1,6 +1,8 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'buy', 'step' => 'sourcing'])
+
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   <b>مستنية تسعير</b>: افتح الطلب، حدد المورد والسعر والوحدة وتاريخ التوريد واضغط «احفظ» —
@@ -36,6 +38,8 @@
         <option value="">كل الطالبين</option>
         @foreach($requesters as $k=>$v)<option value="{{ $k }}" @selected(request('requested_by')==$k)>{{ $v }}</option>@endforeach
       </select>
+      @if(request('sort'))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
+      @if(request('dir'))<input type="hidden" name="dir" value="{{ request('dir') }}">@endif
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
   </div>
@@ -43,8 +47,14 @@
   <div class="table-responsive">
     <table class="table table-sm">
       <thead><tr>
-        <th>رقم الطلب</th><th>الحالة</th><th>طلبه مين</th><th>إمتى</th>
-        <th>الأصناف</th><th>المورد</th><th>تاريخ التوريد</th><th>الإجمالي</th><th style="width:110px"></th>
+        @include('partials.th_sort', ['label'=>'رقم الطلب','col'=>'po_no'])
+        @include('partials.th_sort', ['label'=>'الحالة','col'=>'stage'])
+        <th>طلبه مين</th>
+        @include('partials.th_sort', ['label'=>'إمتى','col'=>'po_date'])
+        <th>الأصناف</th><th>المورد</th>
+        @include('partials.th_sort', ['label'=>'تاريخ التوريد','col'=>'delivery_date'])
+        @include('partials.th_sort', ['label'=>'الإجمالي','col'=>'total'])
+        <th style="width:110px"><span class="visually-hidden">إجراءات</span></th>
       </tr></thead>
       <tbody>
       @forelse($rows as $r)

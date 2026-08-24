@@ -2,6 +2,8 @@
 @section('content')
 @php $lines = old('lines', $row->lines?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
 
+@include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'receipt'])
+
 @include('partials.approval_box')
 
 <div class="note-box mb-3">
@@ -74,7 +76,7 @@
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between">
       <span>الأصناف المستلمة</span>
-      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg"></i> سطر</button>@endif
+      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> سطر</button>@endif
     </div>
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
@@ -90,15 +92,15 @@
       </table>
     </div>
     <div class="card-footer bg-white hint">
-      <i class="bi bi-info-circle"></i>
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
       الأرقام هنا هي اللي طلعت من الجرد والفحص — مش اللي المورد قال عليها.
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save"></i> حفظ</button>@endif
+  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
   @if($mode==='edit' && $row->isEditable())
     <button type="button" class="btn btn-success btn-sm"
-      onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send"></i> إرسال للاعتماد</button>
+      onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
   @endif
 </form>
 
@@ -106,7 +108,7 @@
   <form id="submitForm" method="post" action="{{ route('goods-receipts.submit',$row) }}" class="d-none">@csrf</form>
   @if($row->consignment)
     <a href="{{ route('consignments.show', $row->consignment) }}" class="btn btn-outline-plum btn-sm">
-      <i class="bi bi-box-seam"></i> فتح الحوض {{ $row->consignment->consignment_no }}
+      <i class="bi bi-box-seam" aria-hidden="true"></i> فتح الحوض {{ $row->consignment->consignment_no }}
     </a>
   @endif
 @endif
@@ -199,10 +201,6 @@
       </div>
     @endif
   </div>
-@endif
-
-@if($mode === 'edit')
-  @include('partials.comments')
 @endif
 
 @include('partials.lines_js', ['startIndex' => max(count($lines),1)])

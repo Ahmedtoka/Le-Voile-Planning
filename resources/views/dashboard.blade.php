@@ -241,7 +241,12 @@
               <td class="num">{{ number_format($statusMix['kg'][$i]) }}</td>
             </tr>
           @empty
-            <tr><td colspan="3" class="text-center text-muted py-2">مفيش أحواض لسه.</td></tr>
+            <tr><td colspan="3">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش أحواض لسه.</div>
+            </div>
+          </td></tr>
           @endforelse
           </tbody>
         </table>
@@ -297,7 +302,12 @@
               <td class="hint">{{ $u['note'] }}</td>
             </tr>
           @empty
-            <tr><td colspan="5" class="text-center text-muted py-4">مفيش مواعيد قريبة.</td></tr>
+            <tr><td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش مواعيد قريبة.</div>
+            </div>
+          </td></tr>
           @endforelse
           </tbody>
         </table>
@@ -314,7 +324,7 @@
   <div class="col-lg-7">
     <div class="card mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-clock-history"></i> أخطر الموديلات في التغطية</span>
+        <span><i class="bi bi-clock-history" aria-hidden="true"></i> أخطر الموديلات في التغطية</span>
         <a href="{{ route('planning.coverage') }}" class="btn btn-sm btn-outline-plum py-0">الكل</a>
       </div>
       <div class="table-responsive">
@@ -335,9 +345,12 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="5" class="text-center text-muted py-3">
-              مفيش داتا مبيعات أو أرصدة — ارفعها من شاشة الاستيراد أو ولّد داتا ديمو.
-            </td></tr>
+            <tr><td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش داتا مبيعات أو أرصدة — ارفعها من شاشة الاستيراد أو ولّد داتا ديمو.</div>
+            </div>
+          </td></tr>
           @endforelse
           </tbody>
         </table>
@@ -349,7 +362,7 @@
     </div>
 
     <div class="card">
-      <div class="card-header"><i class="bi bi-building"></i> تحميل المصانع</div>
+      <div class="card-header"><i class="bi bi-building" aria-hidden="true"></i> تحميل المصانع</div>
       <div class="table-responsive">
         <table class="table table-sm">
           <thead><tr><th>المصنع</th><th>أوامر مفتوحة</th><th>متأخرة</th><th>قطع عليه</th><th>أيام تقديرية</th></tr></thead>
@@ -365,7 +378,12 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="5" class="text-center text-muted py-3">مفيش أوامر شغل مفتوحة.</td></tr>
+            <tr><td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش أوامر شغل مفتوحة.</div>
+            </div>
+          </td></tr>
           @endforelse
           </tbody>
         </table>
@@ -379,7 +397,7 @@
   <div class="col-lg-5">
     <div class="card mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-check2-square"></i> مستني اعتمادك</span>
+        <span><i class="bi bi-check2-square" aria-hidden="true"></i> مستني اعتمادك</span>
         <a href="{{ route('approvals.index') }}" class="btn btn-sm btn-outline-plum py-0">الكل</a>
       </div>
       <ul class="list-group list-group-flush">
@@ -399,7 +417,7 @@
     </div>
 
     <div class="card mb-3">
-      <div class="card-header text-danger"><i class="bi bi-exclamation-triangle"></i> أوامر شغل متأخرة</div>
+      <div class="card-header text-danger"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> أوامر شغل متأخرة</div>
       <ul class="list-group list-group-flush">
         @forelse($lateOrders as $w)
           <li class="list-group-item py-2">
@@ -416,7 +434,7 @@
     </div>
 
     <div class="card">
-      <div class="card-header"><i class="bi bi-chat-dots"></i> آخر النقاشات</div>
+      <div class="card-header"><i class="bi bi-chat-dots" aria-hidden="true"></i> آخر النقاشات</div>
       <ul class="list-group list-group-flush">
         @forelse($talk as $t)
           <li class="list-group-item py-2">

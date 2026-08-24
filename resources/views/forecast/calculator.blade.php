@@ -3,7 +3,7 @@
 <div class="row g-3">
   <div class="col-lg-5">
     <div class="card">
-      <div class="card-header"><i class="bi bi-calculator"></i> مدخلات الحسبة</div>
+      <div class="card-header"><i class="bi bi-calculator" aria-hidden="true"></i> مدخلات الحسبة</div>
       <form method="get" class="card-body">
         <div class="row g-2">
           <div class="col-6"><label class="form-label req">عرض القماش (سم)</label>
@@ -58,7 +58,7 @@
 
     @if($impact && ($impact['ok'] ?? false))
       <div class="card">
-        <div class="card-header text-warning"><i class="bi bi-exclamation-triangle"></i> تأثير فرق طول الفرشة</div>
+        <div class="card-header text-warning"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> تأثير فرق طول الفرشة</div>
         <table class="table table-sm mb-0">
           <tr><th>الرِقّات المخططة من التوب</th><td class="num">{{ $impact['planned_plies'] }}</td></tr>
           <tr><th>الرِقّات الفعلية</th><td class="num">{{ $impact['actual_plies'] }}</td></tr>

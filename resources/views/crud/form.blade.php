@@ -58,7 +58,7 @@
       </div>
     </div>
     <div class="card-footer bg-white">
-      <button class="btn btn-plum btn-sm"><i class="bi bi-save"></i> حفظ</button>
+      <button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>
       <a href="{{ route($routeName.'.index') }}" class="btn btn-sm btn-light">إلغاء</a>
     </div>
   </div>

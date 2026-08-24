@@ -2,6 +2,8 @@
 @section('content')
 @php $u = auth()->user(); @endphp
 
+@include('partials.flow_bar', ['flow' => 'buy', 'step' => ''])
+
 @include('partials.po_stepper')
 
 <div class="row g-3 mb-3">
@@ -44,7 +46,7 @@
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead><tr><th>م</th><th>الصنف</th><th>اللون</th><th>الكمية</th><th>الوحدة</th>
-            <th>نسبة الزيادة</th><th>سعر الوحدة</th><th>الإجمالي</th><th>مستلم</th></tr></thead>
+            <th>نسبة الزيادة</th><th>سعر الوحدة</th><th>الإجمالي</th><th>مستلم</th><th>باقي</th></tr></thead>
           <tbody>
           @foreach($row->lines as $i => $l)
             <tr>
@@ -58,10 +60,21 @@
               <td class="num">{{ $l->unit_price > 0 ? number_format((float)$l->unit_price,2) : '—' }}</td>
               <td class="num">{{ $l->line_total > 0 ? number_format((float)$l->line_total,2) : '—' }}</td>
               <td class="num">{{ $l->received_qty > 0 ? rtrim(rtrim(number_format((float)$l->received_qty,3),'0'),'.') : '—' }}</td>
+              @php $left = max(0, (float) $l->min_allowed_qty - (float) $l->received_qty); @endphp
+              <td class="num {{ $left > 0 ? 'text-danger fw-bold' : 'text-success' }}">
+                {{ $left > 0 ? rtrim(rtrim(number_format($left,3),'0'),'.') : 'اكتمل' }}</td>
             </tr>
           @endforeach
           </tbody>
         </table>
+        @if($row->remainder_eta)
+          <div class="card-footer bg-white hint">
+            <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+            الباقي متوقع يوصل <b class="num">{{ $row->remainder_eta->format('Y-m-d') }}</b>
+            @if($row->remainder_eta->isBefore(today()))<span class="text-danger fw-bold">— الميعاد فات</span>@endif
+            <span>· اتسجّل مع آخر إذن إضافة.</span>
+          </div>
+        @endif
       </div>
     </div>
   </div>
@@ -92,5 +105,4 @@
   </div>
 </div>
 
-@include('partials.comments')
 @endsection

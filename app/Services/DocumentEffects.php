@@ -54,6 +54,7 @@ class DocumentEffects
             $sa->load('lines', 'supplier', 'purchaseOrder');
 
             $fabricLines = $sa->lines->filter(fn ($l) => $l->fabric_type_id);
+            $arrived     = null;   // بيانات الوصول — الإشعار بيتبعت في آخر العملية بعد تحديث الطلب
 
             /* استلام مباشر (حاويات / طلب معفي من الفحص):
                الإضافة نفسها هي النهائية — البضاعة بتدخل مُفرَج عنها على طول،
@@ -110,18 +111,12 @@ class DocumentEffects
                     }
                 }
 
-                if ($direct) {
-                    // فحص استدلالي اختياري: 5-6 أتواب لأخذ العرض والبنشر — مش للرفض
-                    Notifier::broadcastToRole('inspector', 'inspection_due',
-                        'استلام مباشر (بدون دورة فحص)',
-                        'الرسالة ' . $no . ' دخلت المخزن مُفرَج عنها — لو محتاجين بيانات العرض والبنشر، افحصوا 5-6 أتواب استدلاليًا.',
-                        null, 'info');
-                } else {
-                    Notifier::broadcastToRole('inspector', 'inspection_due',
-                        'حوض جديد محتاج فحص',
-                        'الرسالة ' . $no . ' — ' . number_format($totalKg, 0) . ' كجم · ' . $totalRolls . ' توب',
-                        null, 'warning');
-                }
+                $arrived = [
+                    'no'    => $no,
+                    'kg'    => $totalKg,
+                    'rolls' => $totalRolls,
+                    'cid'   => $consignment->id,
+                ];
             }
 
             /* ── الاستلام الجزئي على طلب الشراء ──────────────────
@@ -158,7 +153,46 @@ class DocumentEffects
                 $po->forceFill([
                     'stage'  => $fully ? 'closed' : 'receiving',
                     'status' => $fully ? 'received' : 'partially_received',
+                    // موعد الباقي بيتنقل للطلب عشان يفضل ظاهر في الطوابير
+                    'remainder_eta' => $fully ? null : ($sa->remainder_eta ?: $po->remainder_eta),
                 ])->save();
+
+                if (!$fully) {
+                    // بنفس مسطرة الإقفال — الحد الأدنى المقبول مش الكمية الاسمية
+                    $rem = 0.0; $unit = '';
+                    foreach ($po->lines as $l) {
+                        $left = max(0, (float) $l->min_allowed_qty - (float) $l->received_qty);
+                        if ($left > 0.0001) { $rem += $left; $unit = $unit ?: $l->unit; }
+                    }
+                    if ($rem > 0.0001) {
+                        $arrivedRemainder = rtrim(rtrim(number_format($rem, 3), '0'), '.') . ' ' . $unit;
+                    }
+                }
+            }
+
+            /* ── إشعار الفحص ────────────────────────────────────
+               الفاحص لازم يشوف إن ده وصول جزئي وكام باقي وهيوصل إمتى،
+               عشان يعرف يفحص دلوقتي ولا يستنى الشحنة تكمل. */
+            if ($arrived) {
+                $partial = isset($arrivedRemainder)
+                    ? ' · جزئي — باقي ' . $arrivedRemainder
+                      . ($sa->remainder_eta ? ' متوقع ' . $sa->remainder_eta->format('Y-m-d') : ' (الموعد مش محدد)')
+                    : '';
+
+                if ($direct) {
+                    Notifier::broadcastToRole('inspector', 'inspection_due',
+                        'استلام مباشر (بدون دورة فحص)',
+                        'الرسالة ' . $arrived['no'] . ' دخلت المخزن مُفرَج عنها' . $partial
+                            . ' — لو محتاجين بيانات العرض والبنشر، افحصوا 5-6 أتواب استدلاليًا.',
+                        null, 'info');
+                } else {
+                    Notifier::broadcastToRole('inspector', 'inspection_due',
+                        'قماش وصل ومحتاج فحص',
+                        'الرسالة ' . $arrived['no'] . ' — '
+                            . rtrim(rtrim(number_format($arrived['kg'], 2), '0'), '.') . ' كجم · '
+                            . $arrived['rolls'] . ' توب' . $partial,
+                        route('inspections.create', ['consignment_id' => $arrived['cid']]), 'warning');
+                }
             }
 
             /* طلب شراء تلقائي للألوان اللي دخلت «كطلب جديد»:

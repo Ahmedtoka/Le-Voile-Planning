@@ -35,7 +35,7 @@
               <td class="num">{{ $u->username }}</td>
               <td class="hint">{{ $u->roleNames() ?: '—' }}</td>
               <td><span class="badge bg-{{ $u->is_active ? 'success' : 'secondary' }}">{{ $u->is_active ? 'نشط' : 'موقوف' }}</span></td>
-              <td><button class="btn btn-sm btn-outline-plum py-0" data-bs-toggle="modal" data-bs-target="#u{{ $u->id }}"><i class="bi bi-pencil"></i></button></td>
+              <td><button class="btn btn-sm btn-outline-plum py-0" data-bs-toggle="modal" data-bs-target="#u{{ $u->id }}"><i class="bi bi-pencil" aria-hidden="true"></i></button></td>
             </tr>
             <div class="modal fade" id="u{{ $u->id }}"><div class="modal-dialog"><div class="modal-content">
               <form method="post" action="{{ route('settings.users.update',$u) }}">@csrf @method('PUT')

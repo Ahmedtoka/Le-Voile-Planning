@@ -48,7 +48,20 @@ abstract class BaseCrudController extends Controller
             }
         }
 
-        $rows = $q->orderBy($this->orderBy, $this->orderDir)->paginate(25)->withQueryString();
+        /* الترتيب من رأس العمود — والأعمدة المسموح بيها هي أعمدة الجدول
+           اللي معروضة فعلًا، عشان محدش يبعت اسم عمود من عنده. */
+        $sortable = collect($this->fields())
+            ->filter(fn ($f) => !empty($f['list']) && empty($f['relation']))
+            ->pluck('name')->push('id')->unique()->values()->all();
+
+        $col = (string) $request->get('sort');
+        $dir = strtolower((string) $request->get('dir')) === 'asc' ? 'asc' : 'desc';
+
+        $q = in_array($col, $sortable, true)
+            ? $q->orderBy($col, $dir)
+            : $q->orderBy($this->orderBy, $this->orderDir);
+
+        $rows = $q->paginate(25)->withQueryString();
 
         return view('crud.index', $this->viewData([
             'rows' => $rows,

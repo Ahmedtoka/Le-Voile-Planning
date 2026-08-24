@@ -27,7 +27,12 @@
           <td class="num hint">{{ $r->ip }}</td>
         </tr>
       @empty
-        <tr><td colspan="5" class="text-center text-muted py-4">مفيش حركة مسجلة.</td></tr>
+        <tr><td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش حركة مسجلة.</div>
+            </div>
+          </td></tr>
       @endforelse
       </tbody>
     </table>

@@ -1,6 +1,8 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'buy', 'step' => 'finance'])
+
 @include('partials.po_stepper')
 
 <div class="note-box mb-3">
@@ -70,5 +72,4 @@
   </div>
 </div>
 
-@include('partials.comments')
 @endsection

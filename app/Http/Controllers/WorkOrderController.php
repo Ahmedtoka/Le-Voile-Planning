@@ -49,7 +49,7 @@ class WorkOrderController extends Controller
 
         return view('workorders.index', [
             'title'     => 'أوامر الشغل',
-            'rows'      => $q->latest('id')->paginate(25)->withQueryString(),
+            'rows'      => $this->applySort($q, $request, ['wo_no','wo_date','due_date','cut_pieces','received_pieces','status','variance_pct'])->paginate(25)->withQueryString(),
             'statuses'  => WorkOrder::STATUSES,
             'factories' => Factory::orderBy('name')->pluck('name', 'id'),
             'summary'   => [

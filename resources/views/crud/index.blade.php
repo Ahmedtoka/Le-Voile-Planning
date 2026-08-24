@@ -16,10 +16,12 @@
           </select>
         @endif
       @endforeach
+      @if(request('sort'))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
+      @if(request('dir'))<input type="hidden" name="dir" value="{{ request('dir') }}">@endif
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
     <a href="{{ route($routeName.'.create') }}" class="btn btn-sm btn-plum">
-      <i class="bi bi-plus-lg"></i> {{ $singular }} جديد
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ $singular }} جديد
     </a>
   </div>
 
@@ -29,9 +31,15 @@
         <tr>
           <th style="width:40px">#</th>
           @foreach($fields as $f)
-            @if(!empty($f['list']))<th>{{ $f['label'] }}</th>@endif
+            @if(!empty($f['list']))
+              @if(empty($f['relation']) && ($f['type'] ?? '') !== 'checkbox')
+                @include('partials.th_sort', ['label' => $f['label'], 'col' => $f['name']])
+              @else
+                <th>{{ $f['label'] }}</th>
+              @endif
+            @endif
           @endforeach
-          <th style="width:110px"></th>
+          <th style="width:110px"><span class="visually-hidden">إجراءات</span></th>
         </tr>
       </thead>
       <tbody>
@@ -61,7 +69,7 @@
           <td class="text-nowrap">
             <a href="{{ route($routeName.'.edit', $row->id) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="تعديل" title="تعديل"><i class="bi bi-pencil" aria-hidden="true"></i></a>
             @if($routeName === 'product-models')
-              <a href="{{ route('product-models.sizes', $row->id) }}" class="btn btn-sm btn-outline-secondary py-0" title="المقاسات والإكسسوارات"><i class="bi bi-list-check"></i></a>
+              <a href="{{ route('product-models.sizes', $row->id) }}" class="btn btn-sm btn-outline-secondary py-0" title="المقاسات والإكسسوارات"><i class="bi bi-list-check" aria-hidden="true"></i></a>
             @endif
             @if($canDelete)
               <form method="post" action="{{ route($routeName.'.destroy', $row->id) }}" class="d-inline"
@@ -73,7 +81,18 @@
           </td>
         </tr>
       @empty
-        <tr><td colspan="20" class="text-center text-muted py-4">مفيش بيانات.</td></tr>
+        <tr><td colspan="{{ collect($fields)->filter(fn ($f) => !empty($f['list']))->count() + 2 }}">
+          <div class="empty-state">
+            <i class="bi bi-inbox ico" aria-hidden="true"></i>
+            <div class="t">مفيش بيانات لسه.</div>
+            @if(collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty())
+              <a href="{{ url()->current() }}" class="btn btn-sm btn-outline-plum mt-2">امسح البحث واعرض الكل</a>
+            @else
+              <a href="{{ route($routeName.'.create') }}" class="btn btn-sm btn-plum mt-2">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i> ضيف {{ $singular }}</a>
+            @endif
+          </div>
+        </td></tr>
       @endforelse
       </tbody>
     </table>

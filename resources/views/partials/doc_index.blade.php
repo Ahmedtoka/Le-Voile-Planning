@@ -1,8 +1,12 @@
 @extends('layouts.app')
 @section('content')
 
+@if(!empty($flow))
+  @include('partials.flow_bar', ['flow' => $flow, 'step' => $flowStep ?? ''])
+@endif
+
 @if(!empty($intro))
-  <div class="note-box mb-3"><i class="bi bi-info-circle"></i> {!! $intro !!}</div>
+  <div class="note-box mb-3"><i class="bi bi-info-circle" aria-hidden="true"></i> {!! $intro !!}</div>
 @endif
 
 @include('partials.summary')
@@ -18,7 +22,7 @@
           @forelse($topTable['rows'] as $tr)
             <tr>{!! $tr !!}</tr>
           @empty
-            <tr><td colspan="10" class="text-center text-muted py-3">{{ $topTable['empty'] ?? '—' }}</td></tr>
+            <tr><td colspan="{{ count($topTable['cols']) }}" class="text-center text-muted py-3">{{ $topTable['empty'] ?? '—' }}</td></tr>
           @endforelse
         </tbody>
       </table>
@@ -46,47 +50,89 @@
 
       @if(($dateFilter ?? true))
         <div class="d-flex align-items-center gap-1">
-          <span class="hint">من</span>
-          <input type="date" name="from" value="{{ request('from') }}" class="form-control form-control-sm" style="width:135px">
-          <span class="hint">إلى</span>
-          <input type="date" name="to" value="{{ request('to') }}" class="form-control form-control-sm" style="width:135px">
+          <label class="hint mb-0" for="f-from">من</label>
+          <input type="date" id="f-from" name="from" value="{{ request('from') }}" class="form-control form-control-sm" style="width:140px">
+          <label class="hint mb-0" for="f-to">إلى</label>
+          <input type="date" id="f-to" name="to" value="{{ request('to') }}" class="form-control form-control-sm" style="width:140px">
         </div>
       @endif
 
+      {{-- الترتيب بيتحفظ مع الفلاتر --}}
+      @if(request('sort'))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
+      @if(request('dir'))<input type="hidden" name="dir" value="{{ request('dir') }}">@endif
+
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
-      @if(collect(request()->except('page'))->filter()->isNotEmpty())
+      @if(collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty())
         <a href="{{ url()->current() }}" class="btn btn-sm btn-link text-muted p-0" style="font-size:.78rem">مسح الفلاتر</a>
       @endif
     </form>
 
     @if(!empty($extraActions)){!! $extraActions !!}@endif
     @if(!empty($createRoute) && Route::has($createRoute))
-      <a href="{{ route($createRoute) }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> {{ $createLabel }}</a>
+      <a href="{{ route($createRoute) }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg" aria-hidden="true"></i> {{ $createLabel }}</a>
     @endif
   </div>
 
+  {{-- شرايح التاريخ السريعة --}}
+  @if(($dateFilter ?? true))
+    @include('partials.date_chips')
+  @endif
+
   <div class="table-responsive">
     <table class="table table-sm">
-      <thead><tr>@foreach($cols as $c)<th>{{ $c }}</th>@endforeach<th style="width:90px"></th></tr></thead>
+      <thead><tr>
+        @php
+          $sortMap = $sortable ?? [];
+          $curSort = request('sort'); $curDir = request('dir') === 'asc' ? 'asc' : 'desc';
+        @endphp
+        @foreach($cols as $c)
+          @php $col = $sortMap[$c] ?? null; @endphp
+          @if($col)
+            @php
+              $on   = $curSort === $col;
+              $next = $on && $curDir === 'asc' ? 'desc' : 'asc';
+              $url  = url()->current() . '?' . http_build_query(array_merge(request()->except(['page','sort','dir']),
+                        ['sort' => $col, 'dir' => $next]));
+            @endphp
+            <th @if($on) aria-sort="{{ $curDir === 'asc' ? 'ascending' : 'descending' }}" @endif>
+              <a href="{{ $url }}" class="th-sort {{ $on ? 'on' : '' }}"
+                 title="ترتيب بـ{{ $c }} {{ $next === 'asc' ? 'تصاعدي' : 'تنازلي' }}">
+                {{ $c }}
+                <i class="bi {{ $on ? ($curDir === 'asc' ? 'bi-sort-up-alt' : 'bi-sort-down') : 'bi-arrow-down-up' }}"
+                   aria-hidden="true"></i>
+              </a>
+            </th>
+          @else
+            <th>{{ $c }}</th>
+          @endif
+        @endforeach
+        <th style="width:90px"><span class="visually-hidden">إجراءات</span></th>
+      </tr></thead>
       <tbody>
       @forelse($rows as $r)
         <tr>
           {!! $rowRenderer($r) !!}
           <td class="text-nowrap">
-            <a href="{{ route($editRoute, $r) }}" class="btn btn-sm btn-outline-plum py-0" title="فتح"><i class="bi bi-pencil"></i></a>
+            <a href="{{ route($editRoute, $r) }}" class="btn btn-sm btn-outline-plum py-0"
+               title="فتح" aria-label="فتح المستند"><i class="bi bi-pencil" aria-hidden="true"></i></a>
             @if(!empty($printRoute))
-              <a href="{{ route($printRoute, $r) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0" title="طباعة"><i class="bi bi-printer"></i></a>
-            @endif
-            @if(method_exists($r, 'commentsCount') && $r->commentsCount())
-              <span class="badge bg-light text-dark" title="فيه نقاش على المستند">
-                <i class="bi bi-chat-dots"></i> {{ $r->commentsCount() }}
-              </span>
+              <a href="{{ route($printRoute, $r) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0"
+                 title="طباعة" aria-label="طباعة المستند"><i class="bi bi-printer" aria-hidden="true"></i></a>
             @endif
           </td>
         </tr>
       @empty
-        <tr><td colspan="20" class="text-center text-muted py-4">
-          {{ $emptyText ?? 'مفيش مستندات مطابقة للفلاتر.' }}
+        <tr><td colspan="{{ count($cols) + 1 }}">
+          <div class="empty-state">
+            <i class="bi bi-inbox ico" aria-hidden="true"></i>
+            <div class="t">{{ $emptyText ?? 'مفيش مستندات مطابقة للفلاتر.' }}</div>
+            @if(collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty())
+              <a href="{{ url()->current() }}" class="btn btn-sm btn-outline-plum mt-2">امسح الفلاتر واعرض الكل</a>
+            @elseif(!empty($createRoute) && Route::has($createRoute))
+              <a href="{{ route($createRoute) }}" class="btn btn-sm btn-plum mt-2">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ $createLabel ?? 'ابدأ واحد جديد' }}</a>
+            @endif
+          </div>
         </td></tr>
       @endforelse
       </tbody>

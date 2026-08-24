@@ -5,16 +5,36 @@
   $editable = $row->isEditable() || $mode==='create';
 @endphp
 
+@include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'addition'])
+
 @include('partials.approval_box')
 
-@if(($poInfo ?? null))
+@php $po = $poInfo ?? $row->purchaseOrder ?? null; @endphp
+@if($po)
+  @php
+    $po->loadMissing('lines');
+    $ordTot = (float) $po->lines->sum('qty');
+    $recTot = (float) $po->lines->sum('received_qty');
+    // الباقي بيتحسب سطر بسطر بنفس مسطرة الإقفال (الحد الأدنى المقبول)
+    $remTot = 0; $unitLbl = '';
+    foreach ($po->lines as $l) {
+      $left = max(0, (float) $l->min_allowed_qty - (float) $l->received_qty);
+      if ($left > 0.0001) { $remTot += $left; $unitLbl = $unitLbl ?: $l->unit; }
+    }
+    $unitLbl = $unitLbl ?: ($po->lines->first()?->unit ?? '');
+  @endphp
   <div class="card mb-3" style="border-color:var(--lv-soft)">
     <div class="card-body py-2 d-flex gap-4 flex-wrap align-items-center">
-      <span><b>طلب الشراء:</b> <span class="num">{{ $poInfo->po_no }}</span></span>
-      <span><b>المورد:</b> {{ $poInfo->supplier?->name ?? '—' }}</span>
-      <span><b>توريد متوقع:</b> <span class="num">{{ $poInfo->delivery_date?->format('Y-m-d') ?? '—' }}</span></span>
-      <span><b>طريقة الدفع:</b> {{ $poInfo->payment_method ?? '—' }}</span>
-      <span class="hint ms-auto">السطور اتملت بالكميات المتبقية — عدّل الفعلي اللي وصل وكمّل عدد الأتواب</span>
+      <span><b>طلب الشراء:</b> <span class="num">{{ $po->po_no }}</span></span>
+      <span><b>المورد:</b> {{ $po->supplier?->name ?? '—' }}</span>
+      <span><b>توريد متوقع:</b> <span class="num">{{ $po->delivery_date?->format('Y-m-d') ?? '—' }}</span></span>
+      <span><b>مطلوب:</b> <span class="num">{{ rtrim(rtrim(number_format($ordTot,3),'0'),'.') }} {{ $unitLbl }}</span></span>
+      <span><b>استلمنا قبل كده:</b> <span class="num">{{ rtrim(rtrim(number_format($recTot,3),'0'),'.') }}</span></span>
+      <span class="fw-bold {{ $remTot > 0 ? 'text-danger' : 'text-success' }}">
+        <b>الباقي قبل الإذن ده:</b>
+        <span class="num">{{ $remTot > 0 ? rtrim(rtrim(number_format($remTot,3),'0'),'.') . ' ' . $unitLbl : 'مفيش' }}</span>
+      </span>
+      <span class="hint ms-auto">السطور اتملت بالمتبقي — عدّل الفعلي اللي وصل وكمّل عدد الأتواب</span>
     </div>
   </div>
 @endif
@@ -91,21 +111,49 @@
         <div class="col-md-6"><label class="form-label">ملاحظات</label>
           <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
       </div>
+
+      {{-- الباقي على الطلب: طالب 50 ووصل 30 ⇒ الباقي 20 هيوصل إمتى؟ --}}
+      @if($po)
+        <div class="alert alert-warning mt-3 mb-0 py-2" id="remainderBox">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-5">
+              <b><i class="bi bi-hourglass-split" aria-hidden="true"></i> الباقي على الطلب قبل الإذن ده:</b>
+              <span class="num fw-bold">{{ rtrim(rtrim(number_format($remTot,3),'0'),'.') }} {{ $unitLbl }}</span>
+              <div class="hint">
+                لو الإذن ده مش هيكمّل الطلب، حدد المورد هيوصّل الباقي إمتى — التاريخ ده بيفضل ظاهر
+                في طابور الاستلام وعند الفحص لحد ما الطلب يقفل.
+                (لو الإذن هيكمّل الطلب، سيب التاريخ فاضي والسيستم هيقفله لوحده.)
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">الباقي هيوصل إمتى؟</label>
+              <input type="date" name="remainder_eta" class="form-control form-control-sm"
+                     value="{{ old('remainder_eta', $row->remainder_eta?->format('Y-m-d')) }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">ملاحظة على الباقي</label>
+              <input name="remainder_note" class="form-control form-control-sm"
+                     value="{{ old('remainder_note', $row->remainder_note) }}"
+                     placeholder="مثال: المورد قال الصبغة تحت التشغيل">
+            </div>
+          </div>
+        </div>
+      @endif
     </fieldset></div>
   </div>
 
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between">
       <span>الأصناف</span>
-      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg"></i> سطر</button>@endif
+      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> سطر</button>@endif
     </div>
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
         <thead><tr>
           <th style="width:35px">م</th><th style="width:95px">كود الصنف</th><th>اسم الصنف</th>
-          <th style="width:145px">الخامة</th><th style="width:135px">اللون</th><th style="width:125px">إكسسوار</th>
-          <th style="width:80px">ع. أتواب</th><th style="width:95px">الكمية</th>
-          <th style="width:75px">الوحدة</th><th style="width:40px"></th>
+          <th style="width:160px">الخامة</th><th style="width:170px">اللون</th>
+          <th style="width:90px">ع. أتواب</th><th style="width:110px">الكمية</th>
+          <th style="width:80px">الوحدة</th><th style="width:40px"></th>
         </tr></thead>
         <tbody id="lines">
           @foreach($lines as $i=>$l) @include('additions.line',['i'=>$i,'l'=>$l]) @endforeach
@@ -115,9 +163,9 @@
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save"></i> حفظ</button>@endif
+  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send"></i> إرسال للاعتماد</button>
+    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
   @endif
 </form>
 @if($mode==='edit' && $row->isEditable())
@@ -140,10 +188,6 @@
 @endif
 
 <template id="lineTpl">@include('additions.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
-@if($mode === 'edit')
-  @include('partials.comments')
-@endif
-
 @include('partials.lines_js',['startIndex'=>max(count($lines),1)])
 <script>
   // انحراف اللون: أول ما اللون الفعلي يختلف عن المطلوب في الـPO يظهر سؤال القرار

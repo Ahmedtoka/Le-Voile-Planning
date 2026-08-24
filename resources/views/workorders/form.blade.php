@@ -5,6 +5,8 @@
   $prods = old('products', $mode === 'edit' ? $row->lines->toArray() : []);
 @endphp
 
+@include('partials.flow_bar', ['flow' => 'prod', 'step' => 'wo'])
+
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   المنتج ممكن يتعمل من <b>أكتر من خامة</b> (طرحة تل + بونيه رباط مياي). كل خامة ليها

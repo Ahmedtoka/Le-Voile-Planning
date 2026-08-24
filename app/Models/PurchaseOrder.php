@@ -15,6 +15,7 @@ class PurchaseOrder extends Model
     protected $casts = [
         'po_date'       => 'date',
         'delivery_date' => 'date',
+        'remainder_eta' => 'date',
         'requested_at'  => 'datetime',
         'sourced_at'    => 'datetime',
         'finance_at'    => 'datetime',

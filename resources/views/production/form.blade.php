@@ -2,6 +2,8 @@
 @section('content')
 @php $lines = old('lines', $row->lines?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
 
+@include('partials.flow_bar', ['flow' => 'prod', 'step' => 'receive'])
+
 @include('partials.approval_box')
 
 <form method="post" action="{{ $mode==='create' ? route('production-receipts.store') : route('production-receipts.update',$row) }}">
@@ -61,21 +63,17 @@
       </table>
     </div>
     <div class="card-footer bg-white hint">
-      <i class="bi bi-info-circle"></i>
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
       لما المتبقي يوصل صفر، أمر الشغل بيتقفل تلقائيًا بعد اعتماد الاستلام.
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save"></i> حفظ</button>@endif
+  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send"></i> إرسال للاعتماد</button>
+    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
   @endif
 </form>
 @if($mode==='edit' && $row->isEditable())
   <form id="submitForm" method="post" action="{{ route('production-receipts.submit',$row) }}" class="d-none">@csrf</form>
 @endif
-@if($mode === 'edit')
-  @include('partials.comments')
-@endif
-
 @endsection

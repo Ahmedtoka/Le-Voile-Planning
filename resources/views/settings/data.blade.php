@@ -62,7 +62,7 @@
         <label class="form-label req" for="c1">اكتب «توليد» للتأكيد</label>
         <input id="c1" name="confirm" class="form-control form-control-sm mb-2" placeholder="توليد" required autocomplete="off">
         <button class="btn btn-success btn-sm w-100" onclick="return confirm('هيتمسح الموجود ويتولّد ديمو كامل. متأكد؟')">
-          <i class="bi bi-magic"></i> ولّد الديمو الكامل
+          <i class="bi bi-magic" aria-hidden="true"></i> ولّد الديمو الكامل
         </button>
         <div class="hint mt-2">ممكن تاخد من 30 لـ 90 ثانية. متقفلش الصفحة.</div>
       </form>
@@ -70,7 +70,7 @@
 
     <div class="card mb-3" style="border-color:var(--lv-soft)">
       <div class="card-header" style="color:var(--lv-brand)">
-        <i class="bi bi-box-seam"></i> ② بيانات أساسية بس — للشغل الحقيقي
+        <i class="bi bi-box-seam" aria-hidden="true"></i> ② بيانات أساسية بس — للشغل الحقيقي
       </div>
       <form method="post" action="{{ route('data.master') }}" class="card-body">@csrf
         <p class="hint mb-2">
@@ -90,13 +90,13 @@
         <label class="form-label req" for="c2">اكتب «أساسية» للتأكيد</label>
         <input id="c2" name="confirm" class="form-control form-control-sm mb-2" placeholder="أساسية" required autocomplete="off">
         <button class="btn btn-plum btn-sm w-100" onclick="return confirm('هيتمسح أي مستندات وتتجهز البيانات الأساسية. متأكد؟')">
-          <i class="bi bi-box-seam"></i> جهّز البيانات الأساسية
+          <i class="bi bi-box-seam" aria-hidden="true"></i> جهّز البيانات الأساسية
         </button>
       </form>
     </div>
 
     <div class="card">
-      <div class="card-header text-danger"><i class="bi bi-trash3"></i> مسح كل بيانات الشغل</div>
+      <div class="card-header text-danger"><i class="bi bi-trash3" aria-hidden="true"></i> مسح كل بيانات الشغل</div>
       <form method="post" action="{{ route('data.reset') }}" class="card-body">@csrf
         <div class="alert alert-danger py-2 small mb-3">
           <b>مفيش رجوع.</b> كل الطلبات والأحواض والأوامر والتقارير والتعليقات
@@ -105,7 +105,7 @@
         <label class="form-label req" for="c3">اكتب «مسح» للتأكيد</label>
         <input id="c3" name="confirm" class="form-control form-control-sm mb-2" placeholder="مسح" required autocomplete="off">
         <button class="btn btn-danger btn-sm w-100" onclick="return confirm('هيتمسح كل شيء نهائيًا. متأكد؟')">
-          <i class="bi bi-exclamation-octagon"></i> امسح كل شيء
+          <i class="bi bi-exclamation-octagon" aria-hidden="true"></i> امسح كل شيء
         </button>
       </form>
     </div>

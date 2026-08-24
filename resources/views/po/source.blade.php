@@ -1,6 +1,8 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'buy', 'step' => 'sourcing'])
+
 @include('partials.po_stepper')
 
 <div class="note-box mb-3">

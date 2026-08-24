@@ -1,8 +1,10 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'prod', 'step' => 'wo'])
+
 <div class="note-box mb-3">
-  <i class="bi bi-info-circle"></i>
+  <i class="bi bi-info-circle" aria-hidden="true"></i>
 أمر الشغل هو <b>ورقة المصنع</b>: منتج واحد ممكن يتعمل من أكتر من خامة، وكل خامة ليها
   رسالتها وحسبتها. <b>الخامة اللي بتدي أقل قطع هي اللي بتحكم الإنتاج.</b>
   الفعلي بييجي من بيان القص، والفرق الطبيعي 2-4%.
@@ -32,15 +34,29 @@
         <span class="hint">إلى</span>
         <input type="date" name="to" value="{{ request('to') }}" class="form-control form-control-sm" style="width:132px">
       </div>
+      @if(request('sort'))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
+      @if(request('dir'))<input type="hidden" name="dir" value="{{ request('dir') }}">@endif
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
     </form>
-    <a href="{{ route('io.export.work-orders') }}" class="btn btn-sm btn-outline-plum"><i class="bi bi-download"></i></a>
-    <a href="{{ route('work-orders.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg"></i> أمر شغل</a>
+    <a href="{{ route('io.export.work-orders') }}" class="btn btn-sm btn-outline-plum"
+       title="تصدير إكسيل" aria-label="تصدير إكسيل"><i class="bi bi-download" aria-hidden="true"></i></a>
+    <a href="{{ route('work-orders.create') }}" class="btn btn-sm btn-plum"><i class="bi bi-plus-lg" aria-hidden="true"></i> أمر شغل</a>
   </div>
+  @include('partials.date_chips')
   <div class="table-responsive">
     <table class="table table-sm">
-      <thead><tr><th>رقم الأمر</th><th>التاريخ</th><th>الحوض</th><th>اللون</th><th>المصنع</th><th>كجم</th>
-        <th>متوقع</th><th>مقصوص</th><th>مستلم</th><th>متبقي</th><th>الانحراف</th><th>التسليم</th><th>الحالة</th><th></th></tr></thead>
+      <thead><tr>
+        @include('partials.th_sort', ['label'=>'رقم الأمر','col'=>'wo_no'])
+        @include('partials.th_sort', ['label'=>'التاريخ','col'=>'wo_date'])
+        <th>المنتج</th><th>الرسالة</th><th>المصنع</th><th>كجم</th><th>متوقع</th>
+        @include('partials.th_sort', ['label'=>'مقصوص','col'=>'cut_pieces'])
+        @include('partials.th_sort', ['label'=>'مستلم','col'=>'received_pieces'])
+        <th>متبقي</th>
+        @include('partials.th_sort', ['label'=>'الانحراف','col'=>'variance_pct'])
+        @include('partials.th_sort', ['label'=>'التسليم','col'=>'due_date'])
+        @include('partials.th_sort', ['label'=>'الحالة','col'=>'status'])
+        <th><span class="visually-hidden">إجراءات</span></th>
+      </tr></thead>
       <tbody>
       @forelse($rows as $r)
         <tr class="{{ $r->is_late ? 'table-warning' : '' }}">
@@ -76,7 +92,12 @@
           <td><a href="{{ route('work-orders.show',$r) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="عرض" title="عرض"><i class="bi bi-eye" aria-hidden="true"></i></a></td>
         </tr>
       @empty
-        <tr><td colspan="14" class="text-center text-muted py-4">مفيش أوامر شغل.</td></tr>
+        <tr><td colspan="14">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش أوامر شغل.</div>
+            </div>
+          </td></tr>
       @endforelse
       </tbody>
     </table>

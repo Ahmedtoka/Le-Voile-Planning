@@ -24,9 +24,6 @@
       </div>
     @endif
   </td>
-  <td><select name="lines[{{ $i }}][accessory_id]"><option value="">—</option>
-      @foreach($accessories as $k=>$v)<option value="{{ $k }}" @selected(($l['accessory_id'] ?? null)==$k)>{{ $v }}</option>@endforeach
-    </select></td>
   <td><input type="number" name="lines[{{ $i }}][rolls_count]" value="{{ $l['rolls_count'] ?? '' }}" placeholder="0"></td>
   <td><input type="number" step="0.001" name="lines[{{ $i }}][qty]" value="{{ $l['qty'] ?? '' }}"></td>
   <td><select name="lines[{{ $i }}][unit]">

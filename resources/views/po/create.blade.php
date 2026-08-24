@@ -1,6 +1,8 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'buy', 'step' => 'request'])
+
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   اكتب الأصناف والكميات ونسبة الزيادة واضغط <b>«اطلب»</b> — الطلب ينزل للمشتريات

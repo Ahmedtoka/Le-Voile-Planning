@@ -81,7 +81,12 @@
           <td class="hint">{{ $r->source === 'manual' ? 'يدوي' : 'مولّد' }}</td>
         </tr>
       @empty
-        <tr><td colspan="9" class="text-center text-muted py-4">مفيش فوركاست للسنة دي.</td></tr>
+        <tr><td colspan="9">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش فوركاست للسنة دي.</div>
+            </div>
+          </td></tr>
       @endforelse
       </tbody>
     </table>

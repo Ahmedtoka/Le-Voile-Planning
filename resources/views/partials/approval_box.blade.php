@@ -2,7 +2,7 @@
 @if($ap)
 <div class="card mb-3">
   <div class="card-header d-flex justify-content-between">
-    <span><i class="bi bi-diagram-3"></i> دورة الاعتماد</span>
+    <span><i class="bi bi-diagram-3" aria-hidden="true"></i> دورة الاعتماد</span>
     <span class="badge bg-{{ $ap->status === 'approved' ? 'success' : ($ap->status === 'rejected' ? 'danger' : 'warning') }}">
       {{ $ap->status_name }}
     </span>
@@ -30,7 +30,7 @@
     <div class="card-footer bg-white d-flex gap-2">
       <form method="post" action="{{ route('approvals.approve', $ap) }}" class="d-flex gap-2 flex-grow-1">@csrf
         <input name="comment" class="form-control form-control-sm" placeholder="تعليق (اختياري)">
-        <button class="btn btn-success btn-sm text-nowrap"><i class="bi bi-check-lg"></i> اعتماد</button>
+        <button class="btn btn-success btn-sm text-nowrap"><i class="bi bi-check-lg" aria-hidden="true"></i> اعتماد</button>
       </form>
       <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejModal">رفض</button>
     </div>

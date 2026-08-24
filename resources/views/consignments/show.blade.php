@@ -1,9 +1,11 @@
 @extends('layouts.app')
 @section('content')
 
+@include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'consign'])
+
 @foreach($warnings as $w)
   <div class="alert alert-{{ $w['level']==='danger'?'danger':'warning' }} py-2">
-    <i class="bi bi-exclamation-triangle"></i> {{ $w['text'] }}
+    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ $w['text'] }}
   </div>
 @endforeach
 
@@ -109,7 +111,12 @@
               <td><span class="badge bg-{{ $w->status_color }}">{{ $w->status_name }}</span></td>
             </tr>
           @empty
-            <tr><td colspan="8" class="text-center text-muted py-3">مفيش أوامر شغل على الحوض ده.</td></tr>
+            <tr><td colspan="8">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش أوامر شغل على الحوض ده.</div>
+            </div>
+          </td></tr>
           @endforelse
           </tbody>
         </table>
@@ -129,7 +136,7 @@
               <td class="num">{{ $r->width_cm ?? '—' }}</td>
               <td class="num">{{ $r->gsm ?? '—' }}</td>
               <td class="num">{{ $r->net_kg ?? '—' }}</td>
-              <td>@if($r->is_inspected)<i class="bi bi-check-circle text-success"></i>@endif</td>
+              <td>@if($r->is_inspected)<i class="bi bi-check-circle text-success" aria-hidden="true"></i>@endif</td>
               <td class="hint">{{ $r->status_name }}</td>
             </tr>
           @endforeach
@@ -139,6 +146,4 @@
     </div>
   </div>
 </div>
-@include('partials.comments')
-
 @endsection
