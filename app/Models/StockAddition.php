@@ -46,7 +46,9 @@ class StockAddition extends Model
     {
         $this->loadMissing('lines');
         $this->forceFill([
-            'total_qty'   => (float) $this->lines->sum('qty'),
+            // الإجمالي بالكيلو — السطور ممكن تكون بوحدة الطلب (طن)
+            'total_qty'   => (float) $this->lines->sum(fn ($l) =>
+                                 $l->unit === 'طن' ? (float) $l->qty * 1000 : (float) $l->qty),
             'total_rolls' => (int) $this->lines->sum('rolls_count'),
         ])->saveQuietly();
     }

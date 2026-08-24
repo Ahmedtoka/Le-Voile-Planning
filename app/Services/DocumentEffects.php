@@ -73,7 +73,8 @@ class DocumentEffects
                     $no  = DocNumber::consignmentNo($prefix, $sa->doc_date, $sa->purchaseOrder?->po_no, $seq);
                 }
 
-                $totalKg    = (float) $fabricLines->sum('qty');
+                // السطور بوحدة الطلب (طن/كجم/متر) — الحوض بيتحاسب بالكيلو دايمًا
+                $totalKg    = (float) $fabricLines->sum(fn ($l) => self::toUnit($l->qty, $l->unit, 'كجم'));
                 $totalRolls = (int) $fabricLines->sum('rolls_count');
 
                 $consignment = Consignment::updateOrCreate(
@@ -130,7 +131,8 @@ class DocumentEffects
                     if (!$line->fabric_type_id) continue;
 
                     /* انحراف اللون: طلبت بيج 3 ووصل بيج 4؟
-                       - «تسكين» → بيتحسب على سطر اللون الأصلي والمخزن بياخد اللون الفعلي.
+                       - «تسكين» → بيتحسب على السطر الأصلي، ولون السطر في الطلب
+                         بيتحدث للون الواصل مع ملاحظة في الهيستوري.
                        - «طلب جديد» → السطر الأصلي بيفضل مطلوب زي ما هو،
                          والوارد بيتوثّق بطلب شراء تلقائي مقفول (شوف تحت). */
                     if ($line->color_action === 'new_po') continue;
@@ -139,10 +141,29 @@ class DocumentEffects
                         ? $line->po_color_id
                         : $line->color_id;
 
-                    $poLine = $po->lines->first(fn ($l) =>
-                        $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $matchColor);
+                    $poLine = $line->po_line_id
+                        ? $po->lines->firstWhere('id', $line->po_line_id)
+                        : $po->lines->first(fn ($l) =>
+                            $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $matchColor);
+
                     if ($poLine) {
                         $poLine->increment('received_qty', self::toUnit($line->qty, $line->unit, $poLine->unit));
+
+                        if ($line->color_action === 'substitute'
+                            && $line->color_id && $poLine->color_id != $line->color_id) {
+                            $oldCode = \App\Models\Color::find($poLine->color_id)?->code ?? '؟';
+                            $newCode = $line->color?->code ?? \App\Models\Color::find($line->color_id)?->code ?? '؟';
+
+                            $poLine->forceFill([
+                                'color_id' => $line->color_id,
+                                'notes'    => trim(($poLine->notes ? $poLine->notes . ' · ' : '')
+                                    . "اللون اتبدل من {$oldCode} لـ {$newCode} بقرار تسكين — الإذن {$sa->doc_no}"),
+                            ])->save();
+
+                            ActivityLogger::log('color_substituted', $po,
+                                "تسكين لون على الطلب {$po->po_no}: السطر اللي كان مطلوب {$oldCode} "
+                                . "استلم {$newCode} واللون اتحدث — الإذن {$sa->doc_no}");
+                        }
                     }
                 }
 
@@ -254,8 +275,10 @@ class DocumentEffects
                     'direction'      => 'in',
                     // الإكسسوارات والاستلام المباشر بيدخلوا متاحين — القماش العادي محجوز لحد الإفراج
                     'quality_state'  => ($line->accessory_id || $direct) ? 'released' : 'hold',
-                    'qty'            => $line->qty,
-                    'unit'           => $line->unit,
+                    // حركة القماش بتتسجل بالكيلو دايمًا — حتى لو الطلب بالطن
+                    'qty'            => $line->fabric_type_id && $line->unit === 'طن'
+                                          ? self::toUnit($line->qty, 'طن', 'كجم') : $line->qty,
+                    'unit'           => $line->fabric_type_id && $line->unit === 'طن' ? 'كجم' : $line->unit,
                     'source_type'    => StockAddition::class,
                     'source_id'      => $sa->id,
                     'reference'      => $sa->doc_no,

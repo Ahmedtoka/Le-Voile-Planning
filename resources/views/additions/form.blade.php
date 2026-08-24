@@ -34,7 +34,7 @@
         <b>الباقي قبل الإذن ده:</b>
         <span class="num">{{ $remTot > 0 ? rtrim(rtrim(number_format($remTot,3),'0'),'.') . ' ' . $unitLbl : 'مفيش' }}</span>
       </span>
-      <span class="hint ms-auto">السطور اتملت بالمتبقي — عدّل الفعلي اللي وصل وكمّل عدد الأتواب</span>
+      <span class="hint ms-auto">بيانات الطلب ثابتة — اكتب المستلم فعلًا وعدد الأتواب بس</span>
     </div>
   </div>
 @endif
@@ -83,7 +83,12 @@
             @foreach($warehouses as $k=>$v)<option value="{{ $k }}" @selected(old('warehouse_id',$row->warehouse_id)==$k)>{{ $v }}</option>@endforeach
           </select></div>
         <div class="col-md-4"><label class="form-label">طلب الشراء</label>
+          {{-- في التعديل الطلب مقفول — السطور مربوطة بسطوره، وتغييره هيبوّظ الحسبة --}}
+          @if($mode==='edit' && $row->purchase_order_id)
+            <input type="hidden" name="purchase_order_id" value="{{ $row->purchase_order_id }}">
+          @endif
           <select name="purchase_order_id" class="form-select form-select-sm"
+                  @if($mode==='edit' && $row->purchase_order_id) disabled @endif
                   @if($mode==='create')
                     onchange="if(this.value) location='{{ route('stock-additions.create') }}?purchase_order_id='+this.value+'&type='+(document.querySelector('[name=receipt_type]')?.value||'normal')"
                   @endif>
@@ -119,6 +124,7 @@
             <div class="col-md-5">
               <b><i class="bi bi-hourglass-split" aria-hidden="true"></i> الباقي على الطلب قبل الإذن ده:</b>
               <span class="num fw-bold">{{ rtrim(rtrim(number_format($remTot,3),'0'),'.') }} {{ $unitLbl }}</span>
+              <div id="remainderTotal" class="mt-1"></div>
               <div class="hint">
                 لو الإذن ده مش هيكمّل الطلب، حدد المورد هيوصّل الباقي إمتى — التاريخ ده بيفضل ظاهر
                 في طابور الاستلام وعند الفحص لحد ما الطلب يقفل.
@@ -144,23 +150,57 @@
 
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between">
-      <span>الأصناف</span>
-      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> سطر</button>@endif
+      <span>الأصناف {{ $po ? '— من الطلب ' . $po->po_no . ' (البيانات ثابتة، اكتب المستلم بس)' : '' }}</span>
+      @if($editable && !$po)
+        <button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i> سطر</button>
+      @endif
     </div>
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
-        <thead><tr>
-          <th style="width:35px">م</th><th style="width:95px">كود الصنف</th><th>اسم الصنف</th>
-          <th style="width:160px">الخامة</th><th style="width:170px">اللون</th>
-          <th style="width:90px">ع. أتواب</th><th style="width:110px">الكمية</th>
-          <th style="width:80px">الوحدة</th><th style="width:40px"></th>
-        </tr></thead>
-        <tbody id="lines">
+        @if($po)
+          <thead><tr>
+            <th style="width:35px">م</th>
+            <th>الصنف</th>
+            <th style="width:130px">اللون المطلوب</th>
+            <th style="width:210px">اللون الواصل</th>
+            <th style="width:85px">ع. أتواب</th>
+            <th style="width:110px">المطلوب</th>
+            <th style="width:120px">المستلم</th>
+            <th style="width:120px">الباقي</th>
+            <th style="width:40px"></th>
+          </tr></thead>
+        @else
+          <thead><tr>
+            <th style="width:35px">م</th><th style="width:95px">كود الصنف</th><th>اسم الصنف</th>
+            <th style="width:160px">الخامة</th><th style="width:170px">اللون</th>
+            <th style="width:90px">ع. أتواب</th><th style="width:110px">الكمية</th>
+            <th style="width:80px">الوحدة</th><th style="width:40px"></th>
+          </tr></thead>
+        @endif
+        <tbody id="lines" class="{{ $editable ? '' : 'lines-locked' }}">
           @foreach($lines as $i=>$l) @include('additions.line',['i'=>$i,'l'=>$l]) @endforeach
-          @if(!count($lines)) @include('additions.line',['i'=>0,'l'=>[]]) @endif
+          @if(!count($lines))
+            @if($po)
+              <tr><td colspan="9">
+                <div class="empty-state">
+                  <i class="bi bi-check2-circle ico" aria-hidden="true"></i>
+                  <div class="t">مفيش باقي على الطلب ده — كل أصنافه اتسلمت.</div>
+                </div>
+              </td></tr>
+            @else
+              @include('additions.line',['i'=>0,'l'=>[]])
+            @endif
+          @endif
         </tbody>
       </table>
     </div>
+    @if($po)
+      <div class="card-footer bg-white hint">
+        طلبت طن؟ بتستلم بالطن — نفس وحدة الطلب. لو اللون الواصل مختلف عن المطلوب
+        هيطلعلك سؤال القرار قبل ما تكمّل.
+      </div>
+    @endif
   </div>
 
   @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
@@ -188,16 +228,155 @@
 @endif
 
 <template id="lineTpl">@include('additions.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
+{{-- بوب أب قرار انحراف اللون --}}
+<div class="modal fade" id="colorModal" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h6 class="modal-title"><i class="bi bi-palette" aria-hidden="true"></i> الدرجة اللي وصلت مختلفة</h6>
+    </div>
+    <div class="modal-body">
+      <p class="mb-2">
+        إنت كنت طالب <b class="cm-req"></b> واللي وصل <b class="cm-got"></b>.
+      </p>
+      <div class="d-grid gap-2">
+        <button type="button" class="btn btn-outline-plum text-start" data-choice="substitute">
+          <b>نزّله مكان الطلب</b>
+          <div class="hint">الكمية بتتحسب على السطر ده، ولون السطر في طلب الشراء
+            بيتحدث للون الواصل — بملاحظة في الهيستوري.</div>
+        </button>
+        <button type="button" class="btn btn-outline-plum text-start" data-choice="new_po">
+          <b>نزّله كسطر جديد — والأصلي يفضل مطلوب</b>
+          <div class="hint">الوارد بيتوثّق بطلب تلقائي باللون الجديد، واللون الأصلي
+            يفضل مفتوح على المورد يبعته.</div>
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer py-2">
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-choice="">
+        إلغاء — رجّع اللون المطلوب
+      </button>
+    </div>
+  </div></div>
+</div>
+
 @include('partials.lines_js',['startIndex'=>max(count($lines),1)])
+{{-- السكريبت في ستاك السكريبتات عشان يتنفذ بعد تحميل بوتستراب — وإلا الموديل مش هيشتغل --}}
+@push('scripts')
 <script>
-  // انحراف اللون: أول ما اللون الفعلي يختلف عن المطلوب في الـPO يظهر سؤال القرار
-  document.getElementById('lines')?.addEventListener('change', function (e) {
-    if (!e.target.name || !/\[color_id\]$/.test(e.target.name)) return;
-    var box = e.target.closest('td')?.querySelector('.color-mismatch');
-    if (!box) return;
-    var diff = e.target.value && e.target.value != box.dataset.pocolor;
-    box.style.display = diff ? '' : 'none';
-    if (!diff) { var s = box.querySelector('select'); if (s) s.value = ''; }
+(function () {
+  var body = document.getElementById('lines');
+  if (!body) return;
+  var EDITABLE = {{ $editable ? 'true' : 'false' }};
+
+  var nf = function (n) {
+    return Number(n.toFixed(3)).toLocaleString('en-US', {maximumFractionDigits: 3});
+  };
+
+  /* ── المستلم/الباقي لايف: طالب 50 طن وكتبت 30 ⇒ «باقي 20 طن» ──
+     العرض بالكمية الاسمية، لكن قرار «اكتمل/محتاج تاريخ» بنفس مسطرة
+     الإقفال بتاعة السيستم: الحد الأدنى المقبول (الكمية − نسبة الزيادة). */
+  function calcRow(tr) {
+    var out = tr.querySelector('.q-left');
+    if (!out) return 0;
+    var ordered  = parseFloat(tr.dataset.ordered)  || 0;
+    var minQty   = parseFloat(tr.dataset.min)      || ordered;
+    var received = parseFloat(tr.dataset.received) || 0;
+    var now      = parseFloat(tr.querySelector('.q-recv')?.value) || 0;
+    var left     = ordered - received - now;          // للعرض
+    var leftMin  = Math.max(0, minQty - received - now);  // للإقفال
+    var unit     = tr.dataset.unit || '';
+
+    if (!now) { out.innerHTML = '<span class="hint">—</span>'; return Math.max(0, minQty - received); }
+    if (leftMin > 0.0005) {
+      out.innerHTML = '<span class="pill pill-warn">باقي ' + nf(left) + ' ' + unit + '</span>';
+    } else if (left < -0.0005) {
+      out.innerHTML = '<span class="pill pill-danger">زيادة ' + nf(-left) + ' ' + unit + '</span>';
+    } else {
+      out.innerHTML = '<span class="pill pill-ok">اكتمل ✓'
+        + (left > 0.0005 ? ' <span class="hint">(الفرق ' + nf(left) + ' جوه نسبة الزيادة)</span>' : '')
+        + '</span>';
+    }
+    return leftMin;
+  }
+
+  function calcAll() {
+    var total = 0, unit = '';
+    body.querySelectorAll('tr.po-row').forEach(function (tr) {
+      total += calcRow(tr);
+      unit = unit || tr.dataset.unit || '';
+    });
+    var box = document.getElementById('remainderTotal');
+    if (box) {
+      box.innerHTML = total > 0.0005
+        ? 'الباقي بعد الإذن ده: <b class="num">' + nf(total) + ' ' + unit + '</b> — حدد هيوصل إمتى'
+        : '<span class="text-success fw-bold">الإذن ده بيكمّل الطلب ✓ — سيب التاريخ فاضي</span>';
+    }
+  }
+
+  /* الحسبة اللايف للمسودات بس — المستند المعتمد المستلم بتاعه اتحسب
+     على الطلب فعلًا، فلو حسبناه تاني هيتخصم مرتين */
+  if (EDITABLE) {
+    body.addEventListener('input', function (e) {
+      if (e.target.classList.contains('q-recv')) calcAll();
+    });
+    calcAll();
+  }
+
+  /* ── قرار اللون: مطابق يكمّل — مختلف يفتح البوب أب ── */
+  var modalEl = document.getElementById('colorModal');
+  var modal   = modalEl ? new bootstrap.Modal(modalEl) : null;
+  var pending = null;   // الصف اللي مستني القرار
+
+  function setStatus(tr, action) {
+    var s = tr.querySelector('.c-status'), sel = tr.querySelector('.c-actual');
+    if (!s || !sel) return;
+    tr.querySelector('.c-action').value = action;
+    if (action === 'substitute') {
+      s.innerHTML = '<span class="pill pill-warn">تسكين — الطلب هيتحدث للون ده</span>';
+    } else if (action === 'new_po') {
+      s.innerHTML = '<span class="pill pill-info">سطر جديد — والأصلي يفضل مطلوب</span>';
+    } else if (sel.value == sel.dataset.requested) {
+      s.innerHTML = '<span class="pill pill-ok"><i class="bi bi-check2" aria-hidden="true"></i> مطابق</span>';
+    } else {
+      s.innerHTML = '';
+    }
+  }
+
+  body.addEventListener('change', function (e) {
+    if (!EDITABLE || !e.target.classList.contains('c-actual')) return;
+    var sel = e.target, tr = sel.closest('tr');
+
+    // سطر الطلب من غير لون محدد؟ مفيش انحراف نسأله عليه
+    if (!sel.dataset.requested) { setStatus(tr, ''); return; }
+
+    if (sel.value == sel.dataset.requested) { setStatus(tr, ''); return; }
+
+    if (modal) {
+      pending = tr;
+      modalEl.querySelector('.cm-req').textContent = sel.dataset.requestedLabel || 'اللون المطلوب';
+      modalEl.querySelector('.cm-got').textContent = sel.selectedOptions[0]?.textContent || '';
+      modal.show();
+    }
   });
+
+  modalEl?.querySelectorAll('[data-choice]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (pending) {
+        var choice = btn.dataset.choice;
+        if (choice) {
+          setStatus(pending, choice);
+        } else {
+          // إلغاء: رجّع اللون المطلوب زي ما كان
+          var sel = pending.querySelector('.c-actual');
+          sel.value = sel.dataset.requested;
+          setStatus(pending, '');
+        }
+        pending = null;
+      }
+      modal.hide();
+    });
+  });
+})();
 </script>
+@endpush
 @endsection

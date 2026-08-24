@@ -339,6 +339,10 @@ th[aria-sort] .th-sort{font-weight:800}
 .calc-box .kv b{font-size:1rem;color:var(--lv-brand);font-variant-numeric:tabular-nums}
 .line-table input,.line-table select{border:1px solid #DDD2DA;border-radius:6px;padding:4px 6px;
   font-size:.8rem;width:100%;background:var(--lv-white);min-height:30px}
+/* المستند المعتمد: سطوره للقراءة بس */
+.lines-locked input,.lines-locked select,.lines-locked button{pointer-events:none;
+  background:var(--lv-offwhite);opacity:.75}
+.lines-locked .btn{visibility:hidden}
 .line-table td{padding:.25rem}
 /* أرقام مصفوفة: عرض ثابت لكل رقم + اتجاه لاتيني.
    ممنوع تغيير الـdisplay هنا — الكلاس ده بيتحط على <td> نفسه في 200+ مكان،

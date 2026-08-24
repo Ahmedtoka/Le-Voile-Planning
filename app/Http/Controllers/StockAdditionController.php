@@ -98,19 +98,13 @@ class StockAdditionController extends Controller
                 $remaining = max(0, (float) $l->qty - (float) $l->received_qty);
                 if ($remaining <= 0) continue;
 
-                // الطلب ممكن يكون بالطن — الاستلام الفعلي بالكيلو
-                $isMeter = $l->unit === 'متر';
-                $qty     = $l->unit === 'طن' ? $remaining * 1000 : $remaining;
-
-                $preset[] = [
-                    'item_code'      => null,
-                    'item_name'      => trim(($l->fabricType?->name ?? '') . ' ' . ($l->color?->name ?? '')),
-                    'fabric_type_id' => $l->fabric_type_id,
-                    'color_id'       => $l->color_id,
-                    'po_color_id'    => $l->color_id,   // اللون المطلوب — لو الفعلي اختلف بيظهر سؤال القرار
-                    'rolls_count'    => '',
-                    'qty'            => $qty,
-                    'unit'           => $isMeter ? 'متر' : 'كجم',
+                /* البيانات الجاية من الطلب ثابتة زي ما هي:
+                   طلبت طن؟ بتستلم بالطن — مفيش تحويل ولا تعديل على الطلب. */
+                $preset[] = $this->poLineArray($l) + [
+                    'rolls_count'  => '',
+                    'qty'          => '',        // أمين المخزن بيكتب المستلم فعلًا
+                    'color_id'     => $l->color_id,
+                    'color_action' => null,
                 ];
             }
         }
@@ -143,8 +137,42 @@ class StockAdditionController extends Controller
 
     public function edit(StockAddition $stock_addition)
     {
-        $stock_addition->load(['lines.color', 'lines.fabricType', 'lines.accessory', 'approval.steps', 'consignment']);
-        return view('additions.form', $this->formData(['row' => $stock_addition, 'mode' => 'edit']));
+        $stock_addition->load([
+            'lines.color', 'lines.fabricType', 'lines.accessory',
+            'lines.poLine.color', 'lines.poLine.fabricType',
+            'approval.steps', 'consignment',
+        ]);
+
+        // نفس شكل بيانات الإنشاء — عشان الشاشة ترسم السطور المرتبطة بالطلب صح
+        $saved = $stock_addition->lines->map(function ($l) {
+            $base = $l->only(['id', 'item_code', 'item_name', 'fabric_type_id', 'color_id',
+                              'po_color_id', 'po_line_id', 'color_action', 'rolls_count', 'qty', 'unit']);
+            return $l->poLine ? $this->poLineArray($l->poLine) + $base : $base;
+        })->all();
+
+        return view('additions.form', $this->formData([
+            'row'    => $stock_addition,
+            'mode'   => 'edit',
+            'preset' => $saved,
+        ]));
+    }
+
+    /** بيانات سطر الطلب اللي بتتعرض كليبلات ثابتة في الإذن */
+    private function poLineArray(\App\Models\PurchaseOrderLine $l): array
+    {
+        return [
+            'po_line_id'     => $l->id,
+            'item_code'      => $l->color?->code,
+            'item_name'      => trim(($l->fabricType?->name ?? '') . ' ' . ($l->color?->name ?? '')),
+            'fabric_type_id' => $l->fabric_type_id,
+            'fabric_name'    => $l->fabricType?->name ?? '—',
+            'po_color_id'    => $l->color_id,
+            'po_color_label' => $l->color?->label ?? ($l->color?->code ?? '—'),
+            'po_ordered'     => (float) $l->qty,
+            'po_min'         => (float) $l->min_allowed_qty,   // حد الإقفال — الكمية ناقص نسبة الزيادة
+            'po_received'    => (float) $l->received_qty,
+            'unit'           => $l->unit,     // طلبت طن ⇒ الوحدة طن — ثابتة
+        ];
     }
 
     public function update(Request $request, StockAddition $stock_addition)
@@ -214,9 +242,15 @@ class StockAdditionController extends Controller
                 $incoming = 0.0;
                 foreach ($stock_addition->lines as $line) {
                     if (!$line->fabric_type_id || $line->color_action === 'new_po') continue;
-                    $match = $line->color_action === 'substitute' && $line->po_color_id
-                        ? $line->po_color_id : $line->color_id;
-                    if ($line->fabric_type_id == $poLine->fabric_type_id && $match == $poLine->color_id) {
+
+                    // الربط المباشر بسطر الطلب هو الأدق — الفولباك للخامة واللون للسطور القديمة
+                    $hit = $line->po_line_id
+                        ? $line->po_line_id == $poLine->id
+                        : $line->fabric_type_id == $poLine->fabric_type_id
+                          && ($line->color_action === 'substitute' && $line->po_color_id
+                                ? $line->po_color_id : $line->color_id) == $poLine->color_id;
+
+                    if ($hit) {
                         $incoming += \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
                     }
                 }
@@ -247,8 +281,10 @@ class StockAdditionController extends Controller
                 $matchColor = $line->color_action === 'substitute' && $line->po_color_id
                     ? $line->po_color_id : $line->color_id;
 
-                $poLine = $po->lines->first(fn ($l) =>
-                    $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $matchColor);
+                $poLine = $line->po_line_id
+                    ? $po->lines->firstWhere('id', $line->po_line_id)
+                    : $po->lines->first(fn ($l) =>
+                        $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $matchColor);
                 if (!$poLine) continue;
 
                 $qty = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
@@ -318,10 +354,15 @@ class StockAdditionController extends Controller
             'lines.*.fabric_type_id' => ['nullable', 'exists:fabric_types,id'],
             'lines.*.color_id'       => ['nullable', 'exists:colors,id'],
             'lines.*.po_color_id'    => ['nullable', 'exists:colors,id'],
+            // السطر لازم يكون من نفس الطلب المختار — مش أي سطر في السيستم
+            'lines.*.po_line_id'     => ['nullable',
+                \Illuminate\Validation\Rule::exists('purchase_order_lines', 'id')
+                    ->where('purchase_order_id', (int) $request->input('purchase_order_id'))],
             'lines.*.color_action'   => ['nullable', 'in:substitute,new_po'],
             'lines.*.accessory_id'   => ['nullable', 'exists:accessories,id'],
             'lines.*.rolls_count'    => ['nullable', 'integer', 'min:0'],
-            'lines.*.qty'            => ['required', 'numeric', 'min:0.001'],
+            // السطر الفاضي = الصنف ده ما وصلش المرة دي — بيتشال لوحده
+            'lines.*.qty'            => ['nullable', 'numeric', 'min:0'],
             'lines.*.unit'           => ['required', 'string', 'max:20'],
             'lines.*.notes'          => ['nullable', 'string'],
         ], [], [
@@ -331,8 +372,14 @@ class StockAdditionController extends Controller
             'lines.*.rolls_count' => 'عدد الأتواب',
         ]);
 
-        $lines = $v['lines'];
+        // اللي ما اتكتبلوش كمية = ما وصلش المرة دي — بيتشال من الإذن
+        $lines = array_values(array_filter($v['lines'], fn ($l) => (float) ($l['qty'] ?? 0) > 0));
         unset($v['lines']);
+
+        if (!count($lines)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                'اكتب الكمية المستلمة لصنف واحد على الأقل — السطور الفاضية معناها الصنف ما وصلش.']);
+        }
 
         return ['header' => $v, 'lines' => $lines];
     }
