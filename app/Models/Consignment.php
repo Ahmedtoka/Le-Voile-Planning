@@ -68,8 +68,6 @@ class Consignment extends Model
         return self::STATUSES[$this->status] ?? $this->status;
     }
 
-    public function stockAdditions()  { return $this->hasMany(StockAddition::class); }
-
     public function getStatusColorAttribute(): string
     {
         return self::STATUS_COLORS[$this->status] ?? 'secondary';
