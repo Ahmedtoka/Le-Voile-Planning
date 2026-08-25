@@ -86,6 +86,71 @@ class ImportExportController extends Controller
         );
     }
 
+    /** رصيد الرسايل — نفس أعمدة شيت ON Hand بالظبط */
+    public function exportOnHand(Request $request)
+    {
+        $q = Consignment::with(['fabricType', 'color']);
+        if ($request->filled('fabric_type_id')) $q->where('fabric_type_id', $request->get('fabric_type_id'));
+        if ($request->filled('status'))         $q->where('status', $request->get('status'));
+        if (!$request->boolean('all')) {
+            $q->where(fn ($x) => $x->where('remaining_kg', '>', 0)->orWhere('hold_kg', '>', 0));
+        }
+
+        $rows = $q->latest('arrival_date')->get()->map(fn ($c) => [
+            $c->fabricType?->code, $c->fabricType?->name,
+            $c->color?->name ?? $c->color?->code, $c->min_width_cm, 'كيلو',
+            $c->consignment_no, (int) $c->rolls_count,
+            round((float) $c->total_kg, 2), round((float) $c->hold_kg, 2),
+            round((float) $c->remaining_kg, 2), $c->status_name,
+        ])->all();
+
+        return Excel::download(
+            new TableExport(
+                ['كود الصنف', 'الصنف', 'اللون', 'Width', 'الوحدة', 'Shipping No',
+                 'عدد اتواب', 'إجمالي الكمية', 'محجوز', 'متاح', 'الحالة'],
+                $rows, 'ON Hand'
+            ),
+            'onhand-' . now()->format('Ymd') . '.xlsx'
+        );
+    }
+
+    /** حركة المخزون — نفس أعمدة شيت IN&OUT */
+    public function exportMovements(Request $request)
+    {
+        $q = \App\Models\StockMovement::with(['fabricType', 'color', 'consignment', 'warehouse', 'accessory']);
+        if ($request->filled('direction'))    $q->where('direction', $request->get('direction'));
+        if ($request->filled('warehouse_id')) $q->where('warehouse_id', $request->get('warehouse_id'));
+        if ($request->filled('source_type'))  $q->where('source_type', $request->get('source_type'));
+        if ($from = $request->get('from'))    $q->whereDate('moved_at', '>=', $from);
+        if ($to = $request->get('to'))        $q->whereDate('moved_at', '<=', $to);
+
+        $ops = \App\Http\Controllers\StockReportController::OPERATIONS;
+
+        $rows = $q->latest('id')->limit(20000)->get()->map(fn ($m) => [
+            \Illuminate\Support\Carbon::parse($m->moved_at)->format('Y-m-d'),
+            $m->fabricType?->code,
+            $m->fabricType?->name ?? $m->accessory?->name,
+            $m->color?->name ?? $m->color?->code,
+            $m->unit,
+            $m->consignment?->consignment_no,
+            strtoupper($m->direction),
+            $ops[$m->source_type] ?? '',
+            $m->warehouse?->name,
+            round((float) $m->qty, 2),
+            $m->reference,
+            ['hold' => 'محجوز', 'released' => 'مفرج', 'rejected' => 'مرفوض'][$m->quality_state] ?? '',
+        ])->all();
+
+        return Excel::download(
+            new TableExport(
+                ['التاريخ', 'الكود', 'الصنف', 'اللون', 'الوحدة', 'Shipping No',
+                 'حالة المستند', 'Operation Sort', 'الجهة', 'الكمية', 'رقم الاذن', 'الجودة'],
+                $rows, 'IN&OUT'
+            ),
+            'movements-' . now()->format('Ymd') . '.xlsx'
+        );
+    }
+
     public function exportConsignments()
     {
         $rows = Consignment::with(['supplier','fabricType','color'])->latest('id')->get()->map(fn ($c) => [

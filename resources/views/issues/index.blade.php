@@ -1,5 +1,24 @@
 @extends('partials.doc_index')
 @php
+  // طابور الصرف: أوامر شغل معتمدة/مرسلة وفيها خامات لسه ما اتصرفتش بالكامل
+  $topTable = [
+    'title' => 'أوامر شغل مستنية صرف خام — دوس «اصرف» والإذن يتملى من الأمر',
+    'cols'  => ['رقم الأمر','المنتج','المصنع','المخطط','المنصرف','الباقي',''],
+    'empty' => 'مفيش أوامر مستنية صرف دلوقتي.',
+    'rows'  => ($awaitingWos ?? collect())->map(function ($w) {
+        $planned = (float) $w->fabrics->sum('planned_qty');
+        $issued  = (float) $w->fabrics->sum(fn ($f) => $f->issued_actual);
+        $left    = max(0, $planned - $issued);
+        return '<td class="num fw-bold">'.e($w->wo_no).'</td>'
+             . '<td>'.e(\Illuminate\Support\Str::limit($w->product_title, 30)).'</td>'
+             . '<td>'.e($w->factory?->name ?? '—').'</td>'
+             . '<td class="num">'.rtrim(rtrim(number_format($planned,2),'0'),'.').'</td>'
+             . '<td class="num">'.rtrim(rtrim(number_format($issued,2),'0'),'.').'</td>'
+             . '<td class="num fw-bold text-danger">'.rtrim(rtrim(number_format($left,2),'0'),'.').'</td>'
+             . '<td><a href="'.route('material-issues.create', ['work_order_id' => $w->id]).'"'
+                 .' class="btn btn-sm btn-plum py-0">اصرف</a></td>';
+    })->all(),
+  ];
   $flow='prod'; $flowStep='issue';
   $sortable=['رقم الإذن'=>'doc_no','المسلسل'=>'paper_serial','التاريخ'=>'doc_date','الكمية'=>'total_qty','الحالة'=>'status'];
   $intro = 'الحلقة بين أمر الشغل والمصنع. الورقة الواحدة بتصرف خامات <b>لأكتر من أمر شغل</b> '

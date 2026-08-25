@@ -113,6 +113,9 @@ Route::middleware('auth.user')->group(function () {
         Route::get('goods-receipts/{goods_receipt}/print',   [GoodsReceiptController::class, 'print'])->name('goods-receipts.print');
         Route::get('stock-additions/{stock_addition}/print', [StockAdditionController::class, 'print'])->name('stock-additions.print');
         Route::get('consignments',               [ConsignmentController::class, 'index'])->name('consignments.index');
+        // تقارير المخزون — نفس شكل شيت رصيد القماش
+        Route::get('stock/onhand',    [\App\Http\Controllers\StockReportController::class, 'onhand'])->name('stock.onhand');
+        Route::get('stock/movements', [\App\Http\Controllers\StockReportController::class, 'movements'])->name('stock.movements');
         Route::get('consignments/{consignment}', [ConsignmentController::class, 'show'])->name('consignments.show');
     });
 
@@ -258,6 +261,8 @@ Route::middleware('auth.user')->group(function () {
     Route::get('export/colors',            [ImportExportController::class, 'exportColors'])->name('io.export.colors');
     Route::get('export/consignments',      [ImportExportController::class, 'exportConsignments'])->name('io.export.consignments');
     Route::get('export/work-orders',       [ImportExportController::class, 'exportWorkOrders'])->name('io.export.work-orders');
+    Route::get('export/onhand',            [ImportExportController::class, 'exportOnHand'])->name('io.export.onhand');
+    Route::get('export/movements',         [ImportExportController::class, 'exportMovements'])->name('io.export.movements');
     Route::get('export/coverage',          [ImportExportController::class, 'exportCoverage'])->name('io.export.coverage');
     Route::get('template/{type}',          [ImportExportController::class, 'template'])->name('io.template');
     });

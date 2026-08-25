@@ -35,7 +35,14 @@ class ProductionReceiptController extends Controller
         $base    = ProductionReceipt::query();
         $waiting = WorkOrder::open()->whereColumn('cut_pieces', '>', 'received_pieces')->count();
 
+        /* طابور الاستلام: فيه قطع مقصوصة لسه على المصنع */
+        $awaitingWos = \App\Models\WorkOrder::with('factory')
+            ->whereColumn('cut_pieces', '>', 'received_pieces')
+            ->whereNotIn('status', ['cancelled', 'closed', 'superseded'])
+            ->latest('id')->limit(10)->get();
+
         return view('production.index', [
+            'awaitingWos' => $awaitingWos,
             'title'   => 'استلامات الإنتاج',
             'rows'    => $this->applySort($q, $request, ['doc_no','doc_date','total_pieces','status'])->paginate(25)->withQueryString(),
             'filters' => [

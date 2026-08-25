@@ -1,10 +1,31 @@
 @extends('layouts.app')
 @section('content')
-@php $lines = old('lines', $row->lines?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
+@php
+  $lines = old('lines', ($preset ?? null) ?: ($row->lines?->toArray() ?? []));
+  $editable = $row->isEditable() || $mode==='create';
+@endphp
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'receipt'])
 
 @include('partials.approval_box')
+
+{{-- الرسالة اللي بيتم الإفراج عنها — بياناتها من الفحص والمعمل --}}
+@if(($arrived ?? null))
+  <div class="card mb-3" style="border-color:var(--lv-soft)">
+    <div class="card-body py-2 d-flex gap-4 flex-wrap align-items-center">
+      <div>
+        <div class="fw-bold num" style="font-size:1.15rem;color:var(--lv-brand-ink)">{{ $arrived->consignment_no }}</div>
+        <div class="hint">{{ $arrived->fabricType?->name ?? '—' }} · {{ $arrived->color?->label ?? $arrived->color?->code ?? '—' }}</div>
+      </div>
+      <span><b>الكمية:</b> <span class="num fw-bold">{{ rtrim(rtrim(number_format((float)$arrived->total_kg,2),'0'),'.') }} كجم</span>
+        · <span class="num">{{ (int) $arrived->rolls_count }} توب</span></span>
+      @if($arrived->min_width_cm)<span><b>أقل عرض:</b> <span class="num fw-bold">{{ $arrived->min_width_cm }} سم</span></span>@endif
+      @if($arrived->avg_gsm)<span><b>البنشر:</b> <span class="num fw-bold">{{ $arrived->avg_gsm }}</span></span>@endif
+      <span><b>المورد:</b> {{ $arrived->supplier?->name ?? '—' }}</span>
+      <span class="hint ms-auto">السطر متملي بأرقام الفحص — سجّل الرفض والتعليق لو فيه</span>
+    </div>
+  </div>
+@endif
 
 <div class="note-box mb-3">
   <b>ده الإفراج.</b> بيتعمل بعد ما الحوض يوصل بإذن إضافة، ويتفحص، وييجي له تقرير معمل.

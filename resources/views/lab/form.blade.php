@@ -6,6 +6,25 @@
 
 @include('partials.approval_box')
 
+{{-- الرسالة اللي بيتعمل عليها التقرير — بياناتها ثابتة من الفحص --}}
+@if(($arrived ?? null))
+  <div class="card mb-3" style="border-color:var(--lv-soft)">
+    <div class="card-body py-2 d-flex gap-4 flex-wrap align-items-center">
+      <div>
+        <div class="fw-bold num" style="font-size:1.15rem;color:var(--lv-brand-ink)">{{ $arrived->consignment_no }}</div>
+        <div class="hint">{{ $arrived->fabricType?->name ?? '—' }} · {{ $arrived->color?->label ?? $arrived->color?->code ?? '—' }}</div>
+      </div>
+      <span><b>الكمية:</b> <span class="num fw-bold">{{ rtrim(rtrim(number_format((float)$arrived->total_kg,2),'0'),'.') }} كجم</span>
+        · <span class="num">{{ (int) $arrived->rolls_count }} توب</span></span>
+      @if($arrived->min_width_cm)
+        <span><b>أقل عرض من الفحص:</b> <span class="num fw-bold">{{ $arrived->min_width_cm }} سم</span></span>
+      @endif
+      <span><b>المورد:</b> {{ $arrived->supplier?->name ?? '—' }}</span>
+      <span class="hint ms-auto">بيانات الرسالة ثابتة — سجّل القراءات بس</span>
+    </div>
+  </div>
+@endif
+
 <div class="note-box mb-3">
   <b>وزن البُنشر</b> هو الوزن المعياري للقماش (جرام لكل متر مربع) — يعني سُمك القماش.
   بيطلع وينزل جوه نفس التوب، عشان كده بناخد قراءات متعددة والسيستم بياخد المتوسط،
@@ -28,32 +47,49 @@
       </div>
     </div>
     <div class="card-body"><fieldset @disabled(!$editable)>
-      <div class="row g-3">
-        <div class="col-md-2"><label class="form-label req">التاريخ</label>
-          <input type="date" name="doc_date" class="form-control form-control-sm" value="{{ old('doc_date',$row->doc_date?->format('Y-m-d') ?? $row->doc_date) }}" required></div>
-        <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
-          <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="002192"></div>
-        <div class="col-md-3"><label class="form-label req">الرسالة (الحوض)</label>
-          <select name="consignment_id" class="form-select form-select-sm" required><option value="">—</option>
-            @foreach($consignments as $k=>$v)<option value="{{ $k }}" @selected(old('consignment_id',$row->consignment_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-2"><label class="form-label">اسم الخامة</label>
-          <select name="fabric_type_id" class="form-select form-select-sm"><option value="">—</option>
-            @foreach($fabricTypes as $k=>$v)<option value="{{ $k }}" @selected(old('fabric_type_id',$row->fabric_type_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-3"><label class="form-label">اللون</label>
-          <select name="color_id" class="form-select form-select-sm"><option value="">—</option>
-            @foreach($colors as $k=>$v)<option value="{{ $k }}" @selected(old('color_id',$row->color_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-3"><label class="form-label">اسم المورد</label>
-          <select name="supplier_id" class="form-select form-select-sm"><option value="">—</option>
-            @foreach($suppliers as $k=>$v)<option value="{{ $k }}" @selected(old('supplier_id',$row->supplier_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-        <div class="col-md-3"><label class="form-label">فني المعمل</label>
-          <select name="technician_id" class="form-select form-select-sm"><option value="">—</option>
-            @foreach($technicians as $k=>$v)<option value="{{ $k }}" @selected(old('technician_id',$row->technician_id ?? auth()->id())==$k)>{{ $v }}</option>@endforeach
-          </select></div>
-      </div>
+      @if(($arrived ?? null))
+        {{-- كل بيانات الرسالة جاية من الفحص — الفني بيسجل القراءات بس --}}
+        <input type="hidden" name="doc_date"       value="{{ old('doc_date', $row->doc_date?->format('Y-m-d') ?? now()->toDateString()) }}">
+        <input type="hidden" name="consignment_id" value="{{ old('consignment_id', $row->consignment_id ?? $arrived->id) }}">
+        <input type="hidden" name="fabric_type_id" value="{{ old('fabric_type_id', $row->fabric_type_id ?? $arrived->fabric_type_id) }}">
+        <input type="hidden" name="color_id"       value="{{ old('color_id', $row->color_id ?? $arrived->color_id) }}">
+        <input type="hidden" name="supplier_id"    value="{{ old('supplier_id', $row->supplier_id ?? $arrived->supplier_id) }}">
+        <input type="hidden" name="technician_id"  value="{{ old('technician_id', $row->technician_id ?? auth()->id()) }}">
+
+        <div class="row g-3">
+          <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
+            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="002192"></div>
+          <div class="col-md-2"><label class="form-label">فني المعمل</label>
+            <div class="form-control form-control-sm" style="background:var(--lv-offwhite)">{{ auth()->user()?->name }}</div></div>
+        </div>
+      @else
+        <div class="row g-3">
+          <div class="col-md-2"><label class="form-label req">التاريخ</label>
+            <input type="date" name="doc_date" class="form-control form-control-sm" value="{{ old('doc_date',$row->doc_date?->format('Y-m-d') ?? $row->doc_date) }}" required></div>
+          <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
+            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="002192"></div>
+          <div class="col-md-3"><label class="form-label req">الرسالة (الحوض)</label>
+            <select name="consignment_id" class="form-select form-select-sm" required><option value="">—</option>
+              @foreach($consignments as $k=>$v)<option value="{{ $k }}" @selected(old('consignment_id',$row->consignment_id)==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-2"><label class="form-label">اسم الخامة</label>
+            <select name="fabric_type_id" class="form-select form-select-sm"><option value="">—</option>
+              @foreach($fabricTypes as $k=>$v)<option value="{{ $k }}" @selected(old('fabric_type_id',$row->fabric_type_id)==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-3"><label class="form-label">اللون</label>
+            <select name="color_id" class="form-select form-select-sm"><option value="">—</option>
+              @foreach($colors as $k=>$v)<option value="{{ $k }}" @selected(old('color_id',$row->color_id)==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-3"><label class="form-label">اسم المورد</label>
+            <select name="supplier_id" class="form-select form-select-sm"><option value="">—</option>
+              @foreach($suppliers as $k=>$v)<option value="{{ $k }}" @selected(old('supplier_id',$row->supplier_id)==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+          <div class="col-md-3"><label class="form-label">فني المعمل</label>
+            <select name="technician_id" class="form-select form-select-sm"><option value="">—</option>
+              @foreach($technicians as $k=>$v)<option value="{{ $k }}" @selected(old('technician_id',$row->technician_id ?? auth()->id())==$k)>{{ $v }}</option>@endforeach
+            </select></div>
+        </div>
+      @endif
 
       <hr class="my-3">
       <div class="row g-3">

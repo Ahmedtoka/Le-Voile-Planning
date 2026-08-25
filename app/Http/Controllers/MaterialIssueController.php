@@ -42,7 +42,15 @@ class MaterialIssueController extends Controller
                 $x->whereHas('materialIssue', fn ($m) => $m->where('status', 'approved')))
             ->count();
 
+        /* طابور الصرف: أوامر شغالة وفيها خامات ناقصة صرف */
+        $awaitingWos = \App\Models\WorkOrder::with(['factory', 'fabrics.issueLines.materialIssue'])
+            ->whereIn('status', ['approved', 'sent_to_factory', 'cutting'])
+            ->latest('id')->limit(20)->get()
+            ->filter(fn ($w) => $w->fabrics->sum(fn ($f) => $f->shortage) > 0.001)
+            ->take(10)->values();
+
         return view('issues.index', [
+            'awaitingWos' => $awaitingWos,
             'title'   => 'أذون صرف الخام',
             'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','total_qty','status'])->paginate(25)->withQueryString(),
             'filters' => [

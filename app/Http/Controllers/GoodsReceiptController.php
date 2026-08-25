@@ -46,7 +46,14 @@ class GoodsReceiptController extends Controller
             ->whereDoesntHave('goodsReceipts', fn ($x) => $x->where('status','approved'))
             ->count();
 
+        /* طابور الإفراج: فحص + معمل معتمدين */
+        $awaiting = \App\Models\Consignment::with(['fabricType', 'color', 'supplier'])
+            ->where('status', 'lab_done')
+            ->whereDoesntHave('goodsReceipts', fn ($x) => $x->whereIn('status', ['pending', 'approved']))
+            ->latest('id')->limit(10)->get();
+
         return view('receipts.index', [
+            'awaiting' => $awaiting,
             'title'   => 'أذون استلام الخام (الإفراج)',
             'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','total_qty','total_rolls','status'])->paginate(25)->withQueryString(),
             'filters' => [
@@ -68,11 +75,13 @@ class GoodsReceiptController extends Controller
 
     public function create(Request $request)
     {
-        $row = new GoodsReceipt(['doc_date' => now()->toDateString(), 'status' => 'draft']);
+        $row    = new GoodsReceipt(['doc_date' => now()->toDateString(), 'status' => 'draft']);
+        $preset = [];
 
         // بنملا الإذن من الحوض المتفحص — الأرقام بتيجي من الفحص، مش من المورد
         if ($cid = $request->get('consignment_id')) {
-            if ($c = Consignment::with(['inspections' => fn ($q) => $q->where('status', 'approved')->latest('id')])->find($cid)) {
+            if ($c = Consignment::with(['fabricType', 'color', 'supplier',
+                    'inspections' => fn ($q) => $q->where('status', 'approved')->latest('id')])->find($cid)) {
                 $row->consignment_id      = $c->id;
                 $row->supplier_id         = $c->supplier_id;
                 $row->warehouse_id        = $c->warehouse_id;
@@ -81,10 +90,28 @@ class GoodsReceiptController extends Controller
                 $row->stock_addition_id   = $c->stockAdditions()->latest('id')->value('id')
                     ?: \App\Models\StockAdditionLine::where('consignment_id', $c->id)->value('stock_addition_id');
                 $row->fabric_inspection_id = $c->inspections->first()?->id;
+
+                // سطر جاهز بأرقام الفحص — المستلم بيأكد وبيسجل الرفض والتعليق بس
+                $insp = $c->inspections->first();
+                $preset[] = [
+                    'item_code'      => $c->fabricType?->code,
+                    'fabric_type_id' => $c->fabric_type_id,
+                    'color_id'       => $c->color_id,
+                    'unit'           => 'كجم',
+                    'width_cm'       => $c->min_width_cm,
+                    'rolls_count'    => (int) ($insp?->counted_rolls ?: $c->rolls_count),
+                    'qty'            => (float) ($insp?->counted_kg ?: $c->total_kg),
+                    'consignment_no' => $c->consignment_no,
+                ];
             }
         }
 
-        return view('receipts.form', $this->formData(['row' => $row, 'mode' => 'create']));
+        return view('receipts.form', $this->formData([
+            'row'     => $row,
+            'mode'    => 'create',
+            'preset'  => $preset,
+            'arrived' => $c ?? null,
+        ]));
     }
 
     public function store(Request $request)
@@ -111,11 +138,13 @@ class GoodsReceiptController extends Controller
 
     public function edit(GoodsReceipt $goods_receipt)
     {
-        $goods_receipt->load(['lines.color', 'lines.fabricType', 'consignment', 'approval.steps']);
+        $goods_receipt->load(['lines.color', 'lines.fabricType',
+            'consignment.fabricType', 'consignment.color', 'consignment.supplier', 'approval.steps']);
 
         return view('receipts.form', $this->formData([
-            'row'  => $goods_receipt,
-            'mode' => 'edit',
+            'row'     => $goods_receipt,
+            'mode'    => 'edit',
+            'arrived' => $goods_receipt->consignment,
         ]));
     }
 

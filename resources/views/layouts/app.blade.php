@@ -483,6 +483,10 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
        'أتواب مرفوضة وألوان معلّقة لحين رد التخطيط والمشتريات'],
       ['consignments.index', 'الأحواض', 'bi-box-seam', 'receipt.view',
        'كل رسالة قماش وحالتها ورصيدها المحجوز والمتاح'],
+      ['stock.onhand', 'رصيد الرسايل', 'bi-clipboard-data', 'receipt.view',
+       'نفس شيت ON Hand: رصيد كل رسالة — المتاح والمحجوز والأتواب'],
+      ['stock.movements', 'حركة المخزون', 'bi-arrow-left-right', 'receipt.view',
+       'نفس شيت IN&OUT: كل حركة داخلة وخارجة بمستندها'],
     ]],
 
     ['prod', 'التشغيل', 'bi-hammer', [

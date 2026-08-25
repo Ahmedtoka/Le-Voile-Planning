@@ -36,7 +36,13 @@ class CutDeclarationController extends Controller
         $waiting = WorkOrder::whereIn('status', ['sent_to_factory','cutting'])
             ->whereDoesntHave('cutDeclarations', fn ($x) => $x->whereIn('status', ['pending','approved']))->count();
 
+        /* طابور القص: الأوامر اللي عند المصنع */
+        $awaitingWos = \App\Models\WorkOrder::with('factory')
+            ->whereIn('status', ['sent_to_factory', 'cutting'])
+            ->latest('id')->limit(10)->get();
+
         return view('cutting.index', [
+            'awaitingWos' => $awaitingWos,
             'title'   => 'بيانات القص',
             'rows'    => $this->applySort($q, $request, ['doc_no','doc_date','total_pieces','variance_pct','status'])->paginate(25)->withQueryString(),
             'filters' => [

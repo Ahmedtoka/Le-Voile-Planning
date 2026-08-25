@@ -24,6 +24,12 @@ class LabReportController extends Controller
     public function index(Request $request)
     {
         $q = LabReport::with(['consignment', 'fabricType', 'color', 'technician']);
+
+        /* طابور المعمل: اللي خلص فحص ومستني قراءات البنشر والانكماش */
+        $awaiting = Consignment::with(['fabricType', 'color', 'supplier'])
+            ->whereIn('status', ['inspected'])
+            ->whereDoesntHave('labReports', fn ($x) => $x->whereIn('status', ['pending', 'approved']))
+            ->latest('id')->limit(10)->get();
         $this->applyFilters($q, $request,
             ['doc_no', 'paper_serial', 'consignment.consignment_no'],
             'doc_date',
@@ -35,6 +41,7 @@ class LabReportController extends Controller
             ->whereDoesntHave('labReports', fn ($x) => $x->whereIn('status', ['pending','approved']))->count();
 
         return view('lab.index', [
+            'awaiting' => $awaiting,
             'title'   => 'تقارير المعمل',
             'rows'    => $this->applySort($q, $request, ['doc_no','doc_date','avg_gsm','status'])->paginate(25)->withQueryString(),
             'filters' => [
@@ -69,7 +76,11 @@ class LabReportController extends Controller
             $row->supplier_id    = $c->supplier_id;
         }
 
-        return view('lab.form', $this->formData(['row' => $row, 'mode' => 'create']));
+        return view('lab.form', $this->formData([
+            'row'     => $row,
+            'mode'    => 'create',
+            'arrived' => isset($c) ? $c->load('fabricType', 'color', 'supplier') : null,
+        ]));
     }
 
     public function store(Request $request)
@@ -93,8 +104,13 @@ class LabReportController extends Controller
 
     public function edit(LabReport $lab_report)
     {
-        $lab_report->load(['readings', 'consignment', 'approval.steps']);
-        return view('lab.form', $this->formData(['row' => $lab_report, 'mode' => 'edit']));
+        $lab_report->load(['readings', 'consignment.fabricType', 'consignment.color',
+            'consignment.supplier', 'approval.steps']);
+        return view('lab.form', $this->formData([
+            'row'     => $lab_report,
+            'mode'    => 'edit',
+            'arrived' => $lab_report->consignment,
+        ]));
     }
 
     public function update(Request $request, LabReport $lab_report)
@@ -144,6 +160,7 @@ class LabReportController extends Controller
             'colors'       => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
             'suppliers'    => Supplier::orderBy('name')->pluck('name', 'id'),
             'technicians'  => User::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
+            'arrived'      => null,
         ], $extra);
     }
 
