@@ -4,8 +4,6 @@
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'lab'])
 
-@include('partials.approval_box')
-
 {{-- الرسالة اللي بيتعمل عليها التقرير — بياناتها ثابتة من الفحص --}}
 @if(($arrived ?? null))
   <div class="card mb-3" style="border-color:var(--lv-soft)">
@@ -155,7 +153,7 @@
 
   @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ واحتساب</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
+    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('التقرير هيتقفل والرسالة هتبقى جاهزة لإذن الاستلام. متأكد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> خلّص المعمل ونزّله للإفراج</button>
   @endif
 </form>
 @if($mode==='edit' && $row->isEditable())

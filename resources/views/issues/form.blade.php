@@ -4,8 +4,6 @@
 
 @include('partials.flow_bar', ['flow' => 'prod', 'step' => 'issue'])
 
-@include('partials.approval_box')
-
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   الورقة الواحدة بتصرف لأكتر من أمر شغل وأكتر من خامة. لو اخترت أمر شغل في السطر،
@@ -91,8 +89,8 @@
   @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
   @if($mode==='edit' && $row->isEditable())
     <button type="button" class="btn btn-success btn-sm"
-            onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()">
-      <i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد
+            onclick="if(confirm('الخامة هتتخصم من المخزن وتتسجل على أمر الشغل. متأكد؟')) document.getElementById('submitForm').submit()">
+      <i class="bi bi-send" aria-hidden="true"></i> اصرف للمصنع
     </button>
   @endif
 </form>

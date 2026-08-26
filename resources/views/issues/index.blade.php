@@ -7,7 +7,8 @@
     'empty' => 'مفيش أوامر مستنية صرف دلوقتي.',
     'rows'  => ($awaitingWos ?? collect())->map(function ($w) {
         $planned = (float) $w->fabrics->sum('planned_qty');
-        $issued  = (float) $w->fabrics->sum(fn ($f) => $f->issued_actual);
+        // العمود المخزّن — نفس اللي الطابور بيتحسب بيه، فالرقم اللي فوق = اللي تحت
+        $issued  = (float) $w->fabrics->sum('issued_qty');
         $left    = max(0, $planned - $issued);
         return '<td class="num fw-bold">'.e($w->wo_no).'</td>'
              . '<td>'.e(\Illuminate\Support\Str::limit($w->product_title, 30)).'</td>'
@@ -23,7 +24,7 @@
   $sortable=['رقم الإذن'=>'doc_no','المسلسل'=>'paper_serial','التاريخ'=>'doc_date','الكمية'=>'total_qty','الحالة'=>'status'];
   $intro = 'الحلقة بين أمر الشغل والمصنع. الورقة الواحدة بتصرف خامات <b>لأكتر من أمر شغل</b> '
          . 'وكل سطر بيقول الخامة من أي رسالة وبأي لون وكام توب. '
-         . 'اعتماد الإذن هو اللي بيخصم فعليًا من رصيد الحوض.';
+         . 'حفظ الإذن هو اللي بيخصم فعليًا من رصيد الحوض — مفيش اعتماد بعده.';
   $searchHint = 'رقم الإذن أو المسلسل أو المنصرف إليه…';
   $emptyText  = 'مفيش أذون صرف. ابدأ من أمر شغل معتمد.';
   $createRoute='material-issues.create'; $createLabel='إذن صرف';

@@ -4,9 +4,9 @@
 @include('partials.flow_bar', ['flow' => 'buy', 'step' => 'finance'])
 
 <div class="note-box mb-3">
-  الشاشة دي <b>متابعة بس — مفيش أي إجراء مطلوب منك</b>. أول ما المشتريات تسعّر طلب،
-  الترانزاكشن بتنزل هنا تلقائيًا: المستحق، المورد، طريقة الدفع، وتاريخ التوريد.
-  تابع الرصيد وصفّيه دفعات أو كاش حسب الاتفاق.
+  الشاشة دي <b>متابعة — مش بوابة</b>. أول ما المشتريات تسعّر طلب، الترانزاكشن بتنزل هنا
+  تلقائيًا: المستحق، المورد، طريقة الدفع، وتاريخ التوريد — والمخزن بيستلم عادي من غير ما يستناك.
+  زرار «سجّل علمك» بيشيل الطلب من قايمة الجديد عندك بس، وما بيوقّفش حاجة.
 </div>
 
 <div class="row g-3 mb-3">
@@ -40,10 +40,10 @@
       <div class="table-responsive">
         <table class="table table-sm">
           <thead><tr><th>رقم الطلب</th><th>المورد</th><th>تاريخ التوريد</th><th>الإجمالي</th>
-            <th>طريقة الدفع</th><th>المرحلة</th><th></th></tr></thead>
+            <th>طريقة الدفع</th><th>المرحلة</th><th>علم الحسابات</th><th></th></tr></thead>
           <tbody>
           @forelse($rows as $r)
-            <tr class="{{ $r->stage === 'finance' ? 'table-warning' : '' }}">
+            <tr>
               <td class="num fw-bold"><a href="{{ route('purchase-orders.edit',$r) }}">{{ $r->po_no }}</a></td>
               <td>{{ $r->supplier?->name }}</td>
               <td class="num">{{ $r->delivery_date?->format('Y-m-d') ?? '—' }}</td>
@@ -51,12 +51,19 @@
               <td class="hint">{{ $r->payment_method ?: '—' }}</td>
               <td><span class="badge bg-{{ $r->stage_color }}">{{ $r->stage_name }}</span></td>
               <td>
+                @if($r->finance_at)
+                  <span class="badge bg-success">اتشاف {{ $r->finance_at->format('Y-m-d') }}</span>
+                @else
+                  <a href="{{ route('finance.ack',$r) }}" class="btn btn-sm btn-plum py-0">سجّل علمك</a>
+                @endif
+              </td>
+              <td>
                 <a href="{{ route('purchase-orders.edit',$r) }}" class="btn btn-sm btn-outline-plum py-0"
                    aria-label="عرض" title="عرض"><i class="bi bi-eye" aria-hidden="true"></i></a>
               </td>
             </tr>
           @empty
-            <tr><td colspan="7">
+            <tr><td colspan="8">
             <div class="empty-state">
               <i class="bi bi-inbox ico" aria-hidden="true"></i>
               <div class="t">مفيش مستحقات متوقعة.</div>

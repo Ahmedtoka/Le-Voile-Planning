@@ -31,11 +31,11 @@
     الطلب مستني تسعير منك.
     <a href="{{ route('purchasing.source', $row) }}" class="btn btn-sm btn-plum ms-auto">سعّر الطلب</a>
   </div>
-@elseif($row->stage === 'finance' && $u->can2('po.finance'))
-  <div class="alert alert-warning py-2 d-flex align-items-center gap-2">
-    <i class="bi bi-hand-index-thumb" aria-hidden="true"></i>
-    الطلب مستني علم الحسابات.
-    <a href="{{ route('finance.ack', $row) }}" class="btn btn-sm btn-plum ms-auto">افتح صفحة العلم</a>
+@elseif($row->needsFinanceAck() && $u->can2('po.finance'))
+  <div class="alert alert-info py-2 d-flex align-items-center gap-2">
+    <i class="bi bi-info-circle" aria-hidden="true"></i>
+    الطلب اتسعّر ونزل للحسابات للمتابعة — الاستلام ماشي عادي، ده تسجيل علم بس.
+    <a href="{{ route('finance.ack', $row) }}" class="btn btn-sm btn-plum ms-auto">سجّل علمك</a>
   </div>
 @endif
 

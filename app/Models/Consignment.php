@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\HasApproval;
+use App\Support\HasDocumentIdentity;
 use App\Support\HasComments;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Consignment extends Model
 {
-    use HasApproval, HasComments;
+    use HasDocumentIdentity, HasComments;
 
     protected $guarded = [];
     protected $casts = ['arrival_date' => 'date', 'color_match_ok' => 'boolean'];
@@ -132,8 +132,13 @@ class Consignment extends Model
             ->whereHas('workOrder', fn ($q) => $q->whereNotIn('status', ['cancelled', 'draft', 'superseded']))
             ->sum('planned_qty');
 
+        /* المفرج عنه بيتاخد زي ما هو من إذن الاستلام.
+           ملحوظة مهمة: مينفعش نستخدم ‎?:‎ هنا — لأن رسالة اترفضت بالكامل
+           بيبقى المفرج عنه فيها = 0.0، و ‎0.0 ?: total_kg‎ هترجّع الوزن كله
+           فيبان قماش مرفوض كأنه جاهز للتشغيل. الفولباك للـ null بس
+           (صفوف قديمة قبل ما العمود يتملّي). */
         $released = in_array($this->status, ['released', 'in_production', 'closed'], true)
-            ? (float) ($this->released_kg ?: $this->total_kg)
+            ? (float) ($this->released_kg ?? $this->total_kg)
             : 0.0;
 
         $hold = in_array($this->status, ['under_inspection', 'inspected', 'lab_done'], true)

@@ -742,10 +742,10 @@ class DemoDataService
         $markers = Marker::where('status','approved')->with('lines')->get();
         if ($markers->isEmpty()) return;
 
+        // مفيش «تحت الاعتماد» — الأمر يا مسودة يا معتمد وماشي
         $statuses = array_merge(
             array_fill(0, 3, 'draft'),
-            array_fill(0, 3, 'pending'),
-            array_fill(0, 4, 'approved'),
+            array_fill(0, 7, 'approved'),
             array_fill(0, 6, 'sent_to_factory'),
             array_fill(0, 8, 'in_production'),
             array_fill(0, 9, 'partially_received'),

@@ -12,7 +12,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolePermissionSeeder::class,
             UserSeeder::class,
-            ApprovalFlowSeeder::class,
         ]);
 
         // الداتا الديمو — تقدر تمسحها وتولّدها من الإعدادات ← أدوات الداتا

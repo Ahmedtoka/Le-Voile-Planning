@@ -19,14 +19,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * طلب الشراء — مستند واحد بيمر على تلات أيادي، زي الورقة بالظبط.
+ * طلب الشراء — مستند واحد بيمر على إيدين، زي الورقة بالظبط.
  *
  *   ① التخطيط   يكتب اللون والصنف والكمية والوحدة ونسبة الزيادة وملاحظة لكل لون
- *   ② المشتريات تحدد المورد وبياناته والسعر وطريقة الدفع وتاريخ التوريد
- *   ③ الحسابات  تعلم بالمستحق المتوقع للمورد وتتابعه
- *   ④ الاعتماد   دورة الاعتماد ⇒ يتبعت للمورد
+ *               → الحفظ بينزّله للمشتريات على طول
+ *   ② المشتريات تحدد المورد والسعر وطريقة الدفع وتاريخ التوريد
+ *               → الحفظ بيخلّي الطلب جاهز للاستلام فورًا
+ *   ③ الحسابات  بيوصلها المستحق للمتابعة وبتسجّل علمها — من غير ما توقّف حاجة
+ *   ④ المخزن    بيشوف الطلب جاي ويستلم عليه أذون إضافة
  *
- * كل مرحلة بتقفل اللي قبلها عن التعديل.
+ * مفيش اعتمادات: كل خطوة بتنفّذ نفسها وبتفتح اللي بعدها.
  */
 class PurchaseOrderController extends Controller
 {
@@ -57,9 +59,10 @@ class PurchaseOrderController extends Controller
                  'note' => 'لسه ما اتقفلتش.'],
                 ['label' => 'عند المشتريات', 'value' => $b()->where('stage','purchasing')->count(), 'tone' => 'warn',
                  'note' => 'مستنية مورد وسعر وتاريخ توريد.'],
-                ['label' => 'عند الحسابات', 'value' => $b()->where('stage','finance')->count(), 'tone' => 'warn',
-                 'note' => 'مستنية علم الحسابات بالمستحق.'],
-                ['label' => 'مستحق متوقع', 'value' => number_format((float) $b()->whereIn('stage',['finance','approval','approved','receiving'])->sum('total'), 0),
+                ['label' => 'مستحق ما اتشافش', 'value' => $b()->whereNotNull('sourced_at')->whereNull('finance_at')
+                        ->whereNotIn('stage',['closed','cancelled'])->count(), 'tone' => 'warn',
+                 'note' => 'اتسعّر ولسه الحسابات ما سجّلتش علمها بيه.'],
+                ['label' => 'مستحق متوقع', 'value' => number_format((float) $b()->whereIn('stage',['finance','approved','receiving'])->sum('total'), 0),
                  'sub' => config('lvplanning.currency'), 'tone' => 'brand',
                  'note' => 'إجمالي قيمة الطلبات اللي اتسعّرت ولسه ما اتقفلتش.'],
                 ['label' => 'توريد متأخر', 'value' => $b()->whereIn('stage',['approved','receiving'])
@@ -283,7 +286,9 @@ class PurchaseOrderController extends Controller
     /** صفحة العلم — بند الحسابات بس */
     public function financeForm(PurchaseOrder $purchase_order)
     {
-        if ($purchase_order->stage !== 'finance') {
+        // الطلب بيوصل الحسابات بمجرد ما يتسعّر — والحسابات بتتفرّج وتسجّل علمها،
+        // من غير ما توقّف الاستلام. الطلب اللي لسه ما اتسعّرش ملوش مستحق أصلًا.
+        if (! $purchase_order->sourced_at) {
             return redirect()->route('purchase-orders.edit', $purchase_order);
         }
 
@@ -296,29 +301,23 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * ③ الحسابات: علم بس — مفيش اعتماد ولا توقيعات.
-     * بمجرد ما الحسابات تدوس «علمت»، الطلب جاهز يتبعت للمورد
-     * وتستقبل عليه أذون إضافة. دي نهاية الدورة الأولى.
+     * ③ الحسابات: علم بس — مفيش اعتماد ولا توقيعات ولا توقيف.
+     * الطلب ماشي للمخزن من ساعة التسعير. زرار «علمت» بيشيله من
+     * قايمة «مستحقات جديدة» عند الحسابات وخلاص — ما بيغيّرش مرحلة الطلب.
      */
     public function financeAck(Request $request, PurchaseOrder $purchase_order)
     {
-        abort_unless($purchase_order->stage === 'finance', 403);
+        abort_unless((bool) $purchase_order->sourced_at, 403, 'الطلب لسه ما اتسعّرش.');
+        abort_if((bool) $purchase_order->finance_at, 403, 'الحسابات سجّلت علمها بالطلب ده قبل كده.');
 
         $data = $request->validate(['finance_note' => ['nullable', 'string']], [], ['finance_note' => 'ملاحظة الحسابات']);
 
         $purchase_order->forceFill([
-            'stage'        => 'approved',      // جاهز للاستلام — من غير دورة اعتماد
-            'status'       => 'approved',
+            // المرحلة ما بتتغيّرش — الطلب أصلًا ماشي. ده تسجيل علم بس.
             'finance_by'   => auth()->id(),
             'finance_at'   => now(),
             'finance_note' => $data['finance_note'] ?? null,
         ])->save();
-
-        Notifier::broadcastToRole('storekeeper', 'po_ready',
-            'طلب شراء جاهز للاستلام',
-            $purchase_order->po_no . ' — ' . ($purchase_order->supplier?->name ?? '')
-                . ' · التوريد ' . $purchase_order->delivery_date?->format('Y-m-d'),
-            route('stock-additions.index'), 'info');
 
         ActivityLogger::log('acknowledged', $purchase_order, 'علم الحسابات بطلب الشراء ' . $purchase_order->po_no);
 
@@ -334,7 +333,8 @@ class PurchaseOrderController extends Controller
 
     public function destroy(PurchaseOrder $purchase_order)
     {
-        abort_unless($purchase_order->stage === 'planning', 403, 'مينفعش تحذف طلب خرج من التخطيط.');
+        abort_unless($purchase_order->stage === 'purchasing' && ! $purchase_order->sourced_at,
+            403, 'مينفعش تحذف طلب اتسعّر أو دخل الاستلام.');
         $no = $purchase_order->po_no;
         $purchase_order->delete();
         ActivityLogger::log('deleted', null, 'حذف طلب شراء ' . $no);

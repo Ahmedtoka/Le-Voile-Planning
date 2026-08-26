@@ -9,8 +9,8 @@ use App\Models\FabricType;
 use App\Models\InspectionRoll;
 use App\Models\Supplier;
 use App\Models\User;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowEngine;
 use App\Services\FlowMessage;
 use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
@@ -50,11 +50,11 @@ class FabricInspectionController extends Controller
            عشان الفاحص يعرف يبدأ دلوقتي ولا يستنى الشحنة تكمل. */
         $awaiting = Consignment::with(['fabricType', 'color', 'supplier', 'purchaseOrder.lines', 'stockAdditions'])
             ->where('status', 'under_inspection')
-            ->whereDoesntHave('inspections', fn ($x) => $x->whereIn('status', ['pending', 'approved']))
+            ->whereDoesntHave('inspections', fn ($x) => $x->where('status', 'approved'))
             ->latest('id')->limit(10)->get();
 
         $waiting = Consignment::where('status', 'under_inspection')
-            ->whereDoesntHave('inspections', fn ($x) => $x->whereIn('status', ['pending','approved']))->count();
+            ->whereDoesntHave('inspections', fn ($x) => $x->where('status', 'approved'))->count();
 
         return view('inspections.index', [
             'title'    => 'تقارير فحص القماش',
@@ -62,7 +62,7 @@ class FabricInspectionController extends Controller
             'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','counted_rolls','min_width_cm','defect_pct','result','status'])->paginate(25)->withQueryString(),
             'results' => FabricInspection::RESULTS,
             'filters' => [
-                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','approved'=>'تم','rejected'=>'ملغي']],
                 ['name' => 'result', 'label' => 'كل النتائج', 'options' => FabricInspection::RESULTS, 'width' => 160],
                 ['name' => 'inspector_id', 'label' => 'كل الفاحصين', 'options' => \App\Models\User::orderBy('name')->pluck('name','id'), 'width' => 150],
             ],
@@ -141,7 +141,7 @@ class FabricInspectionController extends Controller
     public function edit(FabricInspection $inspection)
     {
         $inspection->load(['rolls', 'consignment.purchaseOrder.lines',
-            'consignment.fabricType', 'consignment.color', 'consignment.supplier', 'approval.steps']);
+            'consignment.fabricType', 'consignment.color', 'consignment.supplier', ]);
 
         return view('inspections.form', $this->formData([
             'row'       => $inspection,
@@ -183,8 +183,8 @@ class FabricInspectionController extends Controller
             return back()->withErrors(['msg' => 'كل توب مفحوص لازم يكون له عرض — منه بيتحدد أقل عرض.']);
         }
 
-        ApprovalEngine::submit($inspection);
-        return back()->with(FlowMessage::flash('inspection.submitted', $inspection));
+        FlowEngine::complete($inspection, 'تقرير الفحص ' . $inspection->doc_no . ' اتسجّل وخلص');
+        return back()->with(FlowMessage::flash('inspection.done', $inspection));
     }
 
     public function print(FabricInspection $inspection)

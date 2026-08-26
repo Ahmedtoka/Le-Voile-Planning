@@ -38,7 +38,6 @@ class MenuCounters
         $c   = [];
 
         // ── الاعتمادات: أي حاجة مستنية توقيعي ──
-        $c['approvals.index'] = ApprovalEngine::pendingFor($user)->count();
 
         // ── المشتريات: الطلبات اللي نزلت من التخطيط ومستنية تسعير ──
         if ($can('po.source')) {
@@ -47,11 +46,6 @@ class MenuCounters
 
         // الحسابات متابعة بس — مفيش أكشن مطلوب فمفيش كاونتر.
 
-        // ── طلبات الشراء: مسودات التخطيط بس (لو فضلت واحدة) ──
-        if ($can('po.request')) {
-            $c['purchase-orders.index'] = PurchaseOrder::where('stage', 'planning')
-                ->where('requested_by', $user->id)->count();
-        }
 
         // ── إذن إضافة: مسوداتي ──
         if ($can('receipt.manage')) {
@@ -62,12 +56,12 @@ class MenuCounters
         // ── الفحص: أحواض وصلت ولسه ما اتفحصتش ──
         if ($can('qc.manage')) {
             $c['inspections.index'] = Consignment::where('status', 'under_inspection')
-                ->whereDoesntHave('inspections', fn ($q) => $q->whereIn('status', ['pending', 'approved']))
+                ->whereDoesntHave('inspections', fn ($q) => $q->where('status', 'approved'))
                 ->count();
 
             // ── المعمل: أحواض ملهاش تقرير معمل ──
-            $c['lab-reports.index'] = Consignment::onHold()
-                ->whereDoesntHave('labReports', fn ($q) => $q->whereIn('status', ['pending', 'approved']))
+            $c['lab-reports.index'] = Consignment::where('status', 'inspected')
+                ->whereDoesntHave('labReports', fn ($q) => $q->where('status', 'approved'))
                 ->count();
         }
 
@@ -76,7 +70,7 @@ class MenuCounters
             $c['goods-receipts.index'] = Consignment::whereIn('status', ['inspected', 'lab_done'])
                 ->whereHas('inspections', fn ($q) => $q->where('status', 'approved'))
                 ->whereHas('labReports', fn ($q) => $q->where('status', 'approved'))
-                ->whereDoesntHave('goodsReceipts', fn ($q) => $q->whereIn('status', ['pending', 'approved']))
+                ->whereDoesntHave('goodsReceipts', fn ($q) => $q->where('status', 'approved'))
                 ->count();
         }
 
@@ -84,7 +78,7 @@ class MenuCounters
         if ($can('wo.manage')) {
             $c['consignments.index'] = Consignment::readyForProduction()
                 ->whereDoesntHave('workOrderFabrics', fn ($q) =>
-                    $q->whereHas('workOrder', fn ($w) => $w->whereNotIn('status', ['cancelled', 'superseded'])))
+                    $q->whereHas('workOrder', fn ($w) => $w->whereNotIn('status', ['draft', 'cancelled', 'superseded'])))
                 ->count();
         }
 
@@ -111,7 +105,7 @@ class MenuCounters
         // ── بيان القص: أوامر عند المصنع من غير بيان ──
         if ($can('cut.manage')) {
             $c['cut-declarations.index'] = WorkOrder::whereIn('status', ['sent_to_factory', 'cutting'])
-                ->whereDoesntHave('cutDeclarations', fn ($q) => $q->whereIn('status', ['pending', 'approved']))
+                ->whereDoesntHave('cutDeclarations', fn ($q) => $q->where('status', 'approved'))
                 ->count();
         }
 
@@ -123,10 +117,7 @@ class MenuCounters
 
         // ── إذن صرف خام: أوامر معتمدة ولسه ما اتصرفلهاش خامة ──
         if ($can('receipt.manage')) {
-            $c['material-issues.index'] = WorkOrder::whereIn('status', ['approved', 'sent_to_factory'])
-                ->whereDoesntHave('materialIssueLines', fn ($q) =>
-                    $q->whereHas('materialIssue', fn ($m) => $m->where('status', 'approved')))
-                ->count();
+            $c['material-issues.index'] = WorkOrder::needsMaterial()->count();
         }
 
         // ── المرفوضات: البنود المفتوحة اللي محتاجة قرار ──

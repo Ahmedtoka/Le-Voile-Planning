@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\AppNotification;
-use App\Services\ApprovalEngine;
 use App\Services\MenuCounters;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Schema;
@@ -25,7 +24,6 @@ class AppServiceProvider extends ServiceProvider
             $user = auth()->user();
             $view->with([
                 'navUnread'    => $user ? AppNotification::where('user_id', $user->id)->whereNull('read_at')->count() : 0,
-                'navApprovals' => $user ? ApprovalEngine::pendingFor($user)->count() : 0,
                 // «اللي مستني مني» — رقم جنب كل شاشة فيها شغل عليّا
                 'navCounters'  => MenuCounters::for($user),
             ]);

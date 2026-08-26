@@ -37,33 +37,26 @@ class RolePermissionSeeder extends Seeder
             'po.source'  => 'تحديد المورد والأسعار (المشتريات)',
             'po.finance' => 'علم الحسابات والمستحقات',
             'po.manage'  => 'تعديل إداري على الطلبات',
-            'po.approve' => 'اعتماد طلبات الشراء',
         ],
         'المخازن' => [
             'receipt.view'   => 'عرض أذون الاستلام',
             'receipt.manage' => 'إنشاء أذون الاستلام والإضافة',
-            'receipt.approve'=> 'اعتماد أذون المخازن',
         ],
         'الجودة' => [
             'qc.view'    => 'عرض تقارير الفحص والمعمل',
             'qc.manage'  => 'إنشاء تقارير الفحص والمعمل',
-            'qc.approve' => 'اعتماد تقارير الجودة',
         ],
         'التخطيط' => [
             'marker.view'    => 'عرض الماركرات',
             'marker.manage'  => 'إنشاء ورفع الماركرات',
-            'marker.approve' => 'اعتماد الماركرات',
             'wo.view'        => 'عرض أوامر الشغل',
             'wo.manage'      => 'إنشاء أوامر الشغل',
-            'wo.approve'     => 'اعتماد أوامر الشغل',
             'wo.close'       => 'قفل أوامر الشغل',
         ],
         'الإنتاج' => [
             'cut.view'    => 'عرض بيانات القص',
             'cut.manage'  => 'إدخال بيانات القص',
-            'cut.approve' => 'اعتماد بيانات القص',
             'prod.manage' => 'استلام الإنتاج',
-            'prod.approve'=> 'اعتماد استلامات الإنتاج',
         ],
         'الفوركاست' => [
             'forecast.view'   => 'عرض الفوركاست والتغطية',
@@ -73,7 +66,6 @@ class RolePermissionSeeder extends Seeder
             'import.manage'   => 'استيراد وتصدير البيانات',
             'settings.users'  => 'إدارة المستخدمين',
             'settings.roles'  => 'إدارة الأدوار والصلاحيات',
-            'settings.flows'  => 'إدارة دورات الاعتماد',
             'settings.audit'  => 'عرض سجل الحركة',
             'settings.data'   => 'مسح وتوليد الداتا (خطر)',
         ],
@@ -86,16 +78,16 @@ class RolePermissionSeeder extends Seeder
                       'wo.view','wo.manage','wo.close','cut.view','forecast.view','forecast.manage','import.manage'],
         // المشتريات بتسعّر وتحدد المورد — مش بتنشئ الطلب
         'purchasing' => ['master.view','po.view','po.source','receipt.view'],
-        'purchasing_mgr' => ['master.view','po.view','po.source','po.manage','po.approve','receipt.view','receipt.approve'],
+        'purchasing_mgr' => ['master.view','po.view','po.source','po.manage','receipt.view'],
         'storekeeper' => ['master.view','receipt.view','receipt.manage','prod.manage','qc.view'],
-        'stock_controller' => ['master.view','receipt.view','receipt.approve','prod.approve','qc.view'],
+        'stock_controller' => ['master.view','receipt.view','qc.view'],
         'lab_tech' => ['qc.view','qc.manage','master.view'],
         'inspector' => ['qc.view','qc.manage','master.view'],
         'patternist' => ['marker.view','marker.manage','master.view','wo.view'],
         'factory_follow' => ['wo.view','cut.view','cut.manage','prod.manage','master.view'],
-        'finance' => ['po.view','po.finance','po.approve','forecast.view'],
-        'gm' => ['master.view','po.view','po.approve','po.finance','receipt.view','qc.view','marker.view',
-                 'wo.view','wo.approve','cut.view','cut.approve','forecast.view','settings.audit'],
+        'finance' => ['po.view','po.finance','forecast.view'],
+        'gm' => ['master.view','po.view','po.finance','receipt.view','qc.view','marker.view',
+                 'wo.view','cut.view','forecast.view','settings.audit'],
     ];
 
     public function run(): void

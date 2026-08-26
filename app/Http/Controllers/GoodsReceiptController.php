@@ -12,8 +12,8 @@ use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Services\ActivityLogger;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowEngine;
 use App\Services\FlowMessage;
 use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
@@ -49,7 +49,7 @@ class GoodsReceiptController extends Controller
         /* طابور الإفراج: فحص + معمل معتمدين */
         $awaiting = \App\Models\Consignment::with(['fabricType', 'color', 'supplier'])
             ->where('status', 'lab_done')
-            ->whereDoesntHave('goodsReceipts', fn ($x) => $x->whereIn('status', ['pending', 'approved']))
+            ->whereDoesntHave('goodsReceipts', fn ($x) => $x->where('status', 'approved'))
             ->latest('id')->limit(10)->get();
 
         return view('receipts.index', [
@@ -57,7 +57,7 @@ class GoodsReceiptController extends Controller
             'title'   => 'أذون استلام الخام (الإفراج)',
             'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','total_qty','total_rolls','status'])->paginate(25)->withQueryString(),
             'filters' => [
-                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','approved'=>'تم','rejected'=>'ملغي']],
                 ['name' => 'supplier_id', 'label' => 'كل الموردين', 'options' => \App\Models\Supplier::orderBy('name')->pluck('name','id'), 'width' => 160],
             ],
             'summary' => [
@@ -65,7 +65,7 @@ class GoodsReceiptController extends Controller
                  'note' => 'اتفحصت وخلّصت معمل — ناقصها إذن استلام.',
                  'link' => [route('consignments.index'), 'شوف الأحواض']],
                 ['label' => 'إجمالي الأذون', 'value' => $base->count(), 'note' => 'كل أذون الاستلام المسجلة.'],
-                ['label' => 'مستنية اعتماد', 'value' => (clone $base)->where('status','pending')->count(), 'tone' => 'warn',
+                ['label' => 'مستنية اعتماد', 'value' => (clone $base)->where('status','draft')->count(), 'tone' => 'warn',
                  'note' => 'الاعتماد هو اللي بيفرج عن القماش.'],
                 ['label' => 'كجم مفرج عنها', 'value' => number_format((float) (clone $base)->where('status','approved')->sum('total_qty'), 0), 'tone' => 'ok',
                  'note' => 'قماش بقى متاح فعليًا لأوامر الشغل.'],
@@ -139,7 +139,7 @@ class GoodsReceiptController extends Controller
     public function edit(GoodsReceipt $goods_receipt)
     {
         $goods_receipt->load(['lines.color', 'lines.fabricType',
-            'consignment.fabricType', 'consignment.color', 'consignment.supplier', 'approval.steps']);
+            'consignment.fabricType', 'consignment.color', 'consignment.supplier', ]);
 
         return view('receipts.form', $this->formData([
             'row'     => $goods_receipt,
@@ -188,8 +188,8 @@ class GoodsReceiptController extends Controller
         /* حارس نسبة الزيادة اتنقل لإذن الإضافة — الاستلام بيتحسب هناك.
            هنا إفراج جودة بس. */
 
-        ApprovalEngine::submit($goods_receipt);
-        return back()->with(FlowMessage::flash('receipt.submitted', $goods_receipt));
+        FlowEngine::complete($goods_receipt, 'إذن الاستلام ' . $goods_receipt->doc_no . ' اتسجّل وخلص');
+        return back()->with(FlowMessage::flash('receipt.done', $goods_receipt));
     }
 
     public function print(GoodsReceipt $goods_receipt)

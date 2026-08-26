@@ -4,11 +4,12 @@ namespace App\Support;
 
 trait HasDocumentStatus
 {
+    /* السيستم من غير اعتمادات: المستند يا مسودة يا خلص.
+       «تم» معناها إن آثاره اتنفذت والخطوة اللي بعدها نزلت لصاحبها. */
     public const DEFAULT_STATUSES = [
         'draft'    => 'مسودة',
-        'pending'  => 'تحت الاعتماد',
-        'approved' => 'معتمد',
-        'rejected' => 'مرفوض',
+        'approved' => 'تم',
+        'rejected' => 'ملغي',
     ];
 
     public function statusList(): array
@@ -33,8 +34,11 @@ trait HasDocumentStatus
     }
 
     public function isDraft(): bool    { return $this->status === 'draft'; }
-    public function isPending(): bool  { return $this->status === 'pending'; }
+    /** @deprecated مفيش «تحت الاعتماد» في السيستم — موجودة للتوافق بس */
+    public function isPending(): bool  { return false; }
     public function isApproved(): bool { return $this->status === 'approved'; }
+    /** خلص وآثاره اتنفذت */
+    public function isDone(): bool     { return in_array($this->status, ['approved', 'received', 'closed'], true); }
 
     /** المستند يتقفل عن التعديل بمجرد ما يخرج من المسودة */
     public function isEditable(): bool

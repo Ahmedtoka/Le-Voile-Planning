@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\HasApproval;
+use App\Support\HasDocumentIdentity;
 use App\Support\HasComments;
 use App\Support\HasDocumentStatus;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class WorkOrder extends Model
 {
-    use HasApproval, HasDocumentStatus, HasComments;
+    use HasDocumentIdentity, HasDocumentStatus, HasComments;
 
     protected $guarded = [];
     protected $casts = ['wo_date' => 'date', 'due_date' => 'date', 'receive_date' => 'date'];
@@ -25,7 +25,7 @@ class WorkOrder extends Model
 
     public const STATUSES = [
         'draft'              => 'مسودة',
-        'pending'            => 'تحت الاعتماد',
+        'pending'            => 'قديم — اتنقل',   // داتا قديمة قبل شيل الاعتمادات
         'approved'           => 'معتمد',
         'rejected'           => 'مرفوض',
         'sent_to_factory'    => 'مُرسل للمصنع',
@@ -69,6 +69,20 @@ class WorkOrder extends Model
     public function scopeOpen($q)
     {
         return $q->whereNotIn('status', ['closed', 'cancelled', 'draft', 'superseded']);
+    }
+
+    /**
+     * أوامر لسه عايزة خام من المخزن.
+     *
+     * التعريف الوحيد للطابور ده في السيستم كله — الكاونتر والكارت والجدول
+     * كلهم بينادوه، علشان الرقم اللي فوق يبقى هو نفسه اللي تحت.
+     * لاحظ `cutting`: الصرف الجزئي بينقل الأمر للحالة دي، وبرغم كده
+     * لسه فيه باقي مطلوب صرفه — فلازم يفضل في الطابور.
+     */
+    public function scopeNeedsMaterial($q)
+    {
+        return $q->whereIn('status', ['approved', 'sent_to_factory', 'cutting'])
+            ->whereHas('fabrics', fn ($f) => $f->whereColumn('issued_qty', '<', 'planned_qty'));
     }
 
     public function scopeLate($q)

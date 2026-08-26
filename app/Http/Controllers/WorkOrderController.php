@@ -13,8 +13,8 @@ use App\Models\WorkOrder;
 use App\Models\WorkOrderFabric;
 use App\Models\WorkOrderLine;
 use App\Services\ActivityLogger;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowEngine;
 use App\Services\FlowMessage;
 use App\Services\PlanningEngine;
 use App\Support\FiltersIndex;
@@ -136,8 +136,7 @@ class WorkOrderController extends Controller
             'cutDeclarations.lines', 'receipts.lines',
             'accessoryRequirements.accessory',
             'materialIssueLines.materialIssue',
-            'approval.steps.user', 'approval.steps.role',
-        ]);
+            ]);
 
         $work_order->load(['revisedFrom', 'revisions']);
 
@@ -215,8 +214,8 @@ class WorkOrderController extends Controller
             return back()->withErrors(['msg' => implode(' | ', array_unique($blockers))]);
         }
 
-        ApprovalEngine::submit($work_order);
-        return back()->with(FlowMessage::flash('wo.submitted', $work_order));
+        FlowEngine::complete($work_order, 'أمر الشغل ' . $work_order->wo_no . ' اتسجّل وخلص');
+        return back()->with(FlowMessage::flash('wo.done', $work_order));
     }
 
     public function sendToFactory(WorkOrder $work_order)

@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ConsignmentController;
@@ -41,6 +40,23 @@ Route::post('/logout',[AuthController::class, 'logout'])->name('logout');
 Route::middleware('auth.user')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    /* ── مكاتب الإدارات ────────────────────────────────────────────
+     | لكل إدارة شاشة واحدة: اللي مستني منها + زراير الإنشاء + جداول
+     | المتابعة. الإنشاء دايمًا في شاشة منفصلة.
+    */
+    Route::get('desk/planning',   [\App\Http\Controllers\DeskController::class, 'planning'])
+        ->middleware('can.do:wo.view,po.request,forecast.view')->name('desk.planning');
+    Route::get('desk/purchasing', [\App\Http\Controllers\DeskController::class, 'purchasing'])
+        ->middleware('can.do:po.source')->name('desk.purchasing');
+    Route::get('desk/finance',    [\App\Http\Controllers\DeskController::class, 'finance'])
+        ->middleware('can.do:po.finance')->name('desk.finance');
+    Route::get('desk/store',      [\App\Http\Controllers\DeskController::class, 'store'])
+        ->middleware('can.do:receipt.view,receipt.manage')->name('desk.store');
+    Route::get('desk/quality',    [\App\Http\Controllers\DeskController::class, 'quality'])
+        ->middleware('can.do:qc.view,qc.manage')->name('desk.quality');
+    Route::get('desk/factory',    [\App\Http\Controllers\DeskController::class, 'factory'])
+        ->middleware('can.do:cut.view,cut.manage,prod.manage,wo.view')->name('desk.factory');
 
     // ── البيانات الأساسية ────────────────────────────────────────
     Route::prefix('master')->group(function () {
@@ -239,9 +255,6 @@ Route::middleware('auth.user')->group(function () {
     });
 
     // ── الاعتمادات ───────────────────────────────────────────────
-    Route::get('approvals',                    [ApprovalController::class, 'index'])->name('approvals.index');
-    Route::post('approvals/{approval}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
-    Route::post('approvals/{approval}/reject',  [ApprovalController::class, 'reject'])->name('approvals.reject');
 
     // ── نقاش المستندات ───────────────────────────────────────────
     Route::post('comments/{type}/{id}', [CommentController::class, 'store'])->name('comments.store');
@@ -278,13 +291,6 @@ Route::middleware('auth.user')->group(function () {
         Route::middleware('can.do:settings.roles')->group(function () {
             Route::get('roles', [SettingsController::class, 'roles'])->name('settings.roles');
             Route::post('roles/{role}/permissions', [SettingsController::class, 'saveRolePermissions'])->name('settings.roles.permissions');
-        });
-
-        Route::middleware('can.do:settings.flows')->group(function () {
-            Route::get('approval-flows',                        [SettingsController::class, 'approvalFlows'])->name('settings.flows');
-            Route::post('approval-flows/{flow}/steps',          [SettingsController::class, 'addFlowStep'])->name('settings.flows.step.add');
-            Route::delete('approval-flows/{flow}/steps/{step}', [SettingsController::class, 'deleteFlowStep'])->name('settings.flows.step.delete');
-            Route::post('approval-flows/{flow}/toggle',         [SettingsController::class, 'toggleFlow'])->name('settings.flows.toggle');
         });
 
         // أدوات الداتا — للأدمن بس

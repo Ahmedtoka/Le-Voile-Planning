@@ -106,9 +106,22 @@ class CoverageService
         ][$flag] ?? 'secondary';
     }
 
-    /** جدول التغطية لكل الموديلات النشطة */
+    /** الحسبة تقيلة (٤ استعلامات لكل موديل) — بنحسبها مرة واحدة في الريكوست */
+    private static ?array $memo = null;
+
+    /**
+     * جدول التغطية لكل الموديلات النشطة.
+     *
+     * بتتنادى من الداشبورد أكتر من مرة ومن كاونتر المنيو في كل صفحة،
+     * فبنحفظ النتيجة في الميموري لطول الريكوست. أي كتابة على المخزون
+     * في نفس الريكوست نادرة، ولو حصلت الصفحة اللي بعدها بتحسب من أول.
+     */
     public static function overview(): array
     {
+        if (self::$memo !== null) {
+            return self::$memo;
+        }
+
         $rows = [];
         foreach (ProductModel::where('is_active', true)->orderBy('name')->get() as $m) {
             $row = self::forModel($m->id);
@@ -119,6 +132,6 @@ class CoverageService
         // الأخطر الأول
         usort($rows, fn ($a, $b) => ($a['cover_days'] ?? PHP_INT_MAX) <=> ($b['cover_days'] ?? PHP_INT_MAX));
 
-        return $rows;
+        return self::$memo = $rows;
     }
 }

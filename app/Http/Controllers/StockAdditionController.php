@@ -47,19 +47,19 @@ class StockAdditionController extends Controller
                 ->orderBy('delivery_date')->limit(8)->get(),
             'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','total_qty','total_rolls','status','consignment_no'])->paginate(25)->withQueryString(),
             'filters' => [
-                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','approved'=>'تم','rejected'=>'ملغي']],
                 ['name' => 'supplier_id', 'label' => 'كل الموردين', 'options' => \App\Models\Supplier::orderBy('name')->pluck('name','id'), 'width' => 160],
                 ['name' => 'warehouse_id', 'label' => 'كل المخازن', 'options' => \App\Models\Warehouse::orderBy('name')->pluck('name','id'), 'width' => 150],
             ],
             'summary' => [
                 ['label' => 'إجمالي الأذون', 'value' => $base->count(),
                  'note' => 'كل أذون الإضافة المسجلة.'],
-                ['label' => 'مستنية اعتماد', 'value' => (clone $base)->where('status','pending')->count(), 'tone' => 'warn',
-                 'note' => 'اتبعتت ولسه ما اتعمدتش.'],
+                ['label' => 'نزلت الفحص', 'value' => (clone $base)->where('status','approved')->count(), 'tone' => 'ok',
+                 'note' => 'اتسجلت واتولّدت رسايلها ونزلت طابور الفحص.'],
                 ['label' => 'مسودات', 'value' => (clone $base)->where('status','draft')->count(), 'tone' => 'muted',
-                 'note' => 'لسه ما اتبعتتش للاعتماد.'],
+                 'note' => 'لسه ما نزلتش الفحص.'],
                 ['label' => 'كجم داخلة', 'value' => number_format((float) (clone $base)->where('status','approved')->sum('total_qty'), 0), 'tone' => 'brand',
-                 'note' => 'إجمالي الكميات اللي دخلت المخزن بالأذون المعتمدة.'],
+                 'note' => 'إجمالي الكميات اللي دخلت المخزن.'],
                 ['label' => 'أتواب داخلة', 'value' => number_format((int) (clone $base)->where('status','approved')->sum('total_rolls')),
                  'note' => 'العدد اللي المورد قال عليه — الفحص هيجرده.'],
             ],
@@ -141,7 +141,7 @@ class StockAdditionController extends Controller
             'lines.color', 'lines.fabricType', 'lines.accessory',
             'lines.poLine.color', 'lines.poLine.fabricType',
             'lines.consignment.fabricType', 'lines.consignment.color',
-            'approval.steps', 'consignment',
+            'consignment',
         ]);
 
         // نفس شكل بيانات الإنشاء — عشان الشاشة ترسم السطور المرتبطة بالطلب صح

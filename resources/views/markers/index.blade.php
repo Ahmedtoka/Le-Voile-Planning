@@ -10,7 +10,7 @@
              style="width:170px" placeholder="ينفع على عرض…">
       <select name="status" class="form-select form-select-sm" style="width:140px" onchange="this.form.submit()">
         <option value="">كل الحالات</option>
-        @foreach(['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض'] as $k=>$v)
+        @foreach(['draft'=>'مسودة','approved'=>'تم','rejected'=>'ملغي'] as $k=>$v)
           <option value="{{ $k }}" @selected(request('status')===$k)>{{ $v }}</option>@endforeach
       </select>
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>

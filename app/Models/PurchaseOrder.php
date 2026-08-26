@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Support\HasApproval;
+use App\Support\HasDocumentIdentity;
 use App\Support\HasComments;
 use App\Support\HasDocumentStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseOrder extends Model
 {
-    use HasApproval, HasDocumentStatus, HasComments;
+    use HasDocumentIdentity, HasDocumentStatus, HasComments;
 
     protected $guarded = [];
     protected $casts = [
@@ -25,7 +25,7 @@ class PurchaseOrder extends Model
 
     public const STATUSES = [
         'draft'              => 'مسودة',
-        'pending'            => 'تحت الاعتماد',
+        'pending'            => 'قديم — اتنقل',   // داتا قديمة قبل شيل الاعتمادات
         'approved'           => 'معتمد',
         'rejected'           => 'مرفوض',
         'partially_received' => 'مستلم جزئيًا',
@@ -42,7 +42,7 @@ class PurchaseOrder extends Model
         'planning'   => 'عند التخطيط',
         'purchasing' => 'عند المشتريات',
         'finance'    => 'عند الحسابات',       // للتوافق مع داتا قديمة
-        'approval'   => 'تحت الاعتماد',      // للتوافق مع داتا قديمة
+        'approval'   => 'قديم — اتنقل',      // للتوافق مع داتا قديمة
         'approved'   => 'اتسعّر — مستني الاستلام',
         'receiving'  => 'جاري الاستلام',
         'closed'     => 'مقفول',
@@ -82,30 +82,16 @@ class PurchaseOrder extends Model
         return self::STAGE_COLORS[$this->stage] ?? 'secondary';
     }
 
-    /** الأصناف والكميات — التخطيط بس اللي يعدّلها، وقبل ما تنزل للمشتريات */
-    public function planningEditable(): bool
-    {
-        return $this->stage === 'planning';
-    }
-
     /** المورد والأسعار والتوريد — المشتريات */
     public function purchasingEditable(): bool
     {
         return $this->stage === 'purchasing';
     }
 
-    /** جاهز ينزل للمشتريات؟ */
-    public function readyForPurchasing(): bool
+    /** اتسعّر ونزل للحسابات ولسه ما سجّلتش علمها بيه */
+    public function needsFinanceAck(): bool
     {
-        return $this->stage === 'planning' && $this->lines()->count() > 0;
-    }
-
-    /** جاهز ينزل للحسابات؟ لازم مورد وتاريخ توريد */
-    public function readyForFinance(): bool
-    {
-        return $this->stage === 'purchasing'
-            && $this->supplier_id
-            && $this->delivery_date;
+        return (bool) $this->sourced_at && ! $this->finance_at;
     }
 
     /** المستحق المتوقع للمورد من الطلب ده */

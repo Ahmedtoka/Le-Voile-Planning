@@ -2,68 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Approval;
-use App\Services\ActivityLogger;
-use App\Services\ApprovalEngine;
-use App\Services\FlowMessage;
-use Illuminate\Http\Request;
-
+/**
+ * @deprecated السيستم بقى من غير اعتمادات — كل مستند بيخلص ويدفع اللي بعده.
+ * الكلاس ده متسايب فاضي عشان أي راوت أو لينك قديم ما يكسرش.
+ */
 class ApprovalController extends Controller
 {
-    /** صندوق الاعتمادات — اللي مستني مني */
-    public function index(Request $request)
+    public function index()
     {
-        $user = auth()->user();
-
-        $mine = ApprovalEngine::pendingFor($user)->paginate(25);
-
-        $all = Approval::with(['steps', 'requester'])
-            ->when($request->get('status'), fn ($q, $s) => $q->where('status', $s))
-            ->when($request->get('doc_type'), fn ($q, $t) => $q->where('doc_type', $t))
-            ->latest('id')->limit(50)->get();
-
-        return view('approvals.index', [
-            'title' => 'الاعتمادات',
-            'mine'  => $mine,
-            'all'   => $all,
-            'docTypes' => Approval::query()->distinct()->pluck('doc_type'),
-        ]);
-    }
-
-    public function approve(Request $request, Approval $approval)
-    {
-        try {
-            ApprovalEngine::approve($approval, auth()->user(), $request->input('comment'));
-        } catch (\Throwable $e) {
-            return back()->withErrors(['msg' => $e->getMessage()]);
-        }
-
-        ActivityLogger::log('approved', $approval, 'اعتماد ' . $approval->subject_no);
-
-        // لو المستند خلّص دورته، الرسالة بتقول الخطوة الجاية بتاعت نوعه هو
-        $approval->refresh();
-        $key = $approval->status === 'approved'
-            ? match ($approval->doc_type) {
-                'stock_addition' => 'addition.approved',
-                'goods_receipt'  => 'receipt.approved',
-                default          => 'approval.approved',
-            }
-            : 'approval.approved';
-
-        return back()->with(FlowMessage::flash($key, null, ['no' => $approval->subject_no]));
-    }
-
-    public function reject(Request $request, Approval $approval)
-    {
-        $request->validate(['comment' => ['required', 'string']], [], ['comment' => 'سبب الرفض']);
-
-        try {
-            ApprovalEngine::reject($approval, auth()->user(), $request->input('comment'));
-        } catch (\Throwable $e) {
-            return back()->withErrors(['msg' => $e->getMessage()]);
-        }
-
-        ActivityLogger::log('rejected', $approval, 'رفض ' . $approval->subject_no);
-        return back()->with(FlowMessage::flash('approval.rejected', null, ['no' => $approval->subject_no]));
+        return redirect()->route('dashboard');
     }
 }

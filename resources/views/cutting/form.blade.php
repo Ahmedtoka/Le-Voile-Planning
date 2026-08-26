@@ -4,8 +4,6 @@
 
 @include('partials.flow_bar', ['flow' => 'prod', 'step' => 'cut'])
 
-@include('partials.approval_box')
-
 <div class="note-box mb-3">
   <b>طول الفرشة الفعلي هو أهم رقم هنا.</b>
   المخطط كان {{ $wo->governingFabric()?->effective_spread ?? '—' }} متر. لو المصنع فرش على أكتر — ولو 5 سنتيمتر —
@@ -92,7 +90,7 @@
 
   @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ واحتساب الانحراف</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('إرسال للاعتماد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
+    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('بيان القص هيتسجل ويتحدث عليه أمر الشغل. متأكد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> سجّل القص</button>
   @endif
 </form>
 @if($mode==='edit' && $row->isEditable())

@@ -8,8 +8,8 @@ use App\Models\MaterialIssue;
 use App\Models\MaterialIssueLine;
 use App\Models\Warehouse;
 use App\Models\WorkOrder;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowEngine;
 use App\Services\FlowMessage;
 use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
@@ -36,18 +36,13 @@ class MaterialIssueController extends Controller
 
         $base = MaterialIssue::query();
 
-        // أوامر معتمدة ومتبعتة للمصنع ولسه ما اتصرفلهاش خامة
-        $waiting = WorkOrder::whereIn('status', ['approved', 'sent_to_factory'])
-            ->whereDoesntHave('materialIssueLines', fn ($x) =>
-                $x->whereHas('materialIssue', fn ($m) => $m->where('status', 'approved')))
-            ->count();
+        // أوامر لسه عايزة خام — نفس تعريف الكاونتر والكارت بالظبط
+        $waiting = WorkOrder::needsMaterial()->count();
 
         /* طابور الصرف: أوامر شغالة وفيها خامات ناقصة صرف */
-        $awaitingWos = \App\Models\WorkOrder::with(['factory', 'fabrics.issueLines.materialIssue'])
-            ->whereIn('status', ['approved', 'sent_to_factory', 'cutting'])
-            ->latest('id')->limit(20)->get()
-            ->filter(fn ($w) => $w->fabrics->sum(fn ($f) => $f->shortage) > 0.001)
-            ->take(10)->values();
+        $awaitingWos = \App\Models\WorkOrder::with(['factory', 'fabrics'])
+            ->needsMaterial()
+            ->latest('id')->limit(10)->get();
 
         return view('issues.index', [
             'awaitingWos' => $awaitingWos,
@@ -55,7 +50,7 @@ class MaterialIssueController extends Controller
             'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','total_qty','status'])->paginate(25)->withQueryString(),
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات',
-                 'options' => ['draft' => 'مسودة', 'pending' => 'تحت الاعتماد', 'approved' => 'معتمد', 'rejected' => 'مرفوض']],
+                 'options' => ['draft' => 'مسودة', 'approved' => 'تم', 'rejected' => 'ملغي']],
                 ['name' => 'factory_id', 'label' => 'كل المصانع',
                  'options' => Factory::orderBy('name')->pluck('name', 'id'), 'width' => 150],
                 ['name' => 'warehouse_id', 'label' => 'كل المخازن',
@@ -65,7 +60,7 @@ class MaterialIssueController extends Controller
                 ['label' => 'أوامر مستنية صرف', 'value' => $waiting, 'tone' => $waiting ? 'warn' : 'ok',
                  'note' => 'معتمدة ومتبعتة للمصنع ولسه ما خدتش خامة.'],
                 ['label' => 'إجمالي الأذون', 'value' => $base->count(), 'note' => 'كل أذون الصرف المسجلة.'],
-                ['label' => 'مستنية اعتماد', 'value' => (clone $base)->where('status', 'pending')->count(),
+                ['label' => 'مستنية اعتماد', 'value' => (clone $base)->where('status', 'draft')->count(),
                  'tone' => 'warn', 'note' => 'الاعتماد هو اللي بيخصم من الحوض.'],
                 ['label' => 'أتواب منصرفة',
                  'value' => number_format((int) (clone $base)->where('status', 'approved')->sum('total_rolls')),
@@ -126,7 +121,7 @@ class MaterialIssueController extends Controller
 
     public function edit(MaterialIssue $material_issue)
     {
-        $material_issue->load(['lines.consignment', 'lines.fabricType', 'lines.color', 'lines.workOrder', 'approval.steps']);
+        $material_issue->load(['lines.consignment', 'lines.fabricType', 'lines.color', 'lines.workOrder', ]);
 
         return view('issues.form', $this->formData([
             'row'    => $material_issue,
@@ -186,8 +181,8 @@ class MaterialIssueController extends Controller
             return back()->withErrors(['msg' => 'الكمية أكبر من المفرج عنه — ' . implode(' | ', $over)]);
         }
 
-        ApprovalEngine::submit($material_issue);
-        return back()->with(FlowMessage::flash('issue.submitted', $material_issue));
+        FlowEngine::complete($material_issue, 'إذن الصرف ' . $material_issue->doc_no . ' اتسجّل وخلص');
+        return back()->with(FlowMessage::flash('issue.done', $material_issue));
     }
 
     public function print(MaterialIssue $material_issue)

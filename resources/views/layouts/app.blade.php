@@ -460,6 +460,22 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
        'صورة السيستم كله: الشراء، القماش، التشغيل، التغطية'],
     ]],
 
+    /* مكاتب الإدارات — كل واحد بيفتح مكتبه فيلاقي شغله مستنيه */
+    ['desks', 'مكاتب الإدارات', 'bi-person-workspace', [
+      ['desk.planning',   'التخطيط', 'bi-graph-up-arrow', 'wo.view|po.request|forecast.view',
+       'طلب الخامة، أوامر الشغل، التغطية والفوركاست'],
+      ['desk.purchasing', 'المشتريات', 'bi-cart3', 'po.source',
+       'تسعير الطلبات وتحديد المورد وتاريخ التوريد'],
+      ['desk.finance',    'الحسابات', 'bi-cash-coin', 'po.finance',
+       'متابعة المستحق للموردين — من غير اعتمادات'],
+      ['desk.store',      'المخزن', 'bi-box-seam', 'receipt.view|receipt.manage',
+       'الاستلام والإفراج وصرف الخام واستلام الإنتاج'],
+      ['desk.quality',    'الجودة والمعمل', 'bi-search', 'qc.view|qc.manage',
+       'فحص الأتواب وقراءات البنشر والمرفوضات'],
+      ['desk.factory',    'متابعة المصانع', 'bi-buildings', 'cut.view|cut.manage|prod.manage|wo.view',
+       'بيانات القص واستلامات الإنتاج'],
+    ]],
+
     ['buy', 'دورة الشراء', 'bi-cart3', [
       ['purchase-orders.index', 'طلبات الشراء', 'bi-file-earmark-text',
        'po.view|po.request|po.source|po.finance',
@@ -529,11 +545,9 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
     ]],
 
     ['sys', 'النظام', 'bi-gear', [
-      ['approvals.index', 'الاعتمادات', 'bi-check2-square', null, 'كل حاجة مستنية توقيعك'],
       ['io.index', 'استيراد وتصدير', 'bi-file-earmark-excel', 'import.manage', 'إكسيل: ألوان ومبيعات وأرصدة وتقارير'],
       ['settings.users', 'المستخدمين', 'bi-people', 'settings.users', 'إضافة مستخدمين وتحديد أدوارهم'],
       ['settings.roles', 'الأدوار والصلاحيات', 'bi-key', 'settings.roles', 'مين يشوف إيه ومين يعمل إيه'],
-      ['settings.flows', 'دورات الاعتماد', 'bi-diagram-3', 'settings.flows', 'مين يعتمد إيه — بيتغيّر من غير كود'],
       ['settings.activity', 'سجل الحركة', 'bi-journal-text', 'settings.audit', 'مين عمل إيه وإمتى'],
       ['settings.data', 'أدوات الداتا', 'bi-database-gear', 'settings.data', 'مسح بيانات الشغل أو توليد داتا ديمو'],
     ]],

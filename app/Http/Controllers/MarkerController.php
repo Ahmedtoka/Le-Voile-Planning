@@ -10,8 +10,8 @@ use App\Models\MarkerRequest;
 use App\Models\ProductModel;
 use App\Models\Size;
 use App\Models\User;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowEngine;
 use App\Services\FlowMessage;
 use App\Services\Notifier;
 use Illuminate\Http\Request;
@@ -143,7 +143,7 @@ class MarkerController extends Controller
 
     public function edit(Marker $marker)
     {
-        $marker->load(['lines.productModel', 'lines.size', 'approval.steps']);
+        $marker->load(['lines.productModel', 'lines.size', ]);
         return view('markers.form', $this->formData(['row' => $marker, 'mode' => 'edit']));
     }
 
@@ -182,8 +182,8 @@ class MarkerController extends Controller
                 . $marker->fabric_width_cm . '). ده هيخلّينا نحرق الجنب ونرميه.']);
         }
 
-        ApprovalEngine::submit($marker);
-        return back()->with(FlowMessage::flash('marker.submitted', $marker));
+        FlowEngine::complete($marker, 'الماركر ' . $marker->code . ' اتسجّل وخلص');
+        return back()->with(FlowMessage::flash('marker.done', $marker));
     }
 
     public function destroy(Marker $marker)

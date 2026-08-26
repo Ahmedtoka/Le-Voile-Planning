@@ -7,8 +7,6 @@
 
 @include('partials.flow_bar', ['flow' => 'prod', 'step' => 'wo'])
 
-@include('partials.approval_box')
-
 {{-- النسخ المعدلة --}}
 @if($row->status === 'superseded' && $row->revisions->isNotEmpty())
   <div class="alert alert-warning py-2">
@@ -358,8 +356,9 @@
         @if($row->isEditable())
           <a href="{{ route('work-orders.edit',$row) }}" class="btn btn-sm btn-outline-plum">
             <i class="bi bi-pencil" aria-hidden="true"></i> تعديل</a>
-          <form method="post" action="{{ route('work-orders.submit',$row) }}" onsubmit="return confirm('إرسال للاعتماد؟')">@csrf
-            <button class="btn btn-sm btn-success"><i class="bi bi-send" aria-hidden="true"></i> إرسال للاعتماد</button>
+          <form method="post" action="{{ route('work-orders.submit',$row) }}"
+                onsubmit="return confirm('أمر الشغل هيتقفل ويتحجز عليه الخام ويبقى جاهز للصرف للمصنع. متأكد؟')">@csrf
+            <button class="btn btn-sm btn-success"><i class="bi bi-check2-circle" aria-hidden="true"></i> اعتمده للتشغيل</button>
           </form>
         @endif
         @if($row->status === 'approved')
@@ -413,7 +412,7 @@
     <div class="modal-body">
       <p class="small">
         الأمر المعتمد مش بيتعدل مباشرة — هتتعمل نسخة جديدة (مسودة) بكل بياناته،
-        تعدّل فيها وتبعتها للاعتماد من جديد. النسخة دي هتتعلم «استُبدل بنسخة أحدث» وتفضل محفوظة.
+        تعدّل فيها وتعتمدها من جديد. النسخة دي هتتعلم «استُبدل بنسخة أحدث» وتفضل محفوظة.
       </p>
       <label class="form-label req">سبب التعديل</label>
       <textarea name="revision_reason" rows="3" class="form-control" required

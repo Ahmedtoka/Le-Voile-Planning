@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\HasApproval;
+use App\Support\HasDocumentIdentity;
 use App\Support\HasComments;
 use App\Support\HasDocumentStatus;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Marker extends Model
 {
-    use HasApproval, HasDocumentStatus, HasComments;
+    use HasDocumentIdentity, HasDocumentStatus, HasComments;
 
     protected $guarded = [];
     protected $casts = ['is_active' => 'boolean'];

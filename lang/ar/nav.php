@@ -2,6 +2,14 @@
 /** أسماء الشاشات — بيستخدمها الداشبورد والإشعارات وكاونترات المنيو. */
 return [
     'dashboard'                  => 'لوحة التحكم',
+    'desk.planning'              => 'مكتب التخطيط',
+    'desk.purchasing'            => 'مكتب المشتريات',
+    'desk.finance'               => 'مكتب الحسابات',
+    'desk.store'                 => 'مكتب المخزن',
+    'desk.quality'               => 'مكتب الجودة',
+    'desk.factory'               => 'مكتب متابعة المصانع',
+    'stock.onhand'               => 'رصيد الرسايل',
+    'stock.movements'            => 'حركة المخزون',
     'purchase-orders.index'      => 'طلبات الشراء',
     'purchasing.queue'           => 'المشتريات',
     'finance.payables'           => 'الحسابات',
@@ -22,7 +30,6 @@ return [
     'planning.forecast'          => 'الفوركاست',
     'planning.color-ratios'      => 'نسب الألوان',
     'planning.safety-stock'      => 'مخزون الأمان',
-    'approvals.index'            => 'الاعتمادات',
     'io.index'                   => 'استيراد وتصدير',
     'product-models.index'       => 'الموديلات',
     'colors.index'               => 'الألوان',
@@ -34,7 +41,6 @@ return [
     'warehouses.index'           => 'المخازن',
     'settings.users'             => 'المستخدمين',
     'settings.roles'             => 'الأدوار والصلاحيات',
-    'settings.flows'             => 'دورات الاعتماد',
     'settings.activity'          => 'سجل الحركة',
     'settings.data'              => 'أدوات الداتا',
 ];

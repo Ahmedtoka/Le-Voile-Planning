@@ -38,24 +38,19 @@
 </div>
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-2">
-    @include('partials.kpi', ['value'=>$purchase['planning'], 'label'=>'عند التخطيط', 'tone'=>'muted',
-      'note'=>'طلبات لسه بتتكتب، ما نزلتش للمشتريات.',
-      'link'=>[route('purchase-orders.index',['stage'=>'planning']),'افتح']])
-  </div>
-  <div class="col-6 col-lg-2">
     @include('partials.kpi', ['value'=>$purchase['purchasing'], 'label'=>'عند المشتريات', 'tone'=>'warn',
       'note'=>'مستنية تحديد مورد وسعر وتاريخ توريد.',
       'link'=>[route('purchase-orders.index',['stage'=>'purchasing']),'افتح']])
   </div>
   <div class="col-6 col-lg-2">
-    @include('partials.kpi', ['value'=>$purchase['finance'], 'label'=>'عند الحسابات', 'tone'=>'warn',
-      'note'=>'مستنية علم الحسابات بالمستحق.',
-      'link'=>[route('finance.payables'),'المستحقات']])
+    @include('partials.kpi', ['value'=>$purchase['finance'], 'label'=>'مستحق ما اتشافش', 'tone'=>'warn',
+      'note'=>'اتسعّر ونزل للحسابات، ولسه ما سجّلتش علمها بيه. مش بيوقّف الاستلام.',
+      'link'=>[route('finance.payables',['unseen'=>1]),'راجعها']])
   </div>
   <div class="col-6 col-lg-2">
-    @include('partials.kpi', ['value'=>$purchase['approval'], 'label'=>'تحت الاعتماد', 'tone'=>'warn',
-      'note'=>'مستنية توقيع مدير المشتريات والمدير العام.',
-      'link'=>[route('approvals.index'),'الاعتمادات']])
+    @include('partials.kpi', ['value'=>$purchase['receiving'], 'label'=>'جاري الاستلام', 'tone'=>'warn',
+      'note'=>'وصل جزء منها والباقي مستني.',
+      'link'=>[route('stock-additions.index'),'أذون الإضافة']])
   </div>
   <div class="col-6 col-lg-2">
     @include('partials.kpi', ['value'=>$money($purchase['payable']), 'label'=>'مستحق متوقع للموردين',
@@ -396,24 +391,29 @@
 
   <div class="col-lg-5">
     <div class="card mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-check2-square" aria-hidden="true"></i> مستني اعتمادك</span>
-        <a href="{{ route('approvals.index') }}" class="btn btn-sm btn-outline-plum py-0">الكل</a>
-      </div>
+      <div class="card-header"><i class="bi bi-hourglass-split" aria-hidden="true"></i> اللي مستني منك دلوقتي</div>
       <ul class="list-group list-group-flush">
-        @forelse($myApprovals as $a)
+        @forelse($myQueue as $q)
           <li class="list-group-item d-flex justify-content-between align-items-center py-2">
             <div>
-              <div class="fw-bold num">{{ $a->subject_no }}</div>
-              <div class="hint">{{ __('doc.'.$a->doc_type) }} — {{ $a->currentStepRow()?->title }}</div>
+              <div class="fw-bold">{{ $q['label'] }}</div>
+              <div class="hint">{{ $q['note'] }}</div>
             </div>
-            <span class="hint">{{ $a->created_at->diffForHumans() }}</span>
+            <a href="{{ $q['link'] }}" class="btn btn-sm btn-plum py-0">
+              {{ $q['count'] }} <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            </a>
           </li>
         @empty
-          <li class="list-group-item text-center text-muted py-3">مفيش حاجة مستنية اعتمادك.</li>
+          <li class="list-group-item">
+            <div class="empty-state">
+              <i class="bi bi-check2-circle ico" aria-hidden="true"></i>
+              <div class="t">مفيش حاجة مستنية منك.</div>
+              <div>كل اللي عليك خلص — أي شغل جديد هيظهر هنا فورًا.</div>
+            </div>
+          </li>
         @endforelse
       </ul>
-      <div class="card-footer bg-white hint">دورة الاعتماد بتتظبط من الإعدادات ← دورات الاعتماد.</div>
+      <div class="card-footer bg-white hint">مفيش اعتمادات في السيستم — كل خطوة بتنزل لصاحبها على طول.</div>
     </div>
 
     <div class="card mb-3">

@@ -17,7 +17,6 @@ use App\Models\PurchaseOrder;
 use App\Models\StockAddition;
 use App\Models\FabricInspection;
 use App\Models\WorkOrder;
-use App\Services\ApprovalEngine;
 use App\Services\CoverageService;
 use App\Services\MenuCounters;
 
@@ -47,7 +46,7 @@ class DashboardController extends Controller
 
             'factoryLoad' => $this->factoryLoad(),
             'coverage'    => array_slice(CoverageService::overview(), 0, 8),
-            'myApprovals' => $user ? ApprovalEngine::pendingFor($user)->limit(6)->get() : collect(),
+            'myQueue'     => $this->myQueue($user),
             'lateOrders'  => WorkOrder::late()->with(['factory','consignment'])->limit(6)->get(),
             'talk'        => DocumentComment::with('user')->where('kind', '!=', 'system')
                                 ->latest('id')->limit(6)->get(),
@@ -61,17 +60,53 @@ class DashboardController extends Controller
     }
 
     // ── ① دورة الشراء ───────────────────────────────────────────
+    /**
+     * طابور الشغل الشخصي — «اللي مستني منك» مبني على الكاونترز الحقيقية
+     * بتاعة المنيو، مش على دورة اعتماد (السيستم من غير اعتمادات).
+     */
+    private function myQueue($user): array
+    {
+        if (!$user) return [];
+
+        $meta = [
+            'purchasing.queue'        => ['طلبات مستنية تسعير', 'حدد المورد والسعر وتاريخ التوريد'],
+            'stock-additions.index'   => ['قماش مستني استلام', 'طلبات اتسعّرت والبضاعة في الطريق'],
+            'inspections.index'       => ['رسايل مستنية فحص', 'جرد الأتواب وقياس العرض والطول'],
+            'lab-reports.index'       => ['رسايل مستنية المعمل', 'قراءات البنشر والانكماش'],
+            'goods-receipts.index'    => ['رسايل مستنية الإفراج', 'خلصت فحص ومعمل — افرج عنها'],
+            'material-issues.index'   => ['أوامر مستنية صرف خام', 'اصرف الخامة للمصنع'],
+            'cut-declarations.index'  => ['أوامر مستنية بيان قص', 'سجّل المقصوص الفعلي'],
+            'production-receipts.index' => ['قطع مستنية استلام', 'استلم التام من المصنع'],
+            'markers.requests'        => ['طلبات ماركر مفتوحة', 'الباترونست لسه ما رفعش الماركر'],
+            'rejections.index'        => ['مرفوضات ومعلّق', 'محتاجة قرار وردّ على المورد'],
+            'consignments.index'      => ['أحواض جاهزة للتشغيل', 'مفرج عنها ومستنية أمر شغل'],
+        ];
+
+        $out = [];
+        foreach (MenuCounters::for($user) as $route => $n) {
+            if ($n < 1 || !isset($meta[$route]) || !\Route::has($route)) continue;
+            $out[] = [
+                'label' => $meta[$route][0],
+                'note'  => $meta[$route][1],
+                'count' => $n,
+                'link'  => route($route),
+            ];
+        }
+
+        return $out;
+    }
+
     private function purchase(): array
     {
         $byStage = PurchaseOrder::query()->selectRaw('stage, COUNT(*) c')->groupBy('stage')->pluck('c', 'stage');
 
         return [
-            'planning'   => (int) ($byStage['planning'] ?? 0),
             'purchasing' => (int) ($byStage['purchasing'] ?? 0),
-            'finance'    => (int) ($byStage['finance'] ?? 0),
-            'approval'   => (int) ($byStage['approval'] ?? 0),
+            'finance'    => PurchaseOrder::whereNotNull('sourced_at')->whereNull('finance_at')
+                                ->whereNotIn('stage', ['closed', 'cancelled'])->count(),
+            'receiving'  => (int) ($byStage['receiving'] ?? 0),
             'open'       => PurchaseOrder::whereNotIn('stage', ['closed','cancelled'])->count(),
-            'payable'    => (float) PurchaseOrder::whereIn('stage', ['finance','approval','approved','receiving'])
+            'payable'    => (float) PurchaseOrder::whereIn('stage', ['finance','approved','receiving'])
                                 ->sum('total'),
             'due_30'     => (float) PurchaseOrder::whereIn('stage', ['approved','receiving'])
                                 ->whereNotNull('delivery_date')
@@ -88,7 +123,7 @@ class DashboardController extends Controller
         return [
             'awaiting_inspection' => Consignment::where('status', 'under_inspection')
                 ->whereDoesntHave('inspections', fn ($q) => $q->where('status', 'approved'))->count(),
-            'awaiting_lab' => Consignment::onHold()
+            'awaiting_lab' => Consignment::where('status', 'inspected')
                 ->whereDoesntHave('labReports', fn ($q) => $q->where('status', 'approved'))->count(),
             'awaiting_release' => Consignment::whereIn('status', ['inspected','lab_done'])
                 ->whereHas('inspections', fn ($q) => $q->where('status', 'approved'))

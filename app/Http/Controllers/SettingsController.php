@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
-use App\Models\ApprovalFlow;
-use App\Models\ApprovalFlowStep;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -97,59 +95,6 @@ class SettingsController extends Controller
     {
         $role->permissions()->sync($request->input('permissions', []));
         return back()->with('success', 'تم حفظ صلاحيات الدور «' . $role->name . '».');
-    }
-
-    // ── دورات الاعتماد ──
-
-    public function approvalFlows()
-    {
-        return view('settings.approval_flows', [
-            'title' => 'دورات الاعتماد',
-            'flows' => ApprovalFlow::with(['steps.role', 'steps.user'])->orderBy('id')->get(),
-            'roles' => Role::orderBy('name')->pluck('name', 'id'),
-            'users' => User::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
-        ]);
-    }
-
-    public function addFlowStep(Request $request, ApprovalFlow $flow)
-    {
-        $data = $request->validate([
-            'title'        => ['required', 'string', 'max:191'],
-            'role_id'      => ['nullable', 'exists:roles,id'],
-            'user_id'      => ['nullable', 'exists:users,id'],
-            'min_amount'   => ['nullable', 'numeric', 'min:0'],
-            'is_mandatory' => ['boolean'],
-        ], [], ['title' => 'اسم الخطوة']);
-
-        if (empty($data['role_id']) && empty($data['user_id'])) {
-            return back()->withErrors(['msg' => 'لازم تحدد دور أو مستخدم للخطوة.']);
-        }
-
-        ApprovalFlowStep::create($data + [
-            'approval_flow_id' => $flow->id,
-            'step_no'          => (int) $flow->steps()->max('step_no') + 1,
-            'is_mandatory'     => $request->boolean('is_mandatory', true),
-        ]);
-
-        return back()->with('success', 'تمت إضافة الخطوة.');
-    }
-
-    public function deleteFlowStep(ApprovalFlow $flow, ApprovalFlowStep $step)
-    {
-        $step->delete();
-
-        // إعادة ترقيم الخطوات
-        foreach ($flow->steps()->orderBy('step_no')->get() as $i => $s) {
-            $s->update(['step_no' => $i + 1]);
-        }
-
-        return back()->with('success', 'تم حذف الخطوة.');
-    }
-
-    public function toggleFlow(ApprovalFlow $flow)
-    {
-        $flow->update(['is_active' => !$flow->is_active]);
-        return back()->with('success', 'تم تغيير حالة الدورة.');
     }
 
     // ── سجل الحركة ──

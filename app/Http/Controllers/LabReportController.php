@@ -9,8 +9,8 @@ use App\Models\LabGsmReading;
 use App\Models\LabReport;
 use App\Models\Supplier;
 use App\Models\User;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowEngine;
 use App\Services\FlowMessage;
 use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
@@ -28,7 +28,7 @@ class LabReportController extends Controller
         /* طابور المعمل: اللي خلص فحص ومستني قراءات البنشر والانكماش */
         $awaiting = Consignment::with(['fabricType', 'color', 'supplier'])
             ->whereIn('status', ['inspected'])
-            ->whereDoesntHave('labReports', fn ($x) => $x->whereIn('status', ['pending', 'approved']))
+            ->whereDoesntHave('labReports', fn ($x) => $x->where('status', 'approved'))
             ->latest('id')->limit(10)->get();
         $this->applyFilters($q, $request,
             ['doc_no', 'paper_serial', 'consignment.consignment_no'],
@@ -37,15 +37,16 @@ class LabReportController extends Controller
         );
 
         $base    = LabReport::query();
-        $waiting = Consignment::onHold()
-            ->whereDoesntHave('labReports', fn ($x) => $x->whereIn('status', ['pending','approved']))->count();
+        // المتفحص بس — اللي لسه ما اتفحصش مش من شغل المعمل
+        $waiting = Consignment::where('status', 'inspected')
+            ->whereDoesntHave('labReports', fn ($x) => $x->where('status', 'approved'))->count();
 
         return view('lab.index', [
             'awaiting' => $awaiting,
             'title'   => 'تقارير المعمل',
             'rows'    => $this->applySort($q, $request, ['doc_no','doc_date','avg_gsm','status'])->paginate(25)->withQueryString(),
             'filters' => [
-                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','approved'=>'تم','rejected'=>'ملغي']],
                 ['name' => 'fabric_type_id', 'label' => 'كل الخامات', 'options' => FabricType::orderBy('name')->pluck('name','id'), 'width' => 160],
                 ['name' => 'technician_id', 'label' => 'كل الفنيين', 'options' => User::orderBy('name')->pluck('name','id'), 'width' => 150],
             ],
@@ -105,7 +106,7 @@ class LabReportController extends Controller
     public function edit(LabReport $lab_report)
     {
         $lab_report->load(['readings', 'consignment.fabricType', 'consignment.color',
-            'consignment.supplier', 'approval.steps']);
+            'consignment.supplier', ]);
         return view('lab.form', $this->formData([
             'row'     => $lab_report,
             'mode'    => 'edit',
@@ -134,8 +135,8 @@ class LabReportController extends Controller
         if (!$lab_report->readings()->count()) {
             return back()->withErrors(['msg' => 'مينفعش ترسل تقرير من غير قراءات بنشر.']);
         }
-        ApprovalEngine::submit($lab_report);
-        return back()->with(FlowMessage::flash('lab.submitted', $lab_report));
+        FlowEngine::complete($lab_report, 'تقرير المعمل ' . $lab_report->doc_no . ' اتسجّل وخلص');
+        return back()->with(FlowMessage::flash('lab.done', $lab_report));
     }
 
     public function print(LabReport $lab_report)

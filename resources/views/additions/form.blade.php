@@ -7,8 +7,6 @@
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'addition'])
 
-@include('partials.approval_box')
-
 @php $po = $poInfo ?? $row->purchaseOrder ?? null; @endphp
 @if($po)
   @php

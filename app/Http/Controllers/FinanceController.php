@@ -18,17 +18,19 @@ class FinanceController extends Controller
     {
         $q = PurchaseOrder::with(['supplier', 'sourcer', 'lines'])
             ->whereNotNull('supplier_id')
-            ->whereIn('stage', ['finance', 'approval', 'approved', 'receiving'])
-            ->orderByRaw("FIELD(stage,'finance','approval','approved','receiving')")
+            ->whereIn('stage', ['finance', 'approved', 'receiving'])
+            // اللي لسه ما اتشافش الأول — الحسابات بتتفرّج وتسجّل علمها
+            ->orderByRaw('finance_at IS NOT NULL')
             ->orderBy('delivery_date');
 
         if ($s = $request->get('supplier_id')) $q->where('supplier_id', $s);
         if ($st = $request->get('stage'))      $q->where('stage', $st);
+        if ($request->get('unseen'))           $q->whereNull('finance_at');
 
         $rows = $q->paginate(30)->withQueryString();
 
         $base = PurchaseOrder::whereNotNull('supplier_id')
-            ->whereIn('stage', ['finance', 'approval', 'approved', 'receiving']);
+            ->whereIn('stage', ['finance', 'approved', 'receiving']);
 
         return view('finance.payables', [
             'title'     => 'المستحقات المتوقعة للموردين',

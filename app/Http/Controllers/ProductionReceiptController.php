@@ -6,8 +6,8 @@ use App\Models\ProductionReceipt;
 use App\Models\ProductionReceiptLine;
 use App\Models\Warehouse;
 use App\Models\WorkOrder;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowEngine;
 use App\Services\FlowMessage;
 use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
@@ -46,7 +46,7 @@ class ProductionReceiptController extends Controller
             'title'   => 'استلامات الإنتاج',
             'rows'    => $this->applySort($q, $request, ['doc_no','doc_date','total_pieces','status'])->paginate(25)->withQueryString(),
             'filters' => [
-                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','approved'=>'تم','rejected'=>'ملغي']],
                 ['name' => 'factory_id', 'label' => 'كل المصانع', 'options' => \App\Models\Factory::orderBy('name')->pluck('name','id'), 'width' => 150],
                 ['name' => 'warehouse_id', 'label' => 'كل المخازن', 'options' => Warehouse::orderBy('name')->pluck('name','id'), 'width' => 150],
             ],
@@ -102,7 +102,7 @@ class ProductionReceiptController extends Controller
 
     public function edit(ProductionReceipt $production_receipt)
     {
-        $production_receipt->load(['lines', 'workOrder.lines.productModel', 'workOrder.lines.size', 'approval.steps']);
+        $production_receipt->load(['lines', 'workOrder.lines.productModel', 'workOrder.lines.size', ]);
 
         return view('production.form', [
             'title'      => 'استلام إنتاج ' . $production_receipt->doc_no,
@@ -148,8 +148,8 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        ApprovalEngine::submit($production_receipt);
-        return back()->with(FlowMessage::flash('prod.submitted', $production_receipt));
+        FlowEngine::complete($production_receipt, 'استلام الإنتاج ' . $production_receipt->doc_no . ' اتسجّل وخلص');
+        return back()->with(FlowMessage::flash('prod.done', $production_receipt));
     }
 
     public function destroy(ProductionReceipt $production_receipt)

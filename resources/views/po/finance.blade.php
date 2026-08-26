@@ -67,7 +67,7 @@
       <textarea name="finance_note" rows="2" class="form-control form-control-sm mb-2"
                 placeholder="مثال: هيتصرف على دفعتين — الأولى مع التوريد"></textarea>
       <button class="btn btn-plum btn-sm px-4"><i class="bi bi-check2" aria-hidden="true"></i> علمت</button>
-      <span class="hint ms-2">هيرجعك على الحسابات، والطلب يبقى جاهز للاستلام.</span>
+      <span class="hint ms-2">تسجيل علم بس — الطلب أصلًا ماشي عند المورد والمخزن.</span>
     </form>
   </div>
 </div>

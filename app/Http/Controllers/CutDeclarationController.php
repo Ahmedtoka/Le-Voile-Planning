@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\CutDeclaration;
 use App\Models\CutDeclarationLine;
 use App\Models\WorkOrder;
-use App\Services\ApprovalEngine;
 use App\Services\DocNumber;
+use App\Services\FlowEngine;
 use App\Services\FlowMessage;
 use App\Services\PlanningEngine;
 use App\Support\FiltersIndex;
@@ -34,7 +34,7 @@ class CutDeclarationController extends Controller
 
         $base    = CutDeclaration::query();
         $waiting = WorkOrder::whereIn('status', ['sent_to_factory','cutting'])
-            ->whereDoesntHave('cutDeclarations', fn ($x) => $x->whereIn('status', ['pending','approved']))->count();
+            ->whereDoesntHave('cutDeclarations', fn ($x) => $x->where('status', 'approved'))->count();
 
         /* طابور القص: الأوامر اللي عند المصنع */
         $awaitingWos = \App\Models\WorkOrder::with('factory')
@@ -46,7 +46,7 @@ class CutDeclarationController extends Controller
             'title'   => 'بيانات القص',
             'rows'    => $this->applySort($q, $request, ['doc_no','doc_date','total_pieces','variance_pct','status'])->paginate(25)->withQueryString(),
             'filters' => [
-                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','pending'=>'تحت الاعتماد','approved'=>'معتمد','rejected'=>'مرفوض']],
+                ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','approved'=>'تم','rejected'=>'ملغي']],
                 ['name' => 'factory_id', 'label' => 'كل المصانع', 'options' => \App\Models\Factory::orderBy('name')->pluck('name','id'), 'width' => 150],
                 ['name' => 'variance_flag', 'label' => 'كل الانحرافات', 'options' => WorkOrder::VARIANCE_FLAGS, 'width' => 150],
             ],
@@ -103,7 +103,7 @@ class CutDeclarationController extends Controller
 
     public function edit(CutDeclaration $cut_declaration)
     {
-        $cut_declaration->load(['lines', 'workOrder.lines.productModel', 'workOrder.lines.size', 'approval.steps']);
+        $cut_declaration->load(['lines', 'workOrder.lines.productModel', 'workOrder.lines.size', ]);
 
         return view('cutting.form', [
             'title' => 'بيان قص ' . $cut_declaration->doc_no,
@@ -140,8 +140,8 @@ class CutDeclarationController extends Controller
                 . config('lvplanning.variance.warn_pct') . '%). اكتب سبب الفرق قبل الإرسال.']);
         }
 
-        ApprovalEngine::submit($cut_declaration);
-        return back()->with(FlowMessage::flash('cut.submitted', $cut_declaration));
+        FlowEngine::complete($cut_declaration, 'بيان القص ' . $cut_declaration->doc_no . ' اتسجّل وخلص');
+        return back()->with(FlowMessage::flash('cut.done', $cut_declaration));
     }
 
     public function destroy(CutDeclaration $cut_declaration)

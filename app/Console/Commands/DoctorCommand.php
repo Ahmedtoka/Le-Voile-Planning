@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ApprovalFlow;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Console\Command;
@@ -177,6 +176,27 @@ class DoctorCommand extends Command
         } catch (\Throwable $e) {
             $this->note('مقدرتش أتأكد من الميجريشنات: ' . $e->getMessage());
         }
+
+        // مستندات عالقة من نسخة الاعتمادات القديمة — مش هتظهر في أي شاشة
+        try {
+            $stuck = 0;
+            foreach ([
+                'purchase_orders', 'stock_additions', 'fabric_inspections', 'lab_reports',
+                'goods_receipts', 'markers', 'work_orders', 'material_issues',
+                'cut_declarations', 'production_receipts',
+            ] as $t) {
+                if (Schema::hasTable($t) && Schema::hasColumn($t, 'status')) {
+                    $stuck += DB::table($t)->where('status', 'pending')->count();
+                }
+            }
+
+            $stuck === 0
+                ? $this->ok('مفيش مستندات عالقة «تحت الاعتماد»')
+                : $this->bad("فيه {$stuck} مستند عالق من نسخة الاعتمادات القديمة",
+                    'php artisan lv:finish-pending');
+        } catch (\Throwable $e) {
+            $this->note('مقدرتش أفحص المستندات العالقة: ' . $e->getMessage());
+        }
     }
 
     // ── السكيما ──────────────────────────────────────────────────
@@ -304,11 +324,6 @@ class DoctorCommand extends Command
         Role::count() > 0
             ? $this->ok(Role::count() . ' دور معرّف')
             : $this->bad('مفيش أدوار', 'php artisan db:seed --class=Database\\\\Seeders\\\\RolePermissionSeeder --force');
-
-        ApprovalFlow::count() > 0
-            ? $this->ok(ApprovalFlow::count() . ' دورة اعتماد')
-            : $this->note('مفيش دورات اعتماد — المستندات هتتعمد مباشرة',
-                'php artisan db:seed --class=Database\\\\Seeders\\\\ApprovalFlowSeeder --force');
 
         if (Schema::hasTable('consignments')) {
             $n = DB::table('consignments')->count();
