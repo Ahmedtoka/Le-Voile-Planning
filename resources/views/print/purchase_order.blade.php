@@ -25,7 +25,6 @@
       <tr><td class="k">ادارة المشتريات</td><td></td></tr>
       <tr><td class="k">اسم الموظف</td><td>{{ $po->employee?->name }}</td></tr>
       <tr><td class="k">تاريخ التوريد</td><td>{{ $po->delivery_date?->format('d/n/Y') }}</td></tr>
-      <tr><td class="k">مكان التسليم</td><td>{{ $po->delivery_place }}</td></tr>
     </table>
   </td>
 </tr></table>

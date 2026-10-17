@@ -33,7 +33,7 @@ class ColorController extends Controller
 
         return view('crud.colors', [
             'title'    => 'الألوان',
-            'rows'     => $q->orderBy('code')->paginate(50)->withQueryString(),
+            'rows'     => $q->orderBy('id', 'desc')->paginate(50)->withQueryString(),
             'families' => Color::whereNotNull('family')->distinct()->orderBy('family')->pluck('family'),
             'counts'   => [
                 'all'     => Color::count(),

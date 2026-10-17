@@ -12,8 +12,6 @@ class SizeController extends BaseCrudController
     protected string $singular   = 'مقاس';
     protected string $routeName  = 'sizes';
     protected string $permission = 'sizes';
-    protected string $orderBy    = 'sort_order';
-    protected string $orderDir   = 'asc';
 
     protected function fields(): array
     {

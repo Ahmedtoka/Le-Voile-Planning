@@ -47,7 +47,7 @@ class DashboardController extends Controller
             'factoryLoad' => $this->factoryLoad(),
             'coverage'    => array_slice(CoverageService::overview(), 0, 8),
             'myQueue'     => $this->myQueue($user),
-            'lateOrders'  => WorkOrder::late()->with(['factory','consignment'])->limit(6)->get(),
+            'lateOrders'  => WorkOrder::late()->with(['factory','consignment'])->latest('id')->limit(6)->get(),
             'talk'        => DocumentComment::with('user')->where('kind', '!=', 'system')
                                 ->latest('id')->limit(6)->get(),
 

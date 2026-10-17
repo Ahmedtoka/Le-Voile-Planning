@@ -54,8 +54,9 @@
 @else
   <div class="note-box mb-3">
     <b>ده أول مستند في دورة القماش.</b>
-    «نزّل للفحص» بيولّد <b>رسالة (حوض) لكل لون</b> وبينزّل القماش طابور الفحص فورًا —
-    الكمية بتدخل المخزن <b>محجوزة</b> والإفراج بيحصل بإذن الاستلام الخام بعد الفحص والمعمل.
+    <b>الحفظ</b> بيولّد <b>رسالة (حوض) لكل لون</b> وبينزّل القماش طابور الفحص فورًا —
+    مفيش خطوة «إرسال» بعد كده. الكمية بتدخل المخزن <b>محجوزة</b>،
+    والإفراج بيحصل من شاشة استلام الخام بعد ما الفحص والمعمل يخلّصوا.
     <br><b>مهم:</b> اكتب عدد الأتواب صح — الفحص هيجرد عليه.
   </div>
 @endif
@@ -206,16 +207,17 @@
     @endif
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
-  @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm"
-            onclick="if(confirm('هيتولّد لكل لون رسالة (حوض) وينزل طابور الفحص فورًا. متأكد؟')) document.getElementById('submitForm').submit()">
-      <i class="bi bi-send" aria-hidden="true"></i> نزّل للفحص</button>
+  @if($editable)
+    <button class="btn btn-plum btn-sm">
+      <i class="bi bi-save" aria-hidden="true"></i> حفظ
+    </button>
+    <span class="hint ms-2">
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      الحفظ بيخلّص الإذن على طول — بيتولّد حوض لكل لون
+      {{ ($row->receipt_type ?? 'normal') === 'container' ? 'ويدخل المخزن مباشرة' : 'وينزل طابور الفحص' }}.
+    </span>
   @endif
 </form>
-@if($mode==='edit' && $row->isEditable())
-  <form id="submitForm" method="post" action="{{ route('stock-additions.submit',$row) }}" class="d-none">@csrf</form>
-@endif
 
 @php
   $saConsignments = $mode === 'edit'

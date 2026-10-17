@@ -100,7 +100,7 @@ class LabReportController extends Controller
             return $lab;
         });
 
-        return redirect()->route('lab-reports.edit', $lab)->with('success', 'تم إنشاء التقرير ' . $lab->doc_no);
+        return $this->finish($lab->refresh());
     }
 
     public function edit(LabReport $lab_report)
@@ -126,17 +126,32 @@ class LabReportController extends Controller
             $lab_report->refresh()->recalc();
         });
 
-        return back()->with('success', 'تم الحفظ.');
+        return $this->finish($lab_report->refresh());
     }
 
+    /**
+     * الحفظ = خلاص. مفيش زرار «نزّله للإفراج» منفصل —
+     * أول ما القراءات تتحفظ، الرسالة بتظهر في شاشة استلام الخام.
+     */
+    private function finish(LabReport $lab_report)
+    {
+        if (!$lab_report->readings()->count()) {
+            return redirect()->route('lab-reports.edit', $lab_report)
+                ->withErrors(['msg' => 'مينفعش تحفظ تقرير من غير قراءة بنشر واحدة على الأقل.']);
+        }
+
+        FlowEngine::complete($lab_report, 'تقرير المعمل ' . $lab_report->doc_no . ' اتحفظ وخلص');
+
+        return redirect()->route('lab-reports.edit', $lab_report)
+            ->with(FlowMessage::flash('lab.done', $lab_report));
+    }
+
+    /** الراوت القديم — بيوصّل لنفس التخليص */
     public function submit(LabReport $lab_report)
     {
         abort_unless($lab_report->isEditable(), 403);
-        if (!$lab_report->readings()->count()) {
-            return back()->withErrors(['msg' => 'مينفعش ترسل تقرير من غير قراءات بنشر.']);
-        }
-        FlowEngine::complete($lab_report, 'تقرير المعمل ' . $lab_report->doc_no . ' اتسجّل وخلص');
-        return back()->with(FlowMessage::flash('lab.done', $lab_report));
+
+        return $this->finish($lab_report);
     }
 
     public function print(LabReport $lab_report)

@@ -471,12 +471,41 @@ class DocumentEffects
                 null, 'danger');
         }
 
-        if ($insp->result !== 'rejected') {
-            Notifier::broadcastToRole('storekeeper', 'receipt_due',
-                'حوض متفحص — جاهز لإذن الاستلام',
-                'الرسالة ' . $c->consignment_no,
-                null, 'info');
+        /* «مرفوض» في الفحص = القماش بيقف هنا وينزل شاشة المرفوضات على طول.
+           بنسجّله كبند رفض مفتوح على المورد بدل ما يفضل حوض ميّت في السيستم. */
+        if ($insp->result === 'rejected') {
+            $exists = \App\Models\GoodsReceiptRejection::where('fabric_inspection_id', $insp->id)->exists();
+
+            if (! $exists) {
+                \App\Models\GoodsReceiptRejection::create([
+                    'fabric_inspection_id' => $insp->id,
+                    'consignment_id'       => $c->id,
+                    'color_id'             => $c->color_id,
+                    'color_code'           => $c->color?->code,
+                    'lot_label'            => $c->consignment_no,
+                    'kind'                 => 'rejected',
+                    'rolls_count'          => (int) ($insp->counted_rolls ?: $c->rolls_count),
+                    'qty'                  => (float) ($insp->counted_kg ?: $c->total_kg),
+                    'unit'                 => 'كجم',
+                    'party'                => 'quality',
+                    'reason'               => $insp->notes ?: 'اترفض في الفحص',
+                    'resolution'           => 'open',
+                    'created_by'           => auth()->id(),
+                ]);
+            }
+
+            Notifier::broadcastToRole('purchasing', 'rejection_open',
+                'قماش اترفض في الفحص',
+                'الرسالة ' . $c->consignment_no . ' — ' . ($insp->notes ?: 'من غير سبب مكتوب'),
+                null, 'danger');
+
+            return;
         }
+
+        Notifier::broadcastToRole('storekeeper', 'receipt_due',
+            'حوض متفحص — جاهز لإذن الاستلام',
+            'الرسالة ' . $c->consignment_no,
+            null, 'info');
     }
 
     /** ③ تقرير معمل معتمد ⇒ نقل متوسط البنشر والانكماش للحوض */

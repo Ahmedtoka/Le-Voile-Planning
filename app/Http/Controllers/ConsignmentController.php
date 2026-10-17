@@ -56,6 +56,7 @@ class ConsignmentController extends Controller
         $consignment->load([
             'supplier', 'fabricType', 'color', 'warehouse', 'purchaseOrder',
             'rolls', 'inspections.rolls', 'labReports.readings',
+            'workOrderFabrics' => fn ($q) => $q->orderBy('id', 'desc'),
             'workOrderFabrics.workOrder.factory',
         ]);
 

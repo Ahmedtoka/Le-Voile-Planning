@@ -33,10 +33,7 @@
         <div class="col-md-2"><label class="form-label req">تاريخ التوريد</label>
           <input type="date" name="delivery_date" class="form-control form-control-sm"
                  value="{{ old('delivery_date',$row->delivery_date?->format('Y-m-d')) }}" required></div>
-        <div class="col-md-3"><label class="form-label">مكان التسليم</label>
-          <input name="delivery_place" class="form-control form-control-sm"
-                 value="{{ old('delivery_place',$row->delivery_place ?: 'العبور') }}"></div>
-        <div class="col-md-3"><label class="form-label">المخزن</label>
+        <div class="col-md-6"><label class="form-label">المخزن</label>
           <select name="warehouse_id" class="form-select form-select-sm"><option value="">—</option>
             @foreach($warehouses as $k=>$v)<option value="{{ $k }}" @selected(old('warehouse_id',$row->warehouse_id)==$k)>{{ $v }}</option>@endforeach
           </select></div>

@@ -12,8 +12,6 @@ class FactoryController extends BaseCrudController
     protected string $singular   = 'مصنع';
     protected string $routeName  = 'factories';
     protected string $permission = 'factories';
-    protected string $orderBy    = 'name';
-    protected string $orderDir   = 'asc';
 
     protected function fields(): array
     {

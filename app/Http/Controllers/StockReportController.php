@@ -58,7 +58,7 @@ class StockReportController extends Controller
             'rows'    => $this->applySort($q, $request,
                             ['consignment_no', 'arrival_date', 'total_kg', 'remaining_kg',
                              'hold_kg', 'rolls_count', 'min_width_cm', 'status'],
-                            'arrival_date')->paginate(50)->withQueryString(),
+                            'id')->paginate(50)->withQueryString(),
             'fabrics' => FabricType::orderBy('name')->pluck('name', 'id'),
             'statuses'=> Consignment::STATUSES,
             'summary' => [

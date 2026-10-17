@@ -12,6 +12,7 @@ use App\Models\StockAdditionLine;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Services\DocNumber;
+use App\Services\FlowEngine;
 use App\Services\FlowMessage;
 use App\Support\FiltersIndex;
 use Illuminate\Http\Request;
@@ -44,7 +45,7 @@ class StockAdditionController extends Controller
             // approved = لسه موصلش حاجة · receiving = وصل جزء ومستني الباقي
             'awaitingPos' => PurchaseOrder::with(['supplier', 'lines'])
                 ->whereIn('stage', ['approved', 'receiving'])
-                ->orderBy('delivery_date')->limit(8)->get(),
+                ->latest('id')->limit(8)->get(),
             'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','total_qty','total_rolls','status','consignment_no'])->paginate(25)->withQueryString(),
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','approved'=>'تم','rejected'=>'ملغي']],
@@ -132,7 +133,8 @@ class StockAdditionController extends Controller
             return $sa;
         });
 
-        return redirect()->route('stock-additions.edit', $sa)->with('success', 'تم إنشاء الإذن ' . $sa->doc_no);
+        // الحفظ = خلاص: الرسايل بتتولّد والقماش بينزل الفحص فورًا
+        return $this->finish($sa->refresh());
     }
 
     public function edit(StockAddition $stock_addition)
@@ -200,14 +202,20 @@ class StockAdditionController extends Controller
             $stock_addition->refresh()->recalcTotals();
         });
 
-        return back()->with('success', 'تم الحفظ.');
+        return $this->finish($stock_addition->refresh());
     }
 
-    public function submit(StockAddition $stock_addition)
+    /**
+     * الحُرّاس اللي لازم يعدّوا قبل ما الإذن يخلص.
+     * بيرجّع نص المشكلة، أو null لو كل حاجة تمام.
+     *
+     * مفصولين في ميثود لوحدها لأن «حفظ» بقى هو نفسه «خلّص» —
+     * فالحفظ بينده عليهم، ولو وقع الإذن بيفضل مسودة والمستخدم يصلّح.
+     */
+    private function guard(StockAddition $stock_addition): ?string
     {
-        abort_unless($stock_addition->isEditable(), 403);
         if (!$stock_addition->lines()->count()) {
-            return back()->withErrors(['msg' => 'مينفعش ترسل إذن فاضي.']);
+            return 'مينفعش تحفظ إذن فاضي — ضيف صنف واحد على الأقل.';
         }
 
         // لازم عدد أتواب على كل سطر قماش — الفحص (أو الجرد) بيتم عليه
@@ -215,9 +223,9 @@ class StockAdditionController extends Controller
             ->whereNotNull('fabric_type_id')->where('rolls_count', '<=', 0)->count();
 
         if ($missing) {
-            return back()->withErrors(['msg' => $stock_addition->receipt_type === 'container'
+            return $stock_addition->receipt_type === 'container'
                 ? 'لازم تكتب عدد الأتواب لكل صنف قماش — الجرد والفحص الاستدلالي بيتم عليه.'
-                : 'لازم تكتب عدد الأتواب لكل صنف قماش — الفحص هيجرد عليه.']);
+                : 'لازم تكتب عدد الأتواب لكل صنف قماش — الفحص هيجرد عليه.';
         }
 
         // أكتر من لون في نفس الاستلامة عادي — كل لون بياخد رسالته (حوضه) لوحده
@@ -231,9 +239,8 @@ class StockAdditionController extends Controller
                     $q->where('id', '!=', $stock_addition->consignment_id))
                 ->exists();
             if ($taken) {
-                return back()->withErrors(['msg' =>
-                    'رقم الرسالة «' . $manualNo . '» مستخدم قبل كده لاستلامة تانية — '
-                    . 'سيبه فاضي والسيستم هيولّد رقم جديد، أو اكتب رقم مختلف.']);
+                return 'رقم الرسالة «' . $manualNo . '» مستخدم قبل كده لاستلامة تانية — '
+                    . 'سيبه فاضي والسيستم هيولّد رقم جديد، أو اكتب رقم مختلف.';
             }
         }
 
@@ -242,9 +249,8 @@ class StockAdditionController extends Controller
         foreach ($stock_addition->lines as $line) {
             if ($line->fabric_type_id && $line->po_color_id
                 && $line->color_id != $line->po_color_id && !$line->color_action) {
-                return back()->withErrors(['msg' =>
-                    'فيه صنف وصل بلون مختلف عن المطلوب في الطلب — افتح الإذن واختار القرار: '
-                    . 'تسكينه مكان اللون المطلوب، أو فتح طلب جديد والأصلي يفضل مطلوب.']);
+                return 'فيه صنف وصل بلون مختلف عن المطلوب في الطلب — افتح الإذن واختار القرار: '
+                    . 'تسكينه مكان اللون المطلوب، أو فتح طلب جديد والأصلي يفضل مطلوب.';
             }
         }
 
@@ -271,11 +277,10 @@ class StockAdditionController extends Controller
 
                 if ($left > 0.0001 && !$line->remainder_eta) {
                     $name = trim(($poLine->fabricType?->name ?? '') . ' ' . ($poLine->color?->code ?? ''));
-                    return back()->withErrors(['msg' =>
-                        'الصنف «' . $name . '» اتستلم جزئي — باقي '
+                    return 'الصنف «' . $name . '» اتستلم جزئي — باقي '
                         . rtrim(rtrim(number_format($left, 3), '0'), '.') . ' ' . $poLine->unit
                         . '. حدد على السطر «الباقي هيوصل إمتى؟» قبل الإرسال '
-                        . '(لو المورد مش محدد، حط تاريخ تقديري واكتب السبب في الملاحظة).']);
+                        . '(لو المورد مش محدد، حط تاريخ تقديري واكتب السبب في الملاحظة).';
                 }
             }
         }
@@ -299,22 +304,34 @@ class StockAdditionController extends Controller
 
                 $qty = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
                 if ((float) $poLine->received_qty + $qty > $poLine->max_allowed_qty + 0.0001) {
-                    return back()->withErrors(['msg' =>
-                        'الكمية بتتعدى نسبة الزيادة المسموح بها (' . $poLine->tolerance_pct
+                    return 'الكمية بتتعدى نسبة الزيادة المسموح بها (' . $poLine->tolerance_pct
                         . '%) على الطلب ' . $po->po_no . ' — المستلم قبل كده '
                         . rtrim(rtrim(number_format((float) $poLine->received_qty, 2), '0'), '.')
                         . ' والمطلوب ' . rtrim(rtrim(number_format((float) $poLine->qty, 2), '0'), '.')
-                        . ' ' . $poLine->unit . '.']);
+                        . ' ' . $poLine->unit . '.';
                 }
             }
         }
-        /* مفيش دورة اعتماد هنا — القماش وصل فعلًا والفاحص مستنيه.
-           «نزّل للفحص» بيعتمد الإذن فورًا: بيولّد الأحواض (رسالة لكل لون)،
-           بيحدّث الطلب، وبينزل طابور الفحص في نفس اللحظة. */
-        DB::transaction(function () use ($stock_addition) {
-            $stock_addition->forceFill(['status' => 'approved'])->save();
-            \App\Services\DocumentEffects::onApproved($stock_addition->refresh());
-        });
+        return null;
+    }
+
+    /**
+     * الحفظ = خلاص. مفيش زرار «نزّل للفحص» منفصل.
+     *
+     * القماش وصل فعلًا والفاحص مستنيه — فأول ما الإذن يتحفظ صح،
+     * بيتولّد حوض (رسالة) لكل لون، الطلب بيتحدّث، والقماش بينزل
+     * طابور الفحص في نفس اللحظة (أو المخزن على طول لو الاستلام حاويات).
+     */
+    private function finish(StockAddition $stock_addition)
+    {
+        if ($problem = $this->guard($stock_addition)) {
+            // الإذن بيفضل مسودة — المستخدم يصلّح ويحفظ تاني
+            return redirect()->route('stock-additions.edit', $stock_addition)
+                ->withErrors(['msg' => $problem]);
+        }
+
+        FlowEngine::complete($stock_addition,
+            'الإذن ' . $stock_addition->doc_no . ' اتحفظ ونزل الخطوة اللي بعدها');
 
         $consignments = $stock_addition->lines()->whereNotNull('consignment_id')
             ->pluck('consignment_id')->unique()->count();
@@ -322,7 +339,16 @@ class StockAdditionController extends Controller
         \App\Services\ActivityLogger::log('approved', $stock_addition,
             'الإذن ' . $stock_addition->doc_no . ' اتنزّل للفحص — اتولّد ' . $consignments . ' رسالة');
 
-        return back()->with(FlowMessage::flash('addition.approved', $stock_addition));
+        return redirect()->route('stock-additions.edit', $stock_addition)
+            ->with(FlowMessage::flash('addition.approved', $stock_addition));
+    }
+
+    /** الراوت القديم — بيوصّل لنفس التخليص عشان أي لينك قديم ما يقعش */
+    public function submit(StockAddition $stock_addition)
+    {
+        abort_unless($stock_addition->isEditable(), 403);
+
+        return $this->finish($stock_addition);
     }
 
     public function print(StockAddition $stock_addition)

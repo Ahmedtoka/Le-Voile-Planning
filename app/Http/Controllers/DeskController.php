@@ -71,7 +71,7 @@ class DeskController extends Controller
                     route('rejections.index'), 'المرفوضات', 'danger'),
             ],
             'priced' => PurchaseOrder::with('supplier')->whereIn('stage', ['approved', 'receiving'])
-                            ->orderBy('delivery_date')->limit(10)->get(),
+                            ->latest('id')->limit(10)->get(),
             'create' => [],
         ]);
     }
@@ -94,7 +94,7 @@ class DeskController extends Controller
                     route('finance.payables'), 'افتح', 'brand'),
             ],
             'payables' => PurchaseOrder::with('supplier')->whereIn('stage', ['finance', 'approved', 'receiving'])
-                            ->orderBy('delivery_date')->limit(10)->get(),
+                            ->latest('id')->limit(10)->get(),
             'create' => [],
         ]);
     }
@@ -108,10 +108,10 @@ class DeskController extends Controller
                 $this->q('طلبات وصلت أو في الطريق',
                     PurchaseOrder::whereIn('stage', ['approved', 'receiving'])->count(),
                     route('stock-additions.index'), 'استلم', 'warn'),
-                $this->q('رسايل جاهزة للإفراج',
+                $this->q('رسايل خلّصت ومستنية استلام',
                     Consignment::where('status', 'lab_done')
                         ->whereDoesntHave('goodsReceipts', fn ($q) => $q->where('status', 'approved'))->count(),
-                    route('goods-receipts.index'), 'أفرج', 'brand'),
+                    route('goods-receipts.index'), 'استلم', 'brand'),
                 $this->q('أوامر شغل لسه عايزة خام',
                     WorkOrder::needsMaterial()->count(),
                     route('material-issues.index'), 'اصرف', 'warn'),

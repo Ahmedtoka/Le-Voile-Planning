@@ -19,9 +19,9 @@ class FinanceController extends Controller
         $q = PurchaseOrder::with(['supplier', 'sourcer', 'lines'])
             ->whereNotNull('supplier_id')
             ->whereIn('stage', ['finance', 'approved', 'receiving'])
-            // اللي لسه ما اتشافش الأول — الحسابات بتتفرّج وتسجّل علمها
-            ->orderByRaw('finance_at IS NOT NULL')
-            ->orderBy('delivery_date');
+            // الأحدث فوق زي كل جداول السيستم.
+            // عايز اللي ما اتشافش بس؟ الكارت في مكتب الحسابات بيفتح ?unseen=1
+            ->orderBy('id', 'desc');
 
         if ($s = $request->get('supplier_id')) $q->where('supplier_id', $s);
         if ($st = $request->get('stage'))      $q->where('stage', $st);

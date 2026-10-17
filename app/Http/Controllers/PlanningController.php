@@ -75,7 +75,7 @@ class PlanningController extends Controller
                 ->where('product_model_id', $modelId)
                 ->where('year', $year)
                 ->whereNull('month')
-                ->orderByDesc('ratio_pct')->get();
+                ->orderBy('id', 'desc')->get();
         }
 
         return view('forecast.color_ratios', [
@@ -137,7 +137,7 @@ class PlanningController extends Controller
             'actual'   => (float) (clone $q)->sum('actual_qty'),
         ];
 
-        $rows = $q->orderBy('product_model_id')->orderBy('month')->paginate(100)->withQueryString();
+        $rows = $q->orderBy('id', 'desc')->paginate(100)->withQueryString();
 
         return view('forecast.index', [
             'title'   => 'الفوركاست ' . $year,
@@ -180,7 +180,7 @@ class PlanningController extends Controller
     {
         return view('forecast.safety_stock', [
             'title'  => 'مخزون الأمان',
-            'rows'   => SafetyStock::with(['productModel', 'color'])->orderBy('product_model_id')->paginate(50),
+            'rows'   => SafetyStock::with(['productModel', 'color'])->orderBy('id', 'desc')->paginate(50),
             'models' => ProductModel::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
             'colors' => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
         ]);

@@ -12,8 +12,6 @@ class WarehouseController extends BaseCrudController
     protected string $singular   = 'مخزن';
     protected string $routeName  = 'warehouses';
     protected string $permission = 'warehouses';
-    protected string $orderBy    = 'code';
-    protected string $orderDir   = 'asc';
 
     protected function fields(): array
     {

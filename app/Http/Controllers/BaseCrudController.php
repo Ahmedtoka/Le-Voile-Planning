@@ -20,8 +20,6 @@ abstract class BaseCrudController extends Controller
     protected string $permission;   // بادئة الصلاحية
     protected array $searchable = ['code', 'name'];
     protected array $with = [];
-    protected string $orderBy = 'id';
-    protected string $orderDir = 'desc';
     protected bool $canDelete = true;
 
     /** تعريف الحقول */
@@ -57,9 +55,11 @@ abstract class BaseCrudController extends Controller
         $col = (string) $request->get('sort');
         $dir = strtolower((string) $request->get('dir')) === 'asc' ? 'asc' : 'desc';
 
+        /* قاعدة السيستم: آخر حاجة اتضافت تبقى أول سطر.
+           لو المستخدم رتّب بعمود، بنسيب ترتيبه بس بنكسّر التعادل بالأحدث. */
         $q = in_array($col, $sortable, true)
-            ? $q->orderBy($col, $dir)
-            : $q->orderBy($this->orderBy, $this->orderDir);
+            ? $q->orderBy($col, $dir)->orderBy('id', 'desc')
+            : $q->orderBy('id', 'desc');
 
         $rows = $q->paginate(25)->withQueryString();
 

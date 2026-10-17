@@ -94,7 +94,6 @@
               @if($row->finance_note)<div class="hint">«{{ $row->finance_note }}»</div>@endif</td></tr>
         <tr><th>المورد</th><td>{{ $row->supplier?->name ?? '—' }}</td></tr>
         <tr><th>طريقة الدفع</th><td>{{ $row->payment_method ?? '—' }}</td></tr>
-        <tr><th>مكان التسليم</th><td>{{ $row->delivery_place ?? '—' }}</td></tr>
       </table>
       <div class="card-footer bg-white d-flex gap-2">
         <a href="{{ route('purchase-orders.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary">

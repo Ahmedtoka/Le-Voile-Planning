@@ -151,14 +151,16 @@
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ واحتساب</button>@endif
-  @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('التقرير هيتقفل والرسالة هتبقى جاهزة لإذن الاستلام. متأكد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> خلّص المعمل ونزّله للإفراج</button>
+  @if($editable)
+    <button class="btn btn-plum btn-sm">
+      <i class="bi bi-save" aria-hidden="true"></i> حفظ المعمل
+    </button>
+    <span class="hint ms-2">
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      الحفظ بيخلّص التقرير على طول — الرسالة بتظهر في شاشة استلام الخام.
+    </span>
   @endif
 </form>
-@if($mode==='edit' && $row->isEditable())
-  <form id="submitForm" method="post" action="{{ route('lab-reports.submit',$row) }}" class="d-none">@csrf</form>
-@endif
 
 <template id="lineTpl">@include('lab.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
 @include('partials.lines_js',['startIndex'=>max(count($readings),1)])

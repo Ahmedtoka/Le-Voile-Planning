@@ -15,8 +15,6 @@ class ProductModelController extends BaseCrudController
     protected string $singular   = 'موديل';
     protected string $routeName  = 'product-models';
     protected string $permission = 'product_models';
-    protected string $orderBy    = 'name';
-    protected string $orderDir   = 'asc';
     protected array $with        = ['fabricType'];
 
     protected function fields(): array
@@ -47,7 +45,11 @@ class ProductModelController extends BaseCrudController
     /** شاشة مقاسات الموديل + قائمة الإكسسوارات (BOM) */
     public function sizes($id)
     {
-        $model = ProductModel::with(['sizes', 'boms.accessory', 'boms.size'])->findOrFail($id);
+        $model = ProductModel::with([
+            'sizes',
+            'boms' => fn ($q) => $q->orderBy('id', 'desc'),
+            'boms.accessory', 'boms.size',
+        ])->findOrFail($id);
 
         return view('crud.model_sizes', [
             'title'       => 'مقاسات وإكسسوارات: ' . $model->name,

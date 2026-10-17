@@ -16,7 +16,7 @@
       ['k'=>'addition',   't'=>'إذن الإضافة',     'r'=>'stock-additions.index', 'i'=>'bi-box-arrow-in-down'],
       ['k'=>'inspection', 't'=>'الفحص',           'r'=>'inspections.index',     'i'=>'bi-search'],
       ['k'=>'lab',        't'=>'المعمل',          'r'=>'lab-reports.index',     'i'=>'bi-thermometer-half'],
-      ['k'=>'receipt',    't'=>'الإفراج',          'r'=>'goods-receipts.index',  'i'=>'bi-truck'],
+      ['k'=>'receipt',    't'=>'استلام الخام',     'r'=>'goods-receipts.index',  'i'=>'bi-box-arrow-in-down'],
       ['k'=>'consign',    't'=>'الأحواض',          'r'=>'consignments.index',    'i'=>'bi-box-seam'],
     ]],
     'prod' => ['label' => 'دورة التشغيل', 'steps' => [

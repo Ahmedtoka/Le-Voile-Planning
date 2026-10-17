@@ -85,7 +85,7 @@ class FabricInspectionController extends Controller
         $row = new FabricInspection([
             'doc_date'       => now()->toDateString(),
             'status'         => 'draft',
-            'result'         => 'pending',
+            'result'         => '',       // الفاحص لازم يختار — مفيش قيمة افتراضية
             'inspector_id'   => auth()->id(),
             'consignment_id' => $request->get('consignment_id'),
         ]);
@@ -97,18 +97,13 @@ class FabricInspectionController extends Controller
             $row->color_id        = $c->color_id;
             $row->supplier_id     = $c->supplier_id;
             $row->declared_rolls  = $c->rolls_count;   // اللي جه في إذن الإضافة
-            $row->counted_rolls   = $c->rolls_count;   // الفاحص يصححه بعد الجرد
             $row->counted_kg      = $c->total_kg;
 
-            /* سطر جاهز لكل توب وصل — الفاحص بيكتب الطول والعرض وخلاص.
-               اللي مش هيقيسه يمسحه، والباقي بيتحسب عيّنة تلقائيًا. */
-            foreach ($c->rolls()->orderBy('roll_no')->get() as $r) {
-                $preset[] = [
-                    'roll_no'  => $r->roll_no,
-                    'length_m' => $r->length_m,
-                    'width_cm' => $r->width_cm,
-                ];
-            }
+            /* ملحوظة مهمة: مش بنولّد سطر لكل توب وصل.
+               عدد الأتواب اللي المورد قال عليها ملهاش لازمة هنا — اللي يهم
+               هو الجرد الفعلي. الفاحص بيكتب «الأتواب المجرودة فعليًا»
+               ويدوس «تم»، فالسطور بتتفتح بالعدد ده. الصفحة بتفتح بسطر واحد. */
+            $row->counted_rolls = null;
         }
 
         return view('inspections.form', $this->formData([
@@ -135,7 +130,7 @@ class FabricInspectionController extends Controller
             return $insp;
         });
 
-        return redirect()->route('inspections.edit', $insp)->with('success', 'تم إنشاء التقرير ' . $insp->doc_no);
+        return $this->finish($insp->refresh());
     }
 
     public function edit(FabricInspection $inspection)
@@ -162,29 +157,62 @@ class FabricInspectionController extends Controller
             $inspection->refresh()->recalc();
         });
 
-        return back()->with('success', 'تم الحفظ.');
+        return $this->finish($inspection->refresh());
     }
 
-    public function submit(FabricInspection $inspection)
+    /** اللي لازم يتظبط قبل ما التقرير يخلص — بيرجّع نص المشكلة أو null */
+    private function guard(FabricInspection $inspection): ?string
     {
-        abort_unless($inspection->isEditable(), 403);
-
         if (!$inspection->rolls()->count()) {
-            return back()->withErrors(['msg' => 'مينفعش ترسل تقرير من غير أتواب مفحوصة.']);
+            return 'مينفعش تحفظ تقرير من غير أتواب مقيسة — اكتب الأتواب المجرودة ودوس «تم».';
         }
-        if ($inspection->result === 'pending') {
-            return back()->withErrors(['msg' => 'حدد نتيجة الفحص (مقبول / مرفوض) قبل الإرسال.']);
+
+        if ($inspection->result === 'pending' || !$inspection->result) {
+            return 'اختار نتيجة الفحص الأول: مقبول، مقبول بملاحظات، ولا مرفوض.';
         }
+
+        // «مقبول بملاحظات» و«مرفوض» — لازم سبب مكتوب
+        if (in_array($inspection->result, ['accepted_with_notes', 'rejected'], true)
+            && trim((string) $inspection->notes) === '') {
+            return $inspection->result === 'rejected'
+                ? 'الرفض لازم يكون معاه سبب مكتوب — هيظهر في شاشة المرفوضات وللمورد.'
+                : 'اخترت «مقبول بملاحظات» — لازم تكتب الملاحظة.';
+        }
+
         $noWidth = $inspection->rolls()
             ->where(fn ($q) => $q->whereNull('width_cm')->orWhere('width_cm', '<=', 0))
             ->count();
 
         if ($noWidth) {
-            return back()->withErrors(['msg' => 'كل توب مفحوص لازم يكون له عرض — منه بيتحدد أقل عرض.']);
+            return 'كل توب مقيس لازم يكون له عرض — منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.';
         }
 
-        FlowEngine::complete($inspection, 'تقرير الفحص ' . $inspection->doc_no . ' اتسجّل وخلص');
-        return back()->with(FlowMessage::flash('inspection.done', $inspection));
+        return null;
+    }
+
+    /**
+     * الحفظ = خلاص. مفيش زرار «نزّل للمعمل» منفصل.
+     * المقبول بينزل طابور المعمل، والمرفوض بينزل شاشة المرفوضات.
+     */
+    private function finish(FabricInspection $inspection)
+    {
+        if ($problem = $this->guard($inspection)) {
+            return redirect()->route('inspections.edit', $inspection)
+                ->withErrors(['msg' => $problem]);
+        }
+
+        FlowEngine::complete($inspection, 'تقرير الفحص ' . $inspection->doc_no . ' اتحفظ وخلص');
+
+        return redirect()->route('inspections.edit', $inspection)
+            ->with(FlowMessage::flash('inspection.done', $inspection));
+    }
+
+    /** الراوت القديم — بيوصّل لنفس التخليص */
+    public function submit(FabricInspection $inspection)
+    {
+        abort_unless($inspection->isEditable(), 403);
+
+        return $this->finish($inspection);
     }
 
     public function print(FabricInspection $inspection)
@@ -230,7 +258,7 @@ class FabricInspectionController extends Controller
             'declared_rolls' => ['required', 'integer', 'min:0'],
             'counted_rolls'  => ['required', 'integer', 'min:1'],
             'counted_kg'     => ['nullable', 'numeric', 'min:0'],
-            'result'         => ['required', 'in:pending,accepted,accepted_with_notes,rejected'],
+            'result'         => ['required', 'in:accepted,accepted_with_notes,rejected'],
             'notes'          => ['nullable', 'string'],
 
             // السطور بتيجي جاهزة بعدد أتواب الرسالة — اللي ما اتقاسش بيتساب
@@ -249,6 +277,7 @@ class FabricInspectionController extends Controller
             'rolls'            => 'الأتواب المفحوصة',
             'rolls.*.length_m' => 'طول التوب',
             'rolls.*.width_cm' => 'العرض',
+            'result'           => 'نتيجة الفحص',
         ]);
 
         $rolls = $v['rolls'];

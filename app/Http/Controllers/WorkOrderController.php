@@ -133,8 +133,12 @@ class WorkOrderController extends Controller
             'factory', 'planner',
             'fabrics.consignment.color', 'fabrics.fabricType', 'fabrics.color', 'fabrics.marker',
             'lines.productModel', 'lines.size',
-            'cutDeclarations.lines', 'receipts.lines',
+            'cutDeclarations' => fn ($q) => $q->orderBy('id', 'desc'),
+            'cutDeclarations.lines',
+            'receipts' => fn ($q) => $q->orderBy('id', 'desc'),
+            'receipts.lines',
             'accessoryRequirements.accessory',
+            'materialIssueLines' => fn ($q) => $q->orderBy('id', 'desc'),
             'materialIssueLines.materialIssue',
             ]);
 

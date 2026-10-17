@@ -18,7 +18,7 @@ class SettingsController extends Controller
     {
         return view('settings.users', [
             'title' => 'المستخدمين',
-            'rows'  => User::with('roles')->orderBy('name')->paginate(50),
+            'rows'  => User::with('roles')->orderBy('id', 'desc')->paginate(50),
             'roles' => Role::orderBy('name')->get(),
         ]);
     }

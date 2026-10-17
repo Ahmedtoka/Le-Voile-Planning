@@ -75,7 +75,7 @@ class ImportExportController extends Controller
 
     public function exportColors()
     {
-        $rows = Color::with('mergedInto')->orderBy('code')->get()->map(fn ($c) => [
+        $rows = Color::with('mergedInto')->orderBy('id', 'desc')->get()->map(fn ($c) => [
             $c->code, $c->name, $c->family, $c->status_name,
             $c->mergedInto?->code, $c->is_basic ? 'نعم' : 'لا', $c->legacy_code,
         ])->all();
@@ -96,7 +96,7 @@ class ImportExportController extends Controller
             $q->where(fn ($x) => $x->where('remaining_kg', '>', 0)->orWhere('hold_kg', '>', 0));
         }
 
-        $rows = $q->latest('arrival_date')->get()->map(fn ($c) => [
+        $rows = $q->latest('id')->get()->map(fn ($c) => [
             $c->fabricType?->code, $c->fabricType?->name,
             $c->color?->name ?? $c->color?->code, $c->min_width_cm, 'كيلو',
             $c->consignment_no, (int) $c->rolls_count,

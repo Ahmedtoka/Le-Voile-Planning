@@ -12,8 +12,6 @@ class FabricTypeController extends BaseCrudController
     protected string $singular   = 'خامة';
     protected string $routeName  = 'fabric-types';
     protected string $permission = 'fabric_types';
-    protected string $orderBy    = 'name';
-    protected string $orderDir   = 'asc';
 
     protected function fields(): array
     {

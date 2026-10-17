@@ -61,13 +61,10 @@ class GoodsReceiptController extends Controller
                 ['name' => 'supplier_id', 'label' => 'كل الموردين', 'options' => \App\Models\Supplier::orderBy('name')->pluck('name','id'), 'width' => 160],
             ],
             'summary' => [
-                ['label' => 'أحواض مستنية إفراج', 'value' => $waiting, 'tone' => $waiting ? 'warn' : 'ok',
-                 'note' => 'اتفحصت وخلّصت معمل — ناقصها إذن استلام.',
-                 'link' => [route('consignments.index'), 'شوف الأحواض']],
+                ['label' => 'رسايل خلّصت ومستنية استلام', 'value' => $waiting, 'tone' => $waiting ? 'warn' : 'ok',
+                 'note' => 'اتفحصت وخلّصت معمل — دوس «استلم» وشوف السامري.'],
                 ['label' => 'إجمالي الأذون', 'value' => $base->count(), 'note' => 'كل أذون الاستلام المسجلة.'],
-                ['label' => 'مستنية اعتماد', 'value' => (clone $base)->where('status','draft')->count(), 'tone' => 'warn',
-                 'note' => 'الاعتماد هو اللي بيفرج عن القماش.'],
-                ['label' => 'كجم مفرج عنها', 'value' => number_format((float) (clone $base)->where('status','approved')->sum('total_qty'), 0), 'tone' => 'ok',
+                ['label' => 'كجم دخلت المخزن', 'value' => number_format((float) (clone $base)->where('status','approved')->sum('total_qty'), 0), 'tone' => 'ok',
                  'note' => 'قماش بقى متاح فعليًا لأوامر الشغل.'],
             ],
         ]);
@@ -80,15 +77,19 @@ class GoodsReceiptController extends Controller
 
         // بنملا الإذن من الحوض المتفحص — الأرقام بتيجي من الفحص، مش من المورد
         if ($cid = $request->get('consignment_id')) {
-            if ($c = Consignment::with(['fabricType', 'color', 'supplier',
-                    'inspections' => fn ($q) => $q->where('status', 'approved')->latest('id')])->find($cid)) {
+            if ($c = Consignment::with([
+                    'fabricType', 'color', 'supplier', 'warehouse', 'purchaseOrder',
+                    'stockAdditions' => fn ($q) => $q->latest('id'),
+                    'inspections' => fn ($q) => $q->where('status', 'approved')->latest('id'),
+                    'labReports'  => fn ($q) => $q->where('status', 'approved')->latest('id'),
+                ])->find($cid)) {
                 $row->consignment_id      = $c->id;
                 $row->supplier_id         = $c->supplier_id;
                 $row->warehouse_id        = $c->warehouse_id;
                 $row->purchase_order_id   = $c->purchase_order_id;
                 // الحوض ممكن يكون من استلامة متعددة الألوان — الربط الأدق من سطر الإذن
                 $row->stock_addition_id   = $c->stockAdditions()->latest('id')->value('id')
-                    ?: \App\Models\StockAdditionLine::where('consignment_id', $c->id)->value('stock_addition_id');
+                    ?: \App\Models\StockAdditionLine::where('stock_addition_lines.consignment_id', $c->id)->value('stock_addition_id');
                 $row->fabric_inspection_id = $c->inspections->first()?->id;
 
                 // سطر جاهز بأرقام الفحص — المستلم بيأكد وبيسجل الرفض والتعليق بس
@@ -133,13 +134,19 @@ class GoodsReceiptController extends Controller
         });
 
         ActivityLogger::log('created', $gr, 'إذن استلام خام ' . $gr->doc_no);
-        return redirect()->route('goods-receipts.edit', $gr)->with('success', 'تم إنشاء الإذن ' . $gr->doc_no);
+
+        // الحفظ = استلام: القماش بيدخل المخزن ويبقى متاح لأوامر الشغل
+        return $this->finish($gr->refresh());
     }
 
     public function edit(GoodsReceipt $goods_receipt)
     {
-        $goods_receipt->load(['lines.color', 'lines.fabricType',
-            'consignment.fabricType', 'consignment.color', 'consignment.supplier', ]);
+        $goods_receipt->load([
+            'lines.color', 'lines.fabricType',
+            'consignment.fabricType', 'consignment.color', 'consignment.supplier',
+            'consignment.warehouse', 'consignment.purchaseOrder',
+            'consignment.stockAdditions', 'consignment.inspections', 'consignment.labReports',
+        ]);
 
         return view('receipts.form', $this->formData([
             'row'     => $goods_receipt,
@@ -160,36 +167,57 @@ class GoodsReceiptController extends Controller
             $this->stampConsignment($goods_receipt->refresh());
         });
 
-        return back()->with('success', 'تم الحفظ.');
+        return $this->finish($goods_receipt->refresh());
     }
 
+    /** اللي لازم يتظبط قبل ما القماش يدخل المخزن */
+    private function guard(GoodsReceipt $goods_receipt): ?string
+    {
+        if (!$goods_receipt->lines()->count()) {
+            return 'مفيش أصناف في الإذن.';
+        }
+
+        // الاستلام مالوش معنى قبل الفحص — ده جوهر الدورة
+        $c = $goods_receipt->consignment;
+        if (!$c) {
+            return 'الإذن مش مربوط برسالة.';
+        }
+        if (!$c->inspections()->where('status', 'approved')->exists()) {
+            return 'الرسالة ' . $c->consignment_no . ' لسه ما اتفحصتش — '
+                 . 'مينفعش قماش يدخل المخزن من غير تقرير فحص.';
+        }
+        if (!$c->labReports()->where('status', 'approved')->exists()) {
+            return 'الرسالة ' . $c->consignment_no . ' لسه مالهاش تقرير معمل — مفيش بنشر نحسب عليه.';
+        }
+
+        return null;
+    }
+
+    /**
+     * الحفظ = استلام. مفيش زرار «أفرج» منفصل.
+     *
+     * الشاشة دي مراجعة أخيرة: كل الأرقام جاية من الفحص والمعمل،
+     * والمستخدم بيبص ويدوس. القماش بيبقى متاح لأوامر الشغل في نفس اللحظة.
+     */
+    private function finish(GoodsReceipt $goods_receipt)
+    {
+        if ($problem = $this->guard($goods_receipt)) {
+            return redirect()->route('goods-receipts.edit', $goods_receipt)
+                ->withErrors(['msg' => $problem]);
+        }
+
+        FlowEngine::complete($goods_receipt, 'استلام الخام ' . $goods_receipt->doc_no . ' اتسجّل وخلص');
+
+        return redirect()->route('goods-receipts.edit', $goods_receipt)
+            ->with(FlowMessage::flash('receipt.done', $goods_receipt));
+    }
+
+    /** الراوت القديم — بيوصّل لنفس التخليص */
     public function submit(GoodsReceipt $goods_receipt)
     {
         abort_unless($goods_receipt->isEditable(), 403);
 
-        if (!$goods_receipt->lines()->count()) {
-            return back()->withErrors(['msg' => 'مينفعش ترسل إذن فاضي.']);
-        }
-
-        // الإفراج مالوش معنى قبل الفحص — ده جوهر الدورة
-        $c = $goods_receipt->consignment;
-        if (!$c) {
-            return back()->withErrors(['msg' => 'لازم تحدد الحوض.']);
-        }
-        if (!$c->inspections()->where('status', 'approved')->exists()) {
-            return back()->withErrors(['msg' =>
-                'الحوض ' . $c->consignment_no . ' لسه ما اتفحصش. مينفعش تفرج عن قماش من غير تقرير فحص معتمد.']);
-        }
-        if (!$c->labReports()->where('status', 'approved')->exists()) {
-            return back()->withErrors(['msg' =>
-                'الحوض ' . $c->consignment_no . ' لسه مالوش تقرير معمل معتمد — مفيش بنشر نحسب عليه.']);
-        }
-
-        /* حارس نسبة الزيادة اتنقل لإذن الإضافة — الاستلام بيتحسب هناك.
-           هنا إفراج جودة بس. */
-
-        FlowEngine::complete($goods_receipt, 'إذن الاستلام ' . $goods_receipt->doc_no . ' اتسجّل وخلص');
-        return back()->with(FlowMessage::flash('receipt.done', $goods_receipt));
+        return $this->finish($goods_receipt);
     }
 
     public function print(GoodsReceipt $goods_receipt)
@@ -226,11 +254,24 @@ class GoodsReceiptController extends Controller
 
     private function validated(Request $request): array
     {
+        /* الشاشة كلها Labels — المستخدم مش بيقدر يصلّح أي حاجة فيها.
+           فلو سطر جاي ناقص صنف أو لون (رسالة اتعملت من سطر حر من غير لون)،
+           بنملّيه من الرسالة نفسها قبل التحقق، بدل ما القماش يقفل للأبد. */
+        if ($c = \App\Models\Consignment::find($request->input('consignment_id'))) {
+            $lines = $request->input('lines', []);
+            foreach ($lines as $i => $l) {
+                if (empty($l['fabric_type_id'])) $lines[$i]['fabric_type_id'] = $c->fabric_type_id;
+                if (empty($l['color_id']))       $lines[$i]['color_id']       = $c->color_id;
+                if (empty($l['unit']))           $lines[$i]['unit']           = 'كجم';
+            }
+            $request->merge(['lines' => $lines]);
+        }
+
         $v = $request->validate([
             'doc_date'          => ['required', 'date'],
             'paper_serial'      => ['nullable', 'string', 'max:40'],
-            'warehouse_id'         => ['required', 'exists:warehouses,id'],
-            'supplier_id'          => ['required', 'exists:suppliers,id'],
+            'warehouse_id'         => ['nullable', 'exists:warehouses,id'],
+            'supplier_id'          => ['nullable', 'exists:suppliers,id'],
             'purchase_order_id'    => ['nullable', 'exists:purchase_orders,id'],
             'consignment_id'       => ['required', 'exists:consignments,id'],
             'stock_addition_id'    => ['nullable', 'exists:stock_additions,id'],
@@ -257,6 +298,19 @@ class GoodsReceiptController extends Controller
 
         $lines = $v['lines'];
         unset($v['lines']);
+
+        /* المستخدم مش بيختار مخزن ولا مورد ولا طلب شراء — كل ده متعرّف
+           على الرسالة من إذن الإضافة. بنحلّه من هنا عشان الشاشة تفضل
+           سامري بس، ولو الرسالة ملهاش مخزن بناخد الافتراضي. */
+        if ($c = \App\Models\Consignment::find($v['consignment_id'] ?? null)) {
+            $v['supplier_id']       = $c->supplier_id;
+            $v['purchase_order_id'] = $c->purchase_order_id;
+            $v['warehouse_id']      = $c->warehouse_id
+                ?: \App\Models\StockAdditionLine::where('consignment_id', $c->id)
+                        ->join('stock_additions', 'stock_additions.id', '=', 'stock_addition_lines.stock_addition_id')
+                        ->value('stock_additions.warehouse_id')
+                ?: \App\Models\Warehouse::where('is_active', true)->value('id');
+        }
 
         return ['header' => $v, 'lines' => $lines];
     }

@@ -1,13 +1,16 @@
 @extends('layouts.app')
 @section('content')
 @php
-  $rolls = old('rolls', ($preset ?? null) ?: ($row->rolls?->toArray() ?? []));
-  $editable = $row->isEditable() || $mode==='create';
+  /* الصفحة بتفتح على توب واحد. عدد السطور بيتولّد من «الأتواب المجرودة فعليًا»
+     — مش من عدد الأتواب اللي المورد قال عليها في إذن الإضافة. */
+  $rolls    = old('rolls', $row->rolls?->toArray() ?? []);
+  $editable = $row->isEditable() || $mode === 'create';
+  $result   = old('result', in_array($row->result, ['accepted','accepted_with_notes','rejected'], true) ? $row->result : '');
 @endphp
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'inspection'])
 
-{{-- إيه اللي وصل بالظبط، وكام لسه باقي على الطلب --}}
+{{-- ① بيانات الرسالة — كلها Labels جاية من إذن الإضافة --}}
 @if(($arrived ?? null))
   @php
     $rem = 0; $unit = '';
@@ -41,31 +44,60 @@
   </div>
 @endif
 
-<div class="note-box mb-3">
-  التقرير ده بيعمل حاجتين:
-  <b>① الجرد</b> — كام توب موجود فعلًا مقابل اللي جه في إذن الإضافة. أي فرق بيتسجّل ويتبعت تنبيه.
-  <b>② القياس</b> — طول وعرض وعيوب كل توب مفحوص. السيستم بياخد <b>أقل عرض</b> (مش المتوسط)
-  عشان يبني عليه الماركر — لأن الماركر لو طلع أوسع من القماش هنحرق الجنب ونرميه.
-  <br>والفحص عيّنة مش 100%، فنسبة العيّنة بتفضل ظاهرة على كل رقم مبني عليه.
-</div>
-
-<form method="post" action="{{ $mode==='create' ? route('inspections.store') : route('inspections.update',$row) }}">
+<form method="post" id="inspForm"
+      action="{{ $mode==='create' ? route('inspections.store') : route('inspections.update',$row) }}">
   @csrf @if($mode==='edit') @method('PUT') @endif
 
-  <div class="card mb-3">
+  {{-- ② النتيجة — أول قرار في الصفحة --}}
+  <div class="card mb-3" id="resultCard">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <span>{{ $mode==='create' ? 'تقرير فحص جديد' : 'تقرير فحص ' . $row->doc_no }}</span>
+      <span>① نتيجة الفحص <span class="hint">— ابدأ من هنا</span></span>
       <div class="d-flex gap-2">
         @if($mode==='edit')
           <span class="badge bg-{{ $row->status_color }} align-self-center">{{ $row->status_label }}</span>
-          <a href="{{ route('inspections.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0" aria-label="طباعة" title="طباعة"><i class="bi bi-printer" aria-hidden="true"></i></a>
+          <a href="{{ route('inspections.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0"
+             aria-label="طباعة" title="طباعة"><i class="bi bi-printer" aria-hidden="true"></i></a>
         @endif
         <a href="{{ route('inspections.index') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
       </div>
     </div>
     <div class="card-body"><fieldset @disabled(!$editable)>
+      <input type="hidden" name="result" id="resultInput" value="{{ $result }}">
+
+      <div class="d-flex gap-2 flex-wrap" role="group" aria-label="نتيجة الفحص">
+        @foreach([
+          ['accepted',            'مقبول',              'bi-check-circle', 'ok',     'القماش سليم — يكمّل للمعمل'],
+          ['accepted_with_notes', 'مقبول بملاحظات',     'bi-exclamation-circle', 'warn', 'يكمّل بس لازم تكتب الملاحظة'],
+          ['rejected',            'مرفوض',              'bi-x-circle',     'danger', 'ينزل شاشة المرفوضات ويرجع للمورد'],
+        ] as [$key, $label, $icon, $tone, $note])
+          <button type="button" class="btn btn-sm result-btn" data-result="{{ $key }}"
+                  aria-pressed="{{ $result === $key ? 'true' : 'false' }}"
+                  style="min-width:190px;text-align:start;
+                         border:2px solid {{ $result === $key ? 'var(--lv-'.$tone.')' : 'var(--lv-line)' }};
+                         background:{{ $result === $key ? 'var(--lv-'.$tone.'-bg)' : '#fff' }}">
+            <span class="d-block fw-bold">
+              <i class="bi {{ $icon }}" aria-hidden="true" style="color:var(--lv-{{ $tone }})"></i> {{ $label }}
+            </span>
+            <span class="hint d-block">{{ $note }}</span>
+          </button>
+        @endforeach
+      </div>
+
+      <div class="mt-3" id="notesWrap">
+        <label class="form-label" id="notesLabel">ملاحظات</label>
+        <input name="notes" id="notesInput" class="form-control form-control-sm"
+               value="{{ old('notes',$row->notes) }}"
+               placeholder="اكتب اللي شفته على القماش">
+        <div class="hint" id="notesHint">اختياري — إلا لو النتيجة «مقبول بملاحظات» أو «مرفوض».</div>
+      </div>
+    </fieldset></div>
+  </div>
+
+  {{-- ③ الجرد --}}
+  <div class="card mb-3">
+    <div class="card-header">② الجرد <span class="hint">— كام توب موجود فعلًا مقابل اللي إذن الإضافة قال عليه</span></div>
+    <div class="card-body"><fieldset @disabled(!$editable)>
       @if(($arrived ?? null))
-        {{-- الفحص على رسالة محددة: بياناتها ثابتة من إذن الإضافة — الفاحص بيجرد ويقيس بس --}}
         <input type="hidden" name="doc_date"       value="{{ old('doc_date', $row->doc_date?->format('Y-m-d') ?? now()->toDateString()) }}">
         <input type="hidden" name="consignment_id" value="{{ old('consignment_id', $row->consignment_id ?? $arrived->id) }}">
         <input type="hidden" name="fabric_type_id" value="{{ old('fabric_type_id', $row->fabric_type_id ?? $arrived->fabric_type_id) }}">
@@ -73,74 +105,50 @@
         <input type="hidden" name="supplier_id"    value="{{ old('supplier_id', $row->supplier_id ?? $arrived->supplier_id) }}">
         <input type="hidden" name="inspector_id"   value="{{ old('inspector_id', $row->inspector_id ?? auth()->id()) }}">
         <input type="hidden" name="declared_rolls" value="{{ old('declared_rolls', $row->declared_rolls ?? $arrived->rolls_count) }}">
-
-        <div class="row g-3">
-          <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
-            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="04619"></div>
-          <div class="col-md-2"><label class="form-label">أتواب حسب الإذن</label>
-            <div class="form-control form-control-sm num" style="background:var(--lv-offwhite)">{{ (int) ($row->declared_rolls ?? $arrived->rolls_count) }}</div>
-            <div class="hint">اللي جه في إذن الإضافة</div></div>
-          <div class="col-md-2"><label class="form-label req">الأتواب المجرودة فعليًا</label>
-            <input type="number" name="counted_rolls" class="form-control form-control-sm"
-                   value="{{ old('counted_rolls',$row->counted_rolls) }}" required>
-            <div class="hint">الجرد الحقيقي</div></div>
-          <div class="col-md-2"><label class="form-label">الوزن المجرود (كجم)</label>
-            <input type="number" step="0.001" name="counted_kg" class="form-control form-control-sm"
-                   value="{{ old('counted_kg',$row->counted_kg) }}"></div>
-          <div class="col-md-2"><label class="form-label req">النتيجة</label>
-            <select name="result" class="form-select form-select-sm" required>
-              @foreach($results as $k=>$v)<option value="{{ $k }}" @selected(old('result',$row->result)===$k)>{{ $v }}</option>@endforeach
-            </select></div>
-          <div class="col-md-2"><label class="form-label">الفاحص</label>
-            <div class="form-control form-control-sm" style="background:var(--lv-offwhite)">{{ auth()->user()?->name }}</div></div>
-          <div class="col-md-12"><label class="form-label">ملاحظات</label>
-            <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
-        </div>
       @else
-        <div class="row g-3">
-          <div class="col-md-2"><label class="form-label req">التاريخ</label>
-            <input type="date" name="doc_date" class="form-control form-control-sm" value="{{ old('doc_date',$row->doc_date?->format('Y-m-d') ?? $row->doc_date) }}" required></div>
-          <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
-            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="04619"></div>
-          <div class="col-md-3"><label class="form-label req">الحوض (الرسالة)</label>
+        <input type="hidden" name="doc_date"     value="{{ old('doc_date', $row->doc_date?->format('Y-m-d') ?? now()->toDateString()) }}">
+        <input type="hidden" name="inspector_id" value="{{ old('inspector_id', $row->inspector_id ?? auth()->id()) }}">
+        <div class="row g-3 mb-3">
+          <div class="col-md-4"><label class="form-label req">الحوض (الرسالة)</label>
             <select name="consignment_id" class="form-select form-select-sm" required><option value="">—</option>
               @foreach($consignments as $k=>$v)<option value="{{ $k }}" @selected(old('consignment_id',$row->consignment_id)==$k)>{{ $v }}</option>@endforeach
             </select></div>
-          <div class="col-md-2"><label class="form-label">الصنف</label>
-            <select name="fabric_type_id" class="form-select form-select-sm"><option value="">—</option>
-              @foreach($fabricTypes as $k=>$v)<option value="{{ $k }}" @selected(old('fabric_type_id',$row->fabric_type_id)==$k)>{{ $v }}</option>@endforeach
-            </select></div>
-          <div class="col-md-3"><label class="form-label">كود اللون</label>
-            <select name="color_id" class="form-select form-select-sm"><option value="">—</option>
-              @foreach($colors as $k=>$v)<option value="{{ $k }}" @selected(old('color_id',$row->color_id)==$k)>{{ $v }}</option>@endforeach
-            </select></div>
-          <div class="col-md-3"><label class="form-label">اسم المورد</label>
-            <select name="supplier_id" class="form-select form-select-sm"><option value="">—</option>
-              @foreach($suppliers as $k=>$v)<option value="{{ $k }}" @selected(old('supplier_id',$row->supplier_id)==$k)>{{ $v }}</option>@endforeach
-            </select></div>
-          <div class="col-md-3"><label class="form-label">الفاحص</label>
-            <select name="inspector_id" class="form-select form-select-sm"><option value="">—</option>
-              @foreach($inspectors as $k=>$v)<option value="{{ $k }}" @selected(old('inspector_id',$row->inspector_id ?? auth()->id())==$k)>{{ $v }}</option>@endforeach
-            </select></div>
-          <div class="col-md-2"><label class="form-label">أتواب حسب إذن الإضافة</label>
-            <input type="number" name="declared_rolls" class="form-control form-control-sm"
-                   value="{{ old('declared_rolls',$row->declared_rolls) }}" readonly style="background:#F8F4F1">
-            <div class="hint">اللي المورد قال عليه</div></div>
-          <div class="col-md-2"><label class="form-label req">الأتواب المجرودة فعليًا</label>
-            <input type="number" name="counted_rolls" class="form-control form-control-sm"
-                   value="{{ old('counted_rolls',$row->counted_rolls) }}" required>
-            <div class="hint">الجرد الحقيقي</div></div>
-          <div class="col-md-2"><label class="form-label">الوزن المجرود (كجم)</label>
-            <input type="number" step="0.001" name="counted_kg" class="form-control form-control-sm"
-                   value="{{ old('counted_kg',$row->counted_kg) }}"></div>
-          <div class="col-md-2"><label class="form-label req">النتيجة</label>
-            <select name="result" class="form-select form-select-sm" required>
-              @foreach($results as $k=>$v)<option value="{{ $k }}" @selected(old('result',$row->result)===$k)>{{ $v }}</option>@endforeach
-            </select></div>
-          <div class="col-md-6"><label class="form-label">ملاحظات</label>
-            <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
+          <div class="col-md-4"><label class="form-label req">أتواب حسب إذن الإضافة</label>
+            <input type="number" min="0" name="declared_rolls" class="form-control form-control-sm"
+                   value="{{ old('declared_rolls',$row->declared_rolls) }}" required></div>
         </div>
       @endif
+
+      <div class="row g-3 align-items-end">
+        <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
+          <input name="paper_serial" class="form-control form-control-sm"
+                 value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="04619"></div>
+
+        @if(($arrived ?? null))
+          <div class="col-md-2"><label class="form-label">أتواب حسب الإذن</label>
+            <div class="form-control form-control-sm num" style="background:var(--lv-offwhite)">{{ (int) ($row->declared_rolls ?? $arrived->rolls_count) }}</div>
+            <div class="hint">اللي جه في إذن الإضافة</div></div>
+        @endif
+
+        <div class="col-md-3"><label class="form-label req">الأتواب المجرودة فعليًا</label>
+          <div class="input-group input-group-sm">
+            <input type="number" min="1" name="counted_rolls" id="countedRolls" class="form-control"
+                   value="{{ old('counted_rolls',$row->counted_rolls) }}" required>
+            @if($editable)
+              <button type="button" class="btn btn-plum" id="buildRows">
+                <i class="bi bi-check2" aria-hidden="true"></i> تم
+              </button>
+            @endif
+          </div>
+          <div class="hint">اكتب العدد ودوس «تم» — هيتفتحلك سطر لكل توب تحت</div></div>
+
+        <div class="col-md-2"><label class="form-label">الوزن المجرود (كجم)</label>
+          <input type="number" step="0.001" name="counted_kg" class="form-control form-control-sm"
+                 value="{{ old('counted_kg',$row->counted_kg) }}"></div>
+
+        <div class="col-md-2"><label class="form-label">الفاحص</label>
+          <div class="form-control form-control-sm" style="background:var(--lv-offwhite)">{{ auth()->user()?->name }}</div></div>
+      </div>
     </fieldset></div>
 
     @if($mode==='edit')
@@ -159,14 +167,13 @@
         </div>
         @if($row->rolls_variance != 0)
           <div class="alert alert-danger py-2 mt-2 mb-0 small">
-            فرق في الجرد: المورد قال {{ $row->declared_rolls }} توب، والمجرود {{ $row->counted_rolls }}.
+            فرق في الجرد: إذن الإضافة قال {{ $row->declared_rolls }} توب، والمجرود {{ $row->counted_rolls }}.
             راجع مع المورد قبل الإفراج.
           </div>
         @endif
         @if($row->width_alert)
           <div class="alert alert-danger py-2 mt-2 mb-0 small">
             فرق العرض بين الأتواب {{ $row->width_spread_cm }} سم — مش طبيعي لقماش حوض واحد.
-            المفروض القماش ده يترفض من برّه.
           </div>
         @endif
         @if($row->sample_too_small)
@@ -178,21 +185,14 @@
     @endif
   </div>
 
+  {{-- ④ القياس --}}
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <span>الأتواب المفحوصة
-        <span class="hint">— اكتب طول وعرض كل توب قسته، وامسح السطور اللي ما قستهاش</span>
+      <span>③ قياس الأتواب
+        <span class="hint">— طول وعرض كل توب. أقل عرض هو اللي الماركر هيتبني عليه</span>
       </span>
       @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> توب</button>@endif
     </div>
-    @if($editable && ($preset ?? null))
-      <div class="card-body py-2 pb-0">
-        <div class="hint">
-          السطور دي اتملت بأتواب الرسالة اللي وصلت ({{ count($preset) }} توب).
-          عدد الأتواب اللي قستها فعلًا = عدد السطور اللي فيها طول وعرض — والسيستم بيحسب نسبة العيّنة منها لوحده.
-        </div>
-      </div>
-    @endif
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
         <thead><tr>
@@ -208,15 +208,111 @@
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ واحتساب</button>@endif
-  @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('الفحص هيتقفل والرسالة هتنزل طابور المعمل فورًا. متأكد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> خلّص الفحص ونزّله المعمل</button>
+  @if($editable)
+    <button class="btn btn-plum btn-sm">
+      <i class="bi bi-save" aria-hidden="true"></i> حفظ الفحص
+    </button>
+    <span class="hint ms-2">
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      الحفظ بيخلّص الفحص على طول — المقبول بينزل المعمل، والمرفوض بينزل شاشة المرفوضات.
+    </span>
   @endif
 </form>
-@if($mode==='edit' && $row->isEditable())
-  <form id="submitForm" method="post" action="{{ route('inspections.submit',$row) }}" class="d-none">@csrf</form>
-@endif
 
 <template id="lineTpl">@include('inspections.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
-@include('partials.lines_js',['startIndex'=>max(count($rolls),1)])
+@include('partials.lines_js',['startIndex'=>count($rolls) ? max(array_keys($rolls)) + 1 : 1])
+
+@push('scripts')
+<script>
+(function () {
+  var input = document.getElementById('resultInput');
+  if (!input) return;
+
+  var notesInput = document.getElementById('notesInput');
+  var notesHint  = document.getElementById('notesHint');
+  var notesLabel = document.getElementById('notesLabel');
+
+  var TONE = { accepted: 'ok', accepted_with_notes: 'warn', rejected: 'danger' };
+
+  function paint() {
+    document.querySelectorAll('.result-btn').forEach(function (b) {
+      var on = b.dataset.result === input.value;
+      var tone = TONE[b.dataset.result] || 'line';
+      b.style.border     = '2px solid ' + (on ? 'var(--lv-' + tone + ')' : 'var(--lv-line)');
+      b.style.background = on ? 'var(--lv-' + tone + '-bg)' : '#fff';
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+
+    // «مقبول بملاحظات» و«مرفوض» — الملاحظة إجبارية
+    var must = input.value === 'accepted_with_notes' || input.value === 'rejected';
+    if (notesInput) notesInput.required = must;
+    if (notesLabel) notesLabel.className = must ? 'form-label req' : 'form-label';
+    if (notesHint) {
+      notesHint.textContent = input.value === 'rejected'
+        ? 'إجباري — اكتب سبب الرفض، هيظهر في شاشة المرفوضات وللمورد.'
+        : (must ? 'إجباري — اكتب الملاحظة اللي القماش عدّى بيها.'
+                : 'اختياري — إلا لو النتيجة «مقبول بملاحظات» أو «مرفوض».');
+    }
+  }
+
+  document.querySelectorAll('.result-btn').forEach(function (b) {
+    b.addEventListener('click', function () { input.value = b.dataset.result; paint(); });
+  });
+
+  // «تم» جنب الأتواب المجرودة ⇒ يفتح سطر لكل توب
+  var btn = document.getElementById('buildRows');
+  var cnt = document.getElementById('countedRolls');
+  if (btn && cnt) {
+    btn.addEventListener('click', function () {
+      var want = parseInt(cnt.value || '0', 10);
+      if (!want || want < 1) { cnt.focus(); return; }
+      if (want > 500) { alert('العدد كبير أوي — أقصى حاجة 500 توب في التقرير الواحد.'); return; }
+
+      var body = document.getElementById('lines');
+      var have = body.querySelectorAll('tr').length;
+
+      if (want < have) {
+        var filled = 0;
+        body.querySelectorAll('tr').forEach(function (tr) {
+          var len = tr.querySelector('[name*="[length_m]"]');
+          var wid = tr.querySelector('[name*="[width_cm]"]');
+          if ((len && len.value) || (wid && wid.value)) filled++;
+        });
+        if (filled > want && !confirm('فيه ' + filled + ' توب متكتوب فيهم قياسات. تقليل العدد لـ ' + want + ' هيمسح الزيادة. تكمّل؟')) return;
+        while (body.querySelectorAll('tr').length > want) body.lastElementChild.remove();
+      } else {
+        for (var i = have; i < want; i++) LV.add('lineTpl', 'lines');
+      }
+
+      // رقّم الأتواب 001, 002, ... لو لسه فاضية
+      Array.prototype.forEach.call(body.querySelectorAll('tr'), function (tr, i) {
+        var no = tr.querySelector('[name*="[roll_no]"]');
+        if (no && !no.value) no.value = String(i + 1).padStart(3, '0');
+      });
+
+      LV.renumber && LV.renumber('lines');
+    });
+  }
+
+  // ما تبعتش قبل ما تختار نتيجة — أحسن من رحلة للسيرفر ورجوع
+  var form = document.getElementById('inspForm');
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      if (!input.value) {
+        e.preventDefault();
+        var card = document.getElementById('resultCard');
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.style.boxShadow = '0 0 0 3px var(--lv-danger)';
+          setTimeout(function () { card.style.boxShadow = ''; }, 2000);
+        }
+        alert('اختار نتيجة الفحص الأول: مقبول، مقبول بملاحظات، ولا مرفوض.');
+      }
+    });
+  }
+
+  paint();
+})();
+</script>
+@endpush
 @endsection

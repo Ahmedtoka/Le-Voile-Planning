@@ -12,8 +12,6 @@ class SupplierController extends BaseCrudController
     protected string $singular   = 'مورد';
     protected string $routeName  = 'suppliers';
     protected string $permission = 'suppliers';
-    protected string $orderBy    = 'name';
-    protected string $orderDir   = 'asc';
 
     protected function fields(): array
     {

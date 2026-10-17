@@ -12,8 +12,6 @@ class AccessoryController extends BaseCrudController
     protected string $singular   = 'إكسسوار';
     protected string $routeName  = 'accessories';
     protected string $permission = 'accessories';
-    protected string $orderBy    = 'name';
-    protected string $orderDir   = 'asc';
 
     protected function fields(): array
     {
