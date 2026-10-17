@@ -19,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
         setlocale(LC_TIME, 'ar_EG.UTF-8', 'ar_EG', 'ar');
 
-        // بيانات الشريط العلوي — الجرس وعدّاد الاعتمادات
+        // بيانات الشريط العلوي — الجرس وعدّادات الشغل المستني
         View::composer('layouts.app', function ($view) {
             $user = auth()->user();
             $view->with([

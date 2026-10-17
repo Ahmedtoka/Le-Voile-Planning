@@ -80,6 +80,18 @@ class Consignment extends Model
     }
 
     /** لسه محجوز تحت الفحص */
+    /**
+     * رسايل خلّصت فحص ومعمل ومستنية إذن الاستلام الخام (الإفراج).
+     * التعريف الوحيد في السيستم — المنيو والداشبورد والمكتب وشاشة الاستلام كلهم بيستخدموه.
+     */
+    public function scopeAwaitingRelease($q)
+    {
+        return $q->whereIn('status', ['inspected', 'lab_done'])
+            ->whereHas('inspections', fn ($i) => $i->where('status', 'approved'))
+            ->whereHas('labReports',  fn ($l) => $l->where('status', 'approved'))
+            ->whereDoesntHave('goodsReceipts', fn ($g) => $g->where('status', 'approved'));
+    }
+
     public function scopeOnHold($q)
     {
         return $q->whereIn('status', ['under_inspection', 'inspected', 'lab_done']);
@@ -128,9 +140,17 @@ class Consignment extends Model
     {
         /* المخصص بيتجمع من خامات أوامر الشغل — لأن أمر الشغل الواحد
            بياخد من أكتر من حوض، وكل حوض بكميته. */
-        $allocated = (float) $this->workOrderFabrics()
-            ->whereHas('workOrder', fn ($q) => $q->whereNotIn('status', ['cancelled', 'draft', 'superseded']))
+        $open = (float) $this->workOrderFabrics()
+            ->whereHas('workOrder', fn ($q) => $q->whereNotIn('status', ['cancelled', 'draft', 'superseded', 'closed']))
             ->sum('planned_qty');
+
+        /* الأمر المقفول بيحجز اللي اتصرف فعلًا بس — الباقي من المخطط
+           بيرجع متاح للرسالة بدل ما يفضل محجوز على أمر خلص. */
+        $closed = (float) $this->workOrderFabrics()
+            ->whereHas('workOrder', fn ($q) => $q->where('status', 'closed'))
+            ->sum('issued_qty');
+
+        $allocated = $open + $closed;
 
         /* المفرج عنه بيتاخد زي ما هو من إذن الاستلام.
            ملحوظة مهمة: مينفعش نستخدم ‎?:‎ هنا — لأن رسالة اترفضت بالكامل

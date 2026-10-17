@@ -62,7 +62,7 @@ class PurchaseOrderController extends Controller
                 ['label' => 'مستحق ما اتشافش', 'value' => $b()->whereNotNull('sourced_at')->whereNull('finance_at')
                         ->whereNotIn('stage',['closed','cancelled'])->count(), 'tone' => 'warn',
                  'note' => 'اتسعّر ولسه الحسابات ما سجّلتش علمها بيه.'],
-                ['label' => 'مستحق متوقع', 'value' => number_format((float) $b()->whereIn('stage',['finance','approved','receiving'])->sum('total'), 0),
+                ['label' => 'مستحق متوقع', 'value' => number_format((float) $b()->whereIn('stage',['finance','approved','receiving'])->whereNotNull('supplier_id')->sum('total'), 0),
                  'sub' => config('lvplanning.currency'), 'tone' => 'brand',
                  'note' => 'إجمالي قيمة الطلبات اللي اتسعّرت ولسه ما اتقفلتش.'],
                 ['label' => 'توريد متأخر', 'value' => $b()->whereIn('stage',['approved','receiving'])
@@ -114,7 +114,7 @@ class PurchaseOrderController extends Controller
                 ['label' => 'اتسعّرت النهارده',
                  'value' => PurchaseOrder::whereDate('sourced_at', now()->toDateString())->count(),
                  'tone' => 'ok', 'note' => 'خلّصت تسعير ونزلت للحسابات والمخزن.'],
-                ['label' => 'مستنية الاستلام', 'value' => PurchaseOrder::where('stage', 'approved')->count(),
+                ['label' => 'مستنية الاستلام', 'value' => PurchaseOrder::whereIn('stage', ['approved', 'receiving'])->count(),
                  'tone' => 'brand', 'note' => 'اتسعّرت ومستنية القماش يوصل المخزن.',
                  'link' => [route('stock-additions.index'), 'أذون الإضافة']],
             ],
@@ -220,7 +220,7 @@ class PurchaseOrderController extends Controller
             'prices'                 => ['required', 'array'],
             'prices.*.id'            => ['required', 'exists:purchase_order_lines,id'],
             'prices.*.unit_price'    => ['required', 'numeric', 'min:0'],
-            'prices.*.unit'          => ['required', 'in:طن,كيلو,كجم,متر'],
+            'prices.*.unit'          => ['required', 'string', 'max:20'],
         ], [], [
             'supplier_id'    => 'المورد',
             'delivery_date'  => 'تاريخ التوريد',
@@ -232,10 +232,24 @@ class PurchaseOrderController extends Controller
             foreach ($data['prices'] as $p) {
                 $line = $purchase_order->lines()->find($p['id']);
                 if (!$line) continue;
+
+                /* المشتريات ممكن تسعّر بوحدة غير اللي التخطيط طلب بيها
+                   (طلب 2 طن واتسعّر بالكيلو) — الكمية لازم تتحول معاها،
+                   وإلا الطلب يبقى 2 كيلو والاستلام يترفض. التحويل بين
+                   الوزن (طن/كيلو) بس؛ الوزن والمتر مالهمش تحويل فالوحدة بتفضل. */
+                $weight = ['طن', 'كيلو', 'كجم'];
+                $unit   = $line->unit;
+                $qty    = (float) $line->qty;
+                if ($p['unit'] !== $unit && in_array($unit, $weight, true) && in_array($p['unit'], $weight, true)) {
+                    $qty  = DocumentEffects::toUnit($qty, $unit, $p['unit']);
+                    $unit = $p['unit'];
+                }
+
                 $line->update([
-                    'unit'       => $p['unit'],
+                    'unit'       => $unit,
+                    'qty'        => $qty,
                     'unit_price' => $p['unit_price'],
-                    'line_total' => (float) $line->qty * (float) $p['unit_price'],
+                    'line_total' => $qty * (float) $p['unit_price'],
                 ]);
             }
 

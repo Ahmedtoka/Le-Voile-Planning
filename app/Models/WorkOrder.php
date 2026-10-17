@@ -38,6 +38,16 @@ class WorkOrder extends Model
         'superseded'         => 'استُبدل بنسخة أحدث',
     ];
 
+    /** الحالات اللي الأمر فيها لسه ممكن يتصرفله خام */
+    public const MATERIAL_STATUSES = [
+        'approved', 'sent_to_factory', 'cutting', 'cut_declared', 'in_production', 'partially_received',
+    ];
+
+    /** الحالات المفتوحة اللي ينفع منها القفل اليدوي */
+    public const CLOSABLE_STATUSES = [
+        'approved', 'sent_to_factory', 'cutting', 'cut_declared', 'in_production', 'partially_received',
+    ];
+
     public const VARIANCE_FLAGS = [
         'ok'     => 'داخل الحدود',
         'warn'   => 'تحذير',
@@ -81,7 +91,8 @@ class WorkOrder extends Model
      */
     public function scopeNeedsMaterial($q)
     {
-        return $q->whereIn('status', ['approved', 'sent_to_factory', 'cutting'])
+        // بيان القص والاستلام الجزئي بينقلوا الحالة، والخام لسه ممكن يكون ليه باقي
+        return $q->whereIn('status', self::MATERIAL_STATUSES)
             ->whereHas('fabrics', fn ($f) => $f->whereColumn('issued_qty', '<', 'planned_qty'));
     }
 
@@ -143,12 +154,14 @@ class WorkOrder extends Model
         $this->load('lines');
         $cut      = (int) $this->lines->sum('cut_qty');
         $received = (int) $this->lines->sum('received_qty');
+        $rejected = (int) $this->lines->sum('rejected_qty');
 
         $this->load('fabrics');
 
         $this->forceFill([
             'cut_pieces'      => $cut,
             'received_pieces' => $received,
+            'rejected_pieces' => $rejected,
             'governing_qty'   => $this->computed_governing_qty ?: null,
         ])->saveQuietly();
 

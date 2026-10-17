@@ -56,7 +56,7 @@ class LabReportController extends Controller
                 ['label' => 'إجمالي التقارير', 'value' => $base->count(), 'note' => 'كل تقارير المعمل.'],
                 ['label' => 'ألوان غير مطابقة', 'value' => (clone $base)->where('color_match_ok', false)->count(),
                  'tone' => 'danger', 'note' => 'اللون خرج عن العينة المعتمدة.'],
-                ['label' => 'متوسط البنشر', 'value' => round((float) (clone $base)->avg('avg_gsm'), 1) ?: '—',
+                ['label' => 'متوسط البنشر', 'value' => round((float) (clone $base)->where('status', 'approved')->avg('avg_gsm'), 1) ?: '—',
                  'sub' => 'جم/م²', 'note' => 'متوسط كل التقارير — مؤشر عام على الخامات.'],
             ],
         ]);

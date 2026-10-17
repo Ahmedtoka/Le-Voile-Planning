@@ -109,13 +109,13 @@ class DeskController extends Controller
                     PurchaseOrder::whereIn('stage', ['approved', 'receiving'])->count(),
                     route('stock-additions.index'), 'استلم', 'warn'),
                 $this->q('رسايل خلّصت ومستنية استلام',
-                    Consignment::where('status', 'lab_done')
-                        ->whereDoesntHave('goodsReceipts', fn ($q) => $q->where('status', 'approved'))->count(),
+                    Consignment::awaitingRelease()->count(),
                     route('goods-receipts.index'), 'استلم', 'brand'),
                 $this->q('أوامر شغل لسه عايزة خام',
                     WorkOrder::needsMaterial()->count(),
                     route('material-issues.index'), 'اصرف', 'warn'),
-                $this->q('قطع مستنية استلام من المصانع',
+                // الرقم ده عدد أوامر (مش قطع) — العنوان بيقول كده
+                $this->q('أوامر عليها قطع مستنية استلام',
                     WorkOrder::open()->whereColumn('cut_pieces', '>', 'received_pieces')->count(),
                     route('production-receipts.index'), 'استلم', 'ok'),
             ],
@@ -161,7 +161,7 @@ class DeskController extends Controller
                     WorkOrder::whereIn('status', ['sent_to_factory', 'cutting'])
                         ->whereDoesntHave('cutDeclarations', fn ($q) => $q->where('status', 'approved'))->count(),
                     route('cut-declarations.index'), 'سجّل القص', 'warn'),
-                $this->q('قطع مقصوصة لسه على المصانع',
+                $this->q('أوامر عليها قطع مقصوصة لسه على المصنع',
                     WorkOrder::open()->whereColumn('cut_pieces', '>', 'received_pieces')->count(),
                     route('production-receipts.index'), 'استلم', 'brand'),
                 $this->q('أوامر متأخرة', WorkOrder::late()->count(),

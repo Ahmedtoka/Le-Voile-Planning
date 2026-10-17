@@ -39,7 +39,7 @@ class ConsignmentController extends Controller
                  'note' => 'ناقصها إذن استلام عشان تتفرج.'],
                 ['label' => 'جاهزة للتشغيل', 'value' => Consignment::readyForProduction()->count(), 'tone' => 'ok',
                  'sub' => number_format((float) Consignment::readyForProduction()->sum('remaining_kg'), 0) . ' كجم',
-                 'note' => 'مفرج عنها وعندها عرض وبنشر.'],
+                 'note' => 'مفرج عنها ولسه فيها رصيد متاح.'],
                 ['label' => 'كجم محجوزة', 'value' => number_format((float) Consignment::onHold()->sum('total_kg'), 0), 'tone' => 'warn',
                  'note' => 'قماش في المخزن ممنوع تشغيله.'],
                 ['label' => 'مرفوضة', 'value' => $b()->where('status','rejected')->count(), 'tone' => 'danger',

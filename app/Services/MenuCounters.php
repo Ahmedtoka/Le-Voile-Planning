@@ -37,8 +37,6 @@ class MenuCounters
         $can = fn (string $p) => $user->can2($p);
         $c   = [];
 
-        // ── الاعتمادات: أي حاجة مستنية توقيعي ──
-
         // ── المشتريات: الطلبات اللي نزلت من التخطيط ومستنية تسعير ──
         if ($can('po.source')) {
             $c['purchasing.queue'] = PurchaseOrder::where('stage', 'purchasing')->count();
@@ -67,11 +65,7 @@ class MenuCounters
 
         // ── إذن الاستلام: أحواض متفحصة ومستنية إفراج ──
         if ($can('receipt.manage')) {
-            $c['goods-receipts.index'] = Consignment::whereIn('status', ['inspected', 'lab_done'])
-                ->whereHas('inspections', fn ($q) => $q->where('status', 'approved'))
-                ->whereHas('labReports', fn ($q) => $q->where('status', 'approved'))
-                ->whereDoesntHave('goodsReceipts', fn ($q) => $q->where('status', 'approved'))
-                ->count();
+            $c['goods-receipts.index'] = Consignment::awaitingRelease()->count();
         }
 
         // ── الأحواض: مفرج عنها ولسه ما اتعملهاش أمر شغل ⇒ محتاجة أكشن ──

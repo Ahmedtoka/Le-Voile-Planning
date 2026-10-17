@@ -277,7 +277,7 @@
     <div class="card mb-3">
       <div class="card-header d-flex justify-content-between">
         <span>إذون صرف الخام</span>
-        @if(in_array($row->status, ['approved','sent_to_factory','cutting']))
+        @if(in_array($row->status, \App\Models\WorkOrder::MATERIAL_STATUSES))
           <a href="{{ route('material-issues.create', ['work_order_id'=>$row->id]) }}"
              class="btn btn-sm btn-outline-plum py-0"><i class="bi bi-plus-lg" aria-hidden="true"></i> صرف خام</a>
         @endif
@@ -372,7 +372,7 @@
         @endif
         <a href="{{ route('work-orders.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
           <i class="bi bi-printer" aria-hidden="true"></i> طباعة ورقة المصنع</a>
-        @if(!in_array($row->status, ['closed','cancelled','draft']))
+        @if(in_array($row->status, \App\Models\WorkOrder::CLOSABLE_STATUSES))
           <button class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#closeModal">
             <i class="bi bi-lock" aria-hidden="true"></i> قفل</button>
         @endif

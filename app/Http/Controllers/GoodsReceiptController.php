@@ -40,16 +40,10 @@ class GoodsReceiptController extends Controller
         );
 
         $base    = GoodsReceipt::query();
-        $waiting = Consignment::whereIn('status', ['inspected','lab_done'])
-            ->whereHas('inspections', fn ($x) => $x->where('status','approved'))
-            ->whereHas('labReports',  fn ($x) => $x->where('status','approved'))
-            ->whereDoesntHave('goodsReceipts', fn ($x) => $x->where('status','approved'))
-            ->count();
+        $waiting = Consignment::awaitingRelease()->count();
 
-        /* طابور الإفراج: فحص + معمل معتمدين */
-        $awaiting = \App\Models\Consignment::with(['fabricType', 'color', 'supplier'])
-            ->where('status', 'lab_done')
-            ->whereDoesntHave('goodsReceipts', fn ($x) => $x->where('status', 'approved'))
+        /* طابور الإفراج: فحص + معمل معتمدين — نفس تعريف الكارت فوقه */
+        $awaiting = Consignment::awaitingRelease()->with(['fabricType', 'color', 'supplier'])
             ->latest('id')->limit(10)->get();
 
         return view('receipts.index', [
@@ -129,6 +123,7 @@ class GoodsReceiptController extends Controller
             $this->syncLines($gr, $data['lines']);
             $gr->refresh()->recalcTotals();
             $this->stampConsignment($gr->refresh());
+            $this->saveRejects($gr->refresh()->load('lines', 'consignment.color'), $data['rejects']);
 
             return $gr;
         });
@@ -165,6 +160,7 @@ class GoodsReceiptController extends Controller
             $this->syncLines($goods_receipt, $data['lines'], true);
             $goods_receipt->refresh()->recalcTotals();
             $this->stampConsignment($goods_receipt->refresh());
+            $this->saveRejects($goods_receipt->refresh()->load('lines', 'consignment.color'), $data['rejects']);
         });
 
         return $this->finish($goods_receipt->refresh());
@@ -288,7 +284,16 @@ class GoodsReceiptController extends Controller
             'lines.*.rolls_count'    => ['required', 'integer', 'min:1'],
             'lines.*.qty'            => ['required', 'numeric', 'min:0.001'],
             'lines.*.notes'          => ['nullable', 'string'],
+
+            // رفض جزئي / تعليق قبل الإفراج — اختياري، السطر الفاضي بيتجاهل
+            'rejects'                => ['nullable', 'array'],
+            'rejects.*.kind'         => ['nullable', 'in:rejected,on_hold'],
+            'rejects.*.rolls_count'  => ['nullable', 'integer', 'min:0'],
+            'rejects.*.qty'          => ['nullable', 'numeric', 'min:0'],
+            'rejects.*.party'        => ['nullable', 'in:quality,planning,purchasing'],
+            'rejects.*.reason'       => ['nullable', 'string', 'required_with:rejects.*.qty'],
         ], [], [
+            'rejects.*.reason'    => 'سبب الرفض',
             'warehouse_id'        => 'المخزن',
             'supplier_id'         => 'المورد',
             'consignment_id'      => 'الحوض',
@@ -296,8 +301,9 @@ class GoodsReceiptController extends Controller
             'lines.*.qty'         => 'الكمية',
         ]);
 
-        $lines = $v['lines'];
-        unset($v['lines']);
+        $lines   = $v['lines'];
+        $rejects = array_values(array_filter($v['rejects'] ?? [], fn ($r) => (float) ($r['qty'] ?? 0) > 0));
+        unset($v['lines'], $v['rejects']);
 
         /* المستخدم مش بيختار مخزن ولا مورد ولا طلب شراء — كل ده متعرّف
            على الرسالة من إذن الإضافة. بنحلّه من هنا عشان الشاشة تفضل
@@ -312,7 +318,43 @@ class GoodsReceiptController extends Controller
                 ?: \App\Models\Warehouse::where('is_active', true)->value('id');
         }
 
-        return ['header' => $v, 'lines' => $lines];
+        return ['header' => $v, 'lines' => $lines, 'rejects' => $rejects];
+    }
+
+    /**
+     * بنود الرفض الجزئي/التعليق اللي اتكتبت في نفس فورم الاستلام.
+     * لازم تتسجل **قبل** الإفراج — الإفراج بيخصمها من المتاح للتشغيل.
+     */
+    private function saveRejects(GoodsReceipt $gr, array $rejects): void
+    {
+        if (!$rejects) return;
+
+        $receivedKg = (float) $gr->lines->sum(fn ($l) => \App\Services\DocumentEffects::toUnit($l->qty, $l->unit, 'كجم'));
+        $rejectKg   = (float) array_sum(array_map(fn ($r) => (float) $r['qty'], $rejects));
+        if ($rejectKg > $receivedKg + 0.001) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['rejects' =>
+                'المرفوض والمعلّق (' . round($rejectKg, 3) . ' كجم) أكبر من الوارد (' . round($receivedKg, 3) . ' كجم).']);
+        }
+
+        $c = $gr->consignment;
+        foreach ($rejects as $r) {
+            \App\Models\GoodsReceiptRejection::create([
+                'goods_receipt_id'     => $gr->id,
+                'consignment_id'       => $gr->consignment_id,
+                'fabric_inspection_id' => $gr->fabric_inspection_id,
+                'color_id'             => $c?->color_id,
+                'color_code'           => $c?->color?->code,
+                'lot_label'            => $c?->consignment_no,
+                'kind'                 => $r['kind'] ?? 'rejected',
+                'rolls_count'          => (int) ($r['rolls_count'] ?? 0),
+                'qty'                  => (float) $r['qty'],
+                'unit'                 => 'كجم',
+                'party'                => $r['party'] ?? 'quality',
+                'reason'               => $r['reason'],
+                'resolution'           => 'open',
+                'created_by'           => auth()->id(),
+            ]);
+        }
     }
 
     private function syncLines(GoodsReceipt $gr, array $lines, bool $replace = false): void

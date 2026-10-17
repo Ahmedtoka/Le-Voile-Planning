@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  * إطفاء حرايق. الطريقة دي بتبص على متوسط مبيعات آخر 30 يوم وتقول
  * الرصيد الحالي يكفي كام يوم، وتصنّف: خطر / مراقبة / تمام.
  *
- *   متوسط البيع اليومي = مبيعات آخر 30 يوم ÷ 30
+ *   متوسط البيع اليومي = مبيعات أحدث فترة كاملة (شهر/30 يوم) ÷ عدد أيامها
  *   أيام التغطية       = (الرصيد − مخزون الأمان) ÷ متوسط البيع اليومي
  */
 class CoverageService
@@ -24,16 +24,32 @@ class CoverageService
     {
         $asOf   = $asOf ?: now();
         $window = (int) config('lvplanning.avg_sales_window_days', 30);
-        $from   = $asOf->copy()->subDays($window);
 
-        // متوسط المبيعات اليومي
-        $soldQty = (float) SalesSnapshot::query()
+        /* متوسط المبيعات اليومي — من أحدث فترة مبيعات كاملة (شهر أو 30 يوم)
+           خلصت قبل النهارده، بأحدث مراجعة ليها، مقسومة على عدد أيامها.
+           ليه مش جمع كل اللقطات في آخر 30 يوم؟ لأن اللقطة الشهرية ولقطة
+           «آخر 30 يوم» بيتداخلوا، والاستيراد المتكرر بيعمل مراجعات —
+           الجمع كان بيكرر المبيعات ويطلّع التغطية أقل من الحقيقة. */
+        $base = SalesSnapshot::query()
             ->where('product_model_id', $modelId)
             ->when($colorId, fn ($q) => $q->where('color_id', $colorId))
-            ->whereBetween('period_from', [$from->toDateString(), $asOf->toDateString()])
-            ->sum('qty_pcs');
+            ->latestRevision()
+            ->whereDate('period_to', '<=', $asOf->toDateString())
+            ->whereRaw('DATEDIFF(period_to, period_from) >= 27');
 
-        $avgDaily = $window > 0 ? $soldQty / $window : 0;
+        $period = (clone $base)->orderByDesc('period_to')->orderBy('period_from')
+            ->first(['period_from', 'period_to']);
+
+        $soldQty = 0.0; $periodDays = $window;
+        if ($period) {
+            $soldQty = (float) (clone $base)
+                ->whereDate('period_from', $period->period_from)
+                ->whereDate('period_to', $period->period_to)
+                ->sum('qty_pcs');
+            $periodDays = $period->period_from->diffInDays($period->period_to) + 1;
+        }
+
+        $avgDaily = $periodDays > 0 ? $soldQty / $periodDays : 0;
 
         // آخر رصيد
         $lastPull = StockSnapshot::query()

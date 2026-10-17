@@ -45,13 +45,13 @@ use Illuminate\Support\Facades\DB;
  * وكل دور يلاقي شغل مستني منه، والفلو ماشي من طلب الشراء لحد قفل
  * أمر الشغل. ده للتجربة والفهم — مش للاستخدام الفعلي.
  *
- * reset() بيمسح كل حركة الشغل ويسيب المستخدمين والأدوار ودورات الاعتماد.
+ * reset() بيمسح كل حركة الشغل ويسيب المستخدمين والأدوار.
  */
 class DemoDataService
 {
-    /** الجداول اللي بتتمسح — المستخدمين والأدوار والصلاحيات ودورات الاعتماد بيفضلوا */
+    /** الجداول اللي بتتمسح — المستخدمين والأدوار والصلاحيات بيفضلوا */
     public const BUSINESS_TABLES = [
-        'document_comments', 'approval_steps', 'approvals',
+        'document_comments',
         'production_receipt_lines', 'production_receipts',
         'cut_declaration_lines', 'cut_declarations',
         'material_issue_lines', 'material_issues',
@@ -97,7 +97,7 @@ class DemoDataService
         }
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
-        $this->say('اتمسح كل شيء ما عدا المستخدمين والأدوار ودورات الاعتماد.');
+        $this->say('اتمسح كل شيء ما عدا المستخدمين والأدوار.');
     }
 
     // ════════════════════════════════════════════════════════════

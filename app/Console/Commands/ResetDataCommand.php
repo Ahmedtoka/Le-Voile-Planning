@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 class ResetDataCommand extends Command
 {
     protected $signature = 'lv:reset {--force : من غير تأكيد}';
-    protected $description = 'مسح كل بيانات الشغل مع الإبقاء على المستخدمين والأدوار ودورات الاعتماد';
+    protected $description = 'مسح كل بيانات الشغل مع الإبقاء على المستخدمين والأدوار';
 
     public function handle(): int
     {

@@ -54,7 +54,7 @@ class CutDeclarationController extends Controller
                 ['label' => 'أوامر مستنية بيان', 'value' => $waiting, 'tone' => $waiting ? 'warn' : 'ok',
                  'note' => 'اتبعتت للمصنع ولسه ما جاش منها بيان قص.'],
                 ['label' => 'إجمالي البيانات', 'value' => $base->count(), 'note' => 'كل بيانات القص المسجلة.'],
-                ['label' => 'انحراف خارج الحدود', 'value' => (clone $base)->where('variance_flag','danger')->count(),
+                ['label' => 'انحراف خارج الحدود', 'value' => (clone $base)->where('status', 'approved')->where('variance_flag','danger')->count(),
                  'tone' => 'danger', 'note' => 'الفرق تعدى ' . config('lvplanning.variance.warn_pct') . '% — لازم سبب مكتوب.'],
                 ['label' => 'إجمالي المقصوص', 'value' => number_format((int) (clone $base)->where('status','approved')->sum('total_pieces')),
                  'tone' => 'brand', 'note' => 'قطع اتقصت فعليًا في المصانع.'],
@@ -198,7 +198,16 @@ class CutDeclarationController extends Controller
         $total = (int) $cd->lines->sum('qty');
         $wo    = $cd->workOrder;
 
-        $v = $wo ? PlanningEngine::variance((float) $wo->target_qty, (float) $total) : ['pct' => null, 'flag' => null];
+        /* المقارنة بالتراكمي: اللي اتقص قبل كده في بيانات خلصت + البيان ده.
+           القص على دفعات طبيعي — الدفعة الأولى لوحدها مش انحراف. */
+        $before = $wo
+            ? (int) CutDeclaration::where('work_order_id', $wo->id)
+                ->where('id', '!=', $cd->id)->where('status', 'approved')->sum('total_pieces')
+            : 0;
+
+        $v = $wo
+            ? PlanningEngine::cumulativeVariance((float) $wo->target_qty, (float) ($before + $total))
+            : ['pct' => null, 'flag' => null];
 
         $cd->forceFill([
             'total_pieces'          => $total,

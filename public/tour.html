@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>رحلة الرسالة — Le Voile</title>
+<link rel="icon" href="assets/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --plum:#9D197E; --plum-dk:#7A1362; --ink:#3B092F; --ink-2:#560D45;
+  --tint:#F7E8F3; --line:#ECD1E5; --paper:#F8F4F1; --card:#FFFFFF;
+  --muted:#7d6476; --ok:#2f7d4f; --warn:#a86a00; --bad:#b3261e;
+  --display:'Reem Kufi', 'IBM Plex Sans Arabic', Tahoma, sans-serif;
+  --body:'IBM Plex Sans Arabic', Tahoma, 'Segoe UI', sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.65;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--plum);outline-offset:2px;border-radius:6px}
+
+/* ── الرأس ─────────────────────────────────────────── */
+.top{background:linear-gradient(180deg,var(--ink-2),var(--ink));color:#fff;padding:22px 24px 18px}
+.top-in{max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;gap:16px 28px;align-items:end;justify-content:space-between}
+.brand{display:flex;gap:14px;align-items:center}
+.brand img{height:38px;width:auto}
+.brand small{display:block;opacity:.7;font-size:.82rem}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(1.5rem,2.6vw,2.2rem);line-height:1.25;margin:2px 0 0;letter-spacing:0}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;
+  padding:8px 16px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;transition:background .15s}
+.btn:hover{background:rgba(255,255,255,.18)}
+.btn.primary{background:#fff;color:var(--ink);border-color:#fff;font-weight:600}
+.btn.primary:hover{background:var(--tint)}
+.btn svg{width:16px;height:16px}
+.count{font-size:.85rem;opacity:.8;min-width:62px;text-align:center}
+
+/* ── المسار ────────────────────────────────────────── */
+.wrap{max-width:1240px;margin:0 auto;padding:22px 24px 40px}
+.track{position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 18px 8px}
+.phase{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)}
+.phase:last-child{border-bottom:0}
+.phase-name{font-family:var(--display);font-size:1.05rem;color:var(--ink-2);line-height:1.3}
+.phase-name span{display:block;font-family:var(--body);font-size:.78rem;color:var(--muted)}
+.lane{position:relative;display:flex;gap:10px;align-items:stretch}
+/* خط الخياطة اللي بيربط المحطات — زي حرف القماش */
+.lane::before{content:"";position:absolute;inset-inline:18px;top:27px;height:0;border-top:2px dashed var(--line)}
+.st{position:relative;flex:1 1 0;min-width:0;background:none;border:0;padding:0 2px 6px;cursor:pointer;text-align:center}
+.st .dot{position:relative;z-index:1;display:grid;place-items:center;width:40px;height:40px;margin:7px auto 6px;border-radius:50%;
+  background:var(--card);border:2px solid var(--line);font-weight:700;font-size:.92rem;color:var(--muted);transition:all .3s}
+.st .nm{display:block;font-size:.8rem;line-height:1.35;color:var(--muted);transition:color .3s}
+.st.done .dot{background:var(--tint);border-color:var(--plum);color:var(--plum)}
+.st.done .nm{color:var(--ink)}
+.st.now .dot{background:var(--plum);border-color:var(--plum);color:#fff;transform:scale(1.12)}
+.st.now .nm{color:var(--ink);font-weight:600}
+.st.skip{opacity:.35}
+.st.skip .dot{border-style:dashed}
+.st:hover .nm{color:var(--plum)}
+
+/* اللفة اللي بتتحرك */
+.roll{position:absolute;top:0;left:0;z-index:3;width:58px;height:34px;pointer-events:none;transition:transform .9s cubic-bezier(.6,.05,.25,1);
+  transform:translate(0,0)}
+.roll svg{width:100%;height:100%;filter:drop-shadow(0 4px 6px rgba(59,9,47,.25))}
+.roll .tag{position:absolute;top:-24px;inset-inline-start:50%;transform:translateX(50%);white-space:nowrap;
+  background:var(--ink);color:#fff;font-size:.72rem;padding:1px 8px;border-radius:999px}
+
+/* ── اللوحة ────────────────────────────────────────── */
+.panel{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;margin-top:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 24px}
+.step-no{font-family:var(--display);color:var(--plum);font-size:1rem}
+h2{font-family:var(--display);font-weight:600;font-size:clamp(1.3rem,2vw,1.7rem);line-height:1.3;margin:2px 0 10px}
+.who{display:inline-flex;gap:8px;align-items:center;background:var(--tint);color:var(--ink-2);border-radius:999px;padding:3px 12px 3px 4px;font-size:.85rem;margin-bottom:12px}
+.who i{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--plum);color:#fff;font-style:normal;font-size:.75rem}
+.lead{font-size:1.04rem;max-width:62ch;margin:0 0 14px}
+.rules{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.rules li{position:relative;padding-inline-start:22px;font-size:.93rem;max-width:64ch}
+.rules li::before{content:"";position:absolute;inset-inline-start:2px;top:.62em;width:10px;height:10px;border-radius:2px;
+  background:repeating-linear-gradient(45deg,var(--plum) 0 2px,transparent 2px 4px);border:1px solid var(--plum)}
+.rules li.alert::before{background:var(--bad);border-color:var(--bad)}
+.fork{margin-top:16px;padding:14px 16px;border:1px dashed var(--plum);border-radius:14px;background:#fdf8fb;display:none}
+.fork.show{display:block}
+.fork label{display:flex;gap:12px;align-items:center;cursor:pointer;font-weight:600}
+.fork p{margin:6px 0 0;font-size:.88rem;color:var(--muted)}
+.switch{position:relative;width:46px;height:26px;flex:none}
+.switch input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.switch span{position:absolute;inset:0;border-radius:999px;background:var(--line);transition:background .2s}
+.switch span::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch input:checked+span{background:var(--plum)}
+.switch input:checked+span::after{transform:translateX(-20px)}
+.switch input:focus-visible+span{outline:3px solid var(--plum);outline-offset:2px}
+
+/* المعادلة */
+.formula{margin-top:18px;border-radius:14px;background:var(--ink);color:#fff;padding:16px 18px;display:none}
+.formula.show{display:block}
+.formula h3{margin:0 0 8px;font-size:.88rem;font-weight:500;opacity:.75}
+.formula .ln{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.95rem;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+.formula .ln:last-child{border-bottom:0}
+.formula .ln b{color:#f6c9ea;font-weight:600}
+.formula .ln em{font-style:normal;opacity:.75;grid-column:1/-1;font-size:.84rem}
+
+/* دفتر الأرقام */
+.ledger h3{font-family:var(--display);font-weight:600;font-size:1.15rem;margin:0 0 4px}
+.ledger .sub{font-size:.85rem;color:var(--muted);margin:0 0 12px}
+.grp{margin-top:12px}
+.grp h4{margin:0 0 6px;font-size:.82rem;color:var(--plum);font-weight:600}
+.row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--tint);font-size:.92rem}
+.row span{color:var(--muted)}
+.row b{font-weight:600;text-align:left}
+.row.flash b{animation:flash 1.4s ease}
+.row.bad b{color:var(--bad)} .row.good b{color:var(--ok)}
+@keyframes flash{0%{background:#f6c9ea;box-shadow:0 0 0 4px #f6c9ea}100%{background:transparent;box-shadow:0 0 0 4px transparent}}
+.empty{color:var(--muted);font-size:.9rem;padding:8px 0}
+
+/* لوحة المتابعة في الآخر */
+.board{display:none;margin-top:18px}
+.board.show{display:block;overflow-x:auto}
+.board td:nth-child(-n+2){white-space:nowrap;font-size:.84rem}
+.board table{width:100%;border-collapse:collapse;font-size:.92rem}
+.board th,.board td{padding:10px 8px;border-bottom:1px solid var(--tint);text-align:right}
+.board th{color:var(--muted);font-weight:500;font-size:.82rem}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.8rem;background:var(--tint);color:var(--ink-2)}
+.pill.ok{background:#e3f3e8;color:var(--ok)} .pill.warn{background:#fdf0d8;color:var(--warn)}
+
+.progress{position:fixed;inset-inline:0;bottom:0;height:4px;background:var(--line)}
+.progress i{display:block;height:100%;background:var(--plum);width:0;transition:width .6s}
+
+/* ── موبايل ─────────────────────────────────────────── */
+@media (max-width:900px){
+  .panel{grid-template-columns:1fr}
+  .phase{grid-template-columns:1fr}
+  .lane{overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+  .st{flex:0 0 84px}
+}
+@media (max-width:600px){
+  .top,.wrap{padding-inline:16px}
+  .card{padding:18px 16px}
+  .roll{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <img src="assets/logo-white.png" alt="Le Voile" onerror="this.remove()">
+      <div>
+        <small>نظام تخطيط إنتاج المكملات</small>
+        <h1>رحلة رسالة قماش: من «اللون هيخلص» لحد القطعة في المخزن</h1>
+      </div>
+    </div>
+    <div class="controls" role="group" aria-label="التحكم في الجولة">
+      <button class="btn" id="restart" title="من الأول">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        من الأول</button>
+      <button class="btn" id="prev">السابق</button>
+      <span class="count" id="count" aria-live="polite">1 / 15</span>
+      <button class="btn" id="next">التالي</button>
+      <button class="btn primary" id="play" aria-pressed="false">
+        <svg id="playIco" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>
+        <span id="playTxt">شغّل الجولة</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="track" id="track" aria-label="محطات الدورة"></section>
+
+  <section class="panel">
+    <article class="card" id="explain" aria-live="polite">
+      <div class="step-no" id="stepNo"></div>
+      <h2 id="stepTitle"></h2>
+      <div class="who"><i id="whoIco"></i><span id="who"></span></div>
+      <p class="lead" id="lead"></p>
+      <ul class="rules" id="rules"></ul>
+
+      <div class="fork" id="fork">
+        <label>
+          <span class="switch"><input type="checkbox" id="direct"><span></span></span>
+          استلام مباشر — من جوه لجوه (حاويات / طلب معفي من الفحص)
+        </label>
+        <p>شغّله وشوف: الرسالة بتدخل المخزن مُفرَج عنها على طول، ومحطات الفحص والمعمل والإفراج بتتعدّى.</p>
+      </div>
+
+      <div class="formula" id="formula"><h3 id="fTitle"></h3><div id="fBody"></div></div>
+
+      <div class="board" id="board">
+        <table>
+          <thead><tr><th>أمر الشغل</th><th>الرسالة</th><th>المصنع</th><th>المتوقع</th><th>اتسلّم</th><th>الحالة</th></tr></thead>
+          <tbody>
+            <tr><td>WO-2026-0045</td><td>SL30-181026-196-00</td><td>مصنع سيني</td><td>7,032</td><td>6,960</td><td><span class="pill ok">مقفول</span></td></tr>
+            <tr><td>WO-2026-0046</td><td>SL30-181026-196-00</td><td>مصنع خالد</td><td>4,104</td><td>1,200</td><td><span class="pill warn">مستلم جزئيًا · متأخر يومين</span></td></tr>
+            <tr><td>WO-2026-0047</td><td>KB-041026-188-01</td><td>مصنع سيني</td><td>2,880</td><td>—</td><td><span class="pill">عند المصنع · ميعاده 28 أكتوبر</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <aside class="card ledger">
+      <h3>دفتر الرسالة</h3>
+      <p class="sub">كل رقم هنا السيستم حسبه لوحده في الخطوة اللي اتولد فيها.</p>
+      <div id="ledger"><div class="empty">لسه مفيش أرقام — دوس «التالي».</div></div>
+    </aside>
+  </section>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+<script>
+/* ═════════ السيناريو: رسالة واحدة حقيقية الأرقام ═════════
+   كل الأرقام محسوبة بنفس معادلات PlanningEngine في السيستم. */
+const PHASES = [
+  { id:'buy',  name:'① الشراء',      hint:'التخطيط ← المشتريات ← الحسابات' },
+  { id:'fab',  name:'② وصول القماش', hint:'المخزن ← الجودة ← المعمل' },
+  { id:'prod', name:'③ التشغيل',     hint:'الماركر ← المصنع ← المخزن' },
+];
+
+const GROUPS = { po:'طلب الشراء', cn:'الرسالة (الحوض)', wo:'أمر الشغل' };
+
+const STEPS = [
+ { ph:'buy', no:'0', short:'التغطية', title:'السيستم بيقولك إن اللون هيخلص',
+   who:'التخطيط', ico:'خ',
+   lead:'قبل أي طلب: شاشة أيام التغطية بتحسب الرصيد يكفي كام يوم بيع. البادي الأسود باقيله 13 يوم بس — ده «خطر»، فالمخطط يبدأ يطلب قماش.',
+   rules:['بدل «نواقص» — تكتشف اللون خلص بعد ما يخلص.','الأرقام جاية من مبيعات QuickBooks ورصيد المخزن، بعد خصم مخزون الأمان.'],
+   f:{t:'أيام التغطية', l:[
+     ['متوسط البيع اليومي','1,200 قطعة ÷ 31 يوم = <b>38.7 قطعة/يوم</b>'],
+     ['الرصيد المتاح','900 رصيد − 400 أمان = <b>500 قطعة</b>'],
+     ['أيام التغطية','500 ÷ 38.7 = <b>12.9 يوم ⇐ خطر (أقل من 15)</b>']]},
+   set:{po:{'الموديل':'بادي كات — أسود','أيام التغطية':['12.9 يوم — خطر','bad']}} },
+
+ { ph:'buy', no:'1', short:'طلب شراء', title:'التخطيط بيطلب الخامة',
+   who:'التخطيط', ico:'خ',
+   lead:'المخطط بيكتب الصنف واللون والكمية ونسبة السماح. الحفظ بينزّل الطلب للمشتريات على طول — مفيش اعتماد ولا انتظار توقيع.',
+   rules:['اللي بيعمل المستند هو اللي بيقرره.','بعد ما ينزل، التخطيط ما يعدّلش الأصناف.'],
+   f:{t:'حدود الاستلام المسموحة', l:[
+     ['أقصى كمية','2 طن × (1 + 5%) = <b>2.1 طن</b>'],
+     ['أقل كمية مقبولة','2 طن × (1 − 5%) = <b>1.9 طن</b>'],
+     ['','<em>لو وصل أكتر من الأقصى، إذن الإضافة بيترفض. لو وصل الأقل المقبول، الطلب بيتقفل لوحده.</em>']]},
+   set:{po:{'رقم الطلب':'PO-2026-0196','الصنف':'فسكوز فل ليكرا — أسود','الكمية':'2 طن · سماح 5%'}} },
+
+ { ph:'buy', no:'2', short:'التسعير', title:'المشتريات بتحدد المورد والسعر',
+   who:'المشتريات', ico:'م',
+   lead:'المورد وسعر الكيلو وطريقة الدفع وتاريخ التوريد. أول ما تحفظ، الطلب يبقى جاهز للاستلام عند المخزن، وبينزل عند الحسابات للمتابعة في نفس اللحظة.',
+   rules:['لو سعّرت بالكيلو والطلب بالطن، الكمية بتتحول معاها (2 طن = 2,000 كيلو).'],
+   f:{t:'إجمالي الطلب', l:[
+     ['قبل الخصم','2,000 كجم × 210 ج = <b>420,000</b>'],
+     ['الخصم 2%','<b>8,400</b>'],
+     ['الضريبة 14% على اللي بعد الخصم','411,600 × 14% = <b>57,624</b>'],
+     ['الإجمالي','<b>469,224 ج.م</b>']]},
+   set:{po:{'المورد':'سنترال تكستايل','التوريد':'25 أكتوبر','الإجمالي':'469,224 ج.م'}} },
+
+ { ph:'buy', no:'3', short:'الحسابات', title:'الحسابات بتشوف المستحق',
+   who:'الحسابات', ico:'ح',
+   lead:'المستحق بيظهر في شاشة المستحقات لوحده. زرار «سجّل علمك» بيشيله من قايمة الجديد — متابعة مش بوابة، ومش بيوقّف الاستلام.',
+   rules:['مستحق خلال 30 يوم · حسب المورد · اللي اتسعّر النهارده.'],
+   set:{po:{'الحسابات':['علمت بالمستحق','good']}} },
+
+ { ph:'fab', no:'4', short:'إذن إضافة', title:'القماش وصل — والرسالة بتتولد لوحدها',
+   who:'المخزن', ico:'خز', fork:true,
+   lead:'أمين المخزن بيختار طلب الشراء ويكتب اللي استلمه وعدد الأتواب. كل (خامة + لون) بتبقى رسالة لوحدها برقم، وبتدخل المخزن محجوزة «تحت الفحص».',
+   rules:['محجوزة = مش متاحة لأي أمر شغل لحد الإفراج.','لو استلمت جزئي، السيستم بيطلب تاريخ متوقع للباقي.','لو اللون الواصل مختلف: تسكّنه على السطر ولا تفتحله طلب جديد.'],
+   f:{t:'الرسالة', l:[
+     ['الوزن','1.96 طن × 1000 = <b>1,960 كجم</b> (الرسالة دايمًا بالكيلو)'],
+     ['الطلب','1.96 طن ≥ 1.9 الأقل المقبول ⇐ <b>الطلب اتقفل</b>']]},
+   set:{cn:{'رقم الرسالة':'SL30-181026-196-00','الوزن':'1,960 كجم','الأتواب (المورد)':'38 توب','الحالة':['محجوزة تحت الفحص','bad'],'المتاح للتشغيل':'0 كجم'}} },
+
+ { ph:'fab', no:'5', short:'فحص', title:'الفحص والفرز: جرد الأتواب وقياس العرض',
+   who:'الجودة', ico:'ج', inspect:true,
+   lead:'الفاحص بيعدّ الأتواب ويقيس عيّنة منها — العرض والطول والعيوب لكل توب. أهم رقم بيطلع من هنا هو أقل عرض، لأن الماركر هيتحط عليه.',
+   rules:['أقل عرض مش أقصى عرض ولا المتوسط: الماركر لو أعرض من التوب الضيق، هيتحرق جنبه ويترمي.','فرق الجرد (36 بدل 38) بيروح تنبيه فوري لمراقب المخزون.','لو فرق العرض بين الأتواب فوق 5 سم = القماش نفسه بايظ.'],
+   f:{t:'تقرير الفحص', l:[
+     ['أقل عرض','أصغر قياس من (176، 174، 172، 175، 173، 176) = <b>172 سم</b>'],
+     ['فرق العرض','176 − 172 = <b>4 سم ⇐ سليم (أقل من 5)</b>'],
+     ['نسبة العيّنة','6 ÷ 36 × 100 = <b>16.7%</b> (الحد الأدنى 15%)'],
+     ['طول الرسالة','(330 م ÷ 6) × 36 = <b>1,980 م تقديري</b>']]},
+   set:{cn:{'الأتواب (المجرود)':['36 توب — فرق 2','bad'],'أقل عرض':'172 سم','فرق العرض':['4 سم — سليم','good'],'الحالة':'اتفحصت'}} },
+
+ { ph:'fab', no:'6', short:'معمل', title:'المعمل: وزن البنشر والانكماش',
+   who:'المعمل', ico:'مع', inspect:true,
+   lead:'فني المعمل بيسجّل وزن المتر المربع لكل توب، والانكماش طول وعرض، ومطابقة اللون. المتوسط بيروح للرسالة ومنها لحسبة أمر الشغل.',
+   rules:['البنشر بيطلع وينزل جوه نفس التوب، فالمتوسط هو الأقرب.','لو البنشر أو الانكماش برّه مواصفة الخامة، السيستم بينبّه.'],
+   f:{t:'متوسط البنشر', l:[
+     ['القراءات','190 · 192 · 194 · 191 · 193 · 192'],
+     ['المتوسط','1,152 ÷ 6 = <b>192 جم/م²</b>']]},
+   set:{cn:{'متوسط البنشر':'192 جم/م²','الانكماش':'طول 2.5% · عرض 1.8%','الحالة':'خلّصت معمل'}} },
+
+ { ph:'fab', no:'7', short:'إفراج', title:'إذن استلام الخام = الإفراج',
+   who:'المخزن', ico:'خز', inspect:true,
+   lead:'مراجعة أخيرة وحفظ. السليم بيبقى متاح لأوامر الشغل في نفس اللحظة. لو فيه أتواب مرفوضة، بتتكتب في نفس الإذن وتروح مخزن المرتجعات.',
+   rules:['ممنوع إفراج قبل الفحص والمعمل — السيستم بيرفض.','المعلّق بيستنى قرار التخطيط والمشتريات، ولو اتقبل بيرجع للمتاح.'],
+   f:{t:'المُفرَج عنه', l:[
+     ['السليم','1,960 الوارد − 110 مرفوض (توبين) = <b>1,850 كجم</b>']]},
+   set:{cn:{'مرفوض (مرتجعات)':['110 كجم — توبين','bad'],'الحالة':['مُفرَج عنها','good'],'المتاح للتشغيل':['1,850 كجم','good']}} },
+
+ { ph:'prod', no:'8', short:'طلب ماركر', title:'المخطط بيطلب ماركر على أقل عرض',
+   who:'التخطيط', ico:'خ',
+   lead:'«محتاج بادي ومعصم على عرض 172». الطلب بيروح للباترونست.',
+   rules:['الماركر الواحد ممكن يشيل أكتر من موديل.'],
+   set:{wo:{'طلب الماركر':'بادي + معصم · عرض 172 سم'}} },
+
+ { ph:'prod', no:'9', short:'ماركر', title:'الباترونست بيرفع الماركر',
+   who:'الباترونست', ico:'ب',
+   lead:'طول الفرشة وعدد القطع اللي بتطلع من الرِقّة الواحدة، وكام قطعة من كل موديل.',
+   rules:['لو فيه طول أمان، الحسبة بتستخدمه — ده اللي المصنع بيفرش بيه فعلًا.'],
+   set:{wo:{'طول الفرشة':'3.10 م','قطع الفرشة':'12 (6 بادي + 6 معصم)'}} },
+
+ { ph:'prod', no:'10', short:'أمر شغل', title:'أمر الشغل: الحسبة اللي كانت في الإكسيل',
+   who:'التخطيط', ico:'خ',
+   lead:'المخطط بيختار الرسالة والماركر والمصنع والكمية. السيستم بيحسب لحظيًا قبل الحفظ: الرِقّات والقطع المتوقعة ونصيب كل موديل، وبيحجز الكمية على الرسالة.',
+   rules:['ممنوع خلط رسالتين في قطعة واحدة — لونين مختلفين حتى لو الاتنين أسود.','لو الأمر بأكتر من خامة، أقلهم قطع هي الحاكمة.','الاستهلاك بيتوزّع على الموديلات بمتوسطاتهم التاريخية، مش بالتساوي.'],
+   f:{t:'الحسبة', l:[
+     ['وزن الرِقّة','3.10 × 1.72 × 0.192 = <b>1.0237 كجم</b>'],
+     ['الرِقّات','600 كجم ÷ 1.0237 = 586.08 ⇐ <b>586 رِقّة</b>'],
+     ['القطع المتوقعة','586 × 12 = <b>7,032 قطعة</b>'],
+     ['البادي','0.0853 × (0.10 ÷ 0.075) = <b>113.7 جم للقطعة</b>'],
+     ['المعصم','0.0853 × (0.05 ÷ 0.075) = <b>56.9 جم للقطعة</b>']]},
+   set:{cn:{'المتاح للتشغيل':'1,250 كجم'},
+        wo:{'رقم الأمر':'WO-2026-0045','المصنع':'مصنع سيني · ميعاده 1 نوفمبر','المخصص':'600 كجم','المتوقع':'7,032 قطعة (3,516 + 3,516)'}} },
+
+ { ph:'prod', no:'11', short:'صرف خام', title:'المخزن بيصرف الخامة للمصنع',
+   who:'المخزن', ico:'خز',
+   lead:'إذن الصرف بيتملّى من الأمر. الصرف الجزئي مسموح، والأمر بيفضل في طابور المخزن لحد ما الخامة تتصرف كلها.',
+   rules:['الصرف بيطلع حركة مخزون خارجة ويتسجل على سطر الأمر.'],
+   set:{wo:{'المنصرف':'400 + 200 = 600 كجم','الحالة':'تحت القص'}} },
+
+ { ph:'prod', no:'12', short:'بيان قص', title:'بيان القص: الفعلي مقابل المتوقع',
+   who:'متابعة المصانع', ico:'ص',
+   lead:'المصنع فرش 3.13 م بدل 3.10 — 3 سنتي زيادة. السيستم بيحسب كام رِقّة ضاعت والانحراف عن المتوقع.',
+   rules:['لحد 2% أخضر · لحد 4% أصفر · فوق 4% أحمر ولازم سبب مكتوب.','المقارنة بالتراكمي: القص على دفعات مش انحراف.'],
+   f:{t:'الانحراف', l:[
+     ['وزن الرِقّة الفعلي','3.13 × 1.72 × 0.192 = <b>1.0337 كجم</b>'],
+     ['الرِقّات الفعلية','600 ÷ 1.0337 ⇐ <b>580 رِقّة</b> (ضاعت 6 = 72 قطعة)'],
+     ['المقصوص','580 × 12 = <b>6,960 قطعة</b>'],
+     ['الانحراف','(6,960 − 7,032) ÷ 7,032 = <b>−1.0% ⇐ أخضر</b>']]},
+   set:{wo:{'المقصوص':'6,960 قطعة','الانحراف':['−1.0% — طبيعي','good']}} },
+
+ { ph:'prod', no:'13', short:'استلام', title:'استلام الإنتاج على دفعات — والأمر بيتقفل لوحده',
+   who:'المخزن', ico:'خز',
+   lead:'4,000 قطعة، وبعدين 2,960 (منهم 40 مرفوض من المصنع). أول ما كل اللي اتقص يتسلّم والقص يكون وصل للمستهدف، الأمر بيتقفل، والخامة اللي ما اتصرفتش بترجع متاحة للرسالة.',
+   rules:['المرفوض من المصنع بيتحسب مستلم علشان المتبقي يصفّر، بس مش بيدخل مخزن التام.','لو المصنع قص أقل من المستهدف بكتير، الأمر ما بيتقفلش لوحده — بيتقفل يدوي بسبب.'],
+   f:{t:'شرط القفل', l:[
+     ['المتبقي على المصنع','6,960 مقصوص − 6,960 مستلم = <b>0</b>'],
+     ['الحد الأدنى للقص','7,032 × (1 − 4%) = 6,750 ≤ 6,960 ⇐ <b>يتقفل</b>']]},
+   set:{wo:{'المستلم':'6,920 سليم + 40 مرفوض','الحالة':['مقفول','good']}} },
+
+ { ph:'prod', no:'✓', short:'المتابعة', title:'وفي أي لحظة: مين واخد إيه، ومتوقع إيه، وجاي إمتى',
+   who:'الكل', ico:'✓', board:true,
+   lead:'كل أوامر الشغل في مكان واحد: بأنهي رسالة، عند أنهي مصنع، المتوقع منها كام، اتسلّم كام، وميعادها إمتى. والرقم الأحمر في المنيو بيقول لكل واحد فيه إيه مستنيه هو.',
+   rules:['تحميل المصانع: القطع اللي على كل مصنع ÷ طاقته اليومية = أيام تقديرية.','رصيد الرسايل وحركة المخزون بنفس شكل شيتات المخزن، وبيتصدّروا إكسيل.'],
+   set:{} },
+];
+
+/* ═════════ البناء ═════════ */
+const $ = s => document.querySelector(s);
+const track = $('#track');
+const stEls = [];
+
+PHASES.forEach(ph => {
+  const row = document.createElement('div');
+  row.className = 'phase';
+  row.innerHTML = `<div class="phase-name">${ph.name}<span>${ph.hint}</span></div><div class="lane"></div>`;
+  const lane = row.querySelector('.lane');
+  STEPS.forEach((s, i) => {
+    if (s.ph !== ph.id) return;
+    const b = document.createElement('button');
+    b.className = 'st';
+    b.type = 'button';
+    b.setAttribute('aria-label', `الخطوة ${s.no}: ${s.short}`);
+    b.innerHTML = `<span class="dot">${s.no}</span><span class="nm">${s.short}</span>`;
+    b.addEventListener('click', () => { stop(); go(i); });
+    lane.appendChild(b);
+    stEls[i] = b;
+  });
+  track.appendChild(row);
+});
+
+const roll = document.createElement('div');
+roll.className = 'roll';
+roll.setAttribute('aria-hidden', 'true');
+roll.innerHTML = `<span class="tag" id="rollTag">طلب</span>
+<svg viewBox="0 0 58 34"><defs><pattern id="weave" width="4" height="4" patternUnits="userSpaceOnUse">
+<rect width="4" height="4" fill="#9D197E"/><path d="M0 0h2v2H0zM2 2h2v2H2z" fill="#7A1362"/></pattern></defs>
+<rect x="6" y="5" width="44" height="24" rx="3" fill="url(#weave)"/>
+<ellipse cx="50" cy="17" rx="6" ry="12" fill="#7A1362"/><ellipse cx="50" cy="17" rx="2.4" ry="5" fill="#F7E8F3"/>
+<ellipse cx="6" cy="17" rx="6" ry="12" fill="#B63B98"/></svg>`;
+track.appendChild(roll);
+
+/* ═════════ الحالة ═════════ */
+let cur = -1, timer = null;
+const direct = $('#direct');
+const isSkipped = i => direct.checked && STEPS[i].inspect;
+
+function ledgerAt(i) {
+  // الدفتر = كل اللي اتسجل لحد الخطوة دي
+  const data = { po:{}, cn:{}, wo:{} };
+  for (let k = 0; k <= i; k++) {
+    if (isSkipped(k)) continue;
+    const s = STEPS[k].set || {};
+    for (const g in s) Object.assign(data[g], s[g]);
+    if (k === 4 && direct.checked) {
+      Object.assign(data.cn, { 'الحالة':['مُفرَج عنها على طول (مباشر)','good'], 'المتاح للتشغيل':['1,960 كجم','good'] });
+    }
+  }
+  if (direct.checked && i >= 10) data.cn['المتاح للتشغيل'] = '1,360 كجم';
+  return data;
+}
+
+let prevLedger = {};
+function renderLedger(i) {
+  const d = ledgerAt(i), box = $('#ledger');
+  const html = [];
+  for (const g of ['po','cn','wo']) {
+    const keys = Object.keys(d[g]);
+    if (!keys.length) continue;
+    html.push(`<div class="grp"><h4>${GROUPS[g]}</h4>`);
+    keys.forEach(k => {
+      const v = d[g][k], val = Array.isArray(v) ? v[0] : v, tone = Array.isArray(v) ? v[1] : '';
+      const id = g + k, changed = prevLedger[id] !== undefined && prevLedger[id] !== val || prevLedger[id] === undefined && cur >= 0;
+      html.push(`<div class="row ${tone} ${changed ? 'flash' : ''}"><span>${k}</span><b>${val}</b></div>`);
+      prevLedger[id] = val;
+    });
+    html.push('</div>');
+  }
+  box.innerHTML = html.length ? html.join('') : '<div class="empty">لسه مفيش أرقام — دوس «التالي».</div>';
+}
+
+function moveRoll(i) {
+  const el = stEls[i].querySelector('.dot');
+  const t = track.getBoundingClientRect(), r = el.getBoundingClientRect();
+  // اللفة بتقف على خط الخياطة جنب المحطة من ناحية اللي جاي (شمالها — الصفحة يمين لشمال)
+  const x = r.left - t.left - 58 - 6;
+  const y = r.top - t.top + r.height / 2 - 17;
+  roll.style.transform = `translate(${x}px, ${y}px)`;
+  const tags = ['تغطية','طلب','طلب','طلب','1,960 كجم','172 سم','192 جم','1,850 كجم','ماركر','ماركر','7,032 قطعة','600 كجم','6,960','مقفول','✓'];
+  $('#rollTag').textContent = tags[i];
+}
+
+function go(i) {
+  if (i < 0 || i >= STEPS.length) return;
+  // لو مباشر، اقفز فوق محطات الفحص في الاتجاه اللي ماشيين فيه
+  if (isSkipped(i)) { const dir = i > cur ? 1 : -1; return go(i + dir); }
+  cur = i;
+  const s = STEPS[i];
+
+  stEls.forEach((b, k) => {
+    b.classList.toggle('now', k === i);
+    b.classList.toggle('done', k < i && !isSkipped(k));
+    b.classList.toggle('skip', isSkipped(k));
+    if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+  });
+
+  $('#stepNo').textContent = s.no === '✓' ? 'الخلاصة' : (s.no === '0' ? 'البداية' : `الخطوة ${s.no} من 13`);
+  $('#stepTitle').textContent = s.title;
+  $('#who').textContent = s.who;
+  $('#whoIco').textContent = s.ico;
+  $('#lead').textContent = s.lead;
+  $('#rules').innerHTML = (s.rules || []).map(r => `<li${/ممنوع|بايظ/.test(r) ? ' class="alert"' : ''}>${r}</li>`).join('');
+  $('#fork').classList.toggle('show', !!s.fork);
+  $('#board').classList.toggle('show', !!s.board);
+
+  const f = $('#formula');
+  if (s.f) {
+    $('#fTitle').textContent = 'السيستم بيحسب: ' + s.f.t;
+    $('#fBody').innerHTML = s.f.l.map(([a, b]) => a ? `<div class="ln"><span>${a}</span><span>${b}</span></div>` : `<div class="ln">${b}</div>`).join('');
+    f.classList.add('show');
+  } else f.classList.remove('show');
+
+  renderLedger(i);
+  moveRoll(i);
+  const shown = STEPS.filter((_, k) => !isSkipped(k)).length;
+  const pos = STEPS.slice(0, i + 1).filter((_, k) => !isSkipped(k)).length;
+  $('#count').textContent = `${pos} / ${shown}`;
+  $('#bar').style.width = (pos / shown * 100) + '%';
+  $('#prev').disabled = i === 0;
+  $('#next').disabled = i === STEPS.length - 1;
+}
+
+function step(d) {
+  let n = cur + d;
+  while (n >= 0 && n < STEPS.length && isSkipped(n)) n += d;
+  if (n >= 0 && n < STEPS.length) go(n); else stop();
+}
+
+/* التشغيل التلقائي */
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function play() {
+  if (cur >= STEPS.length - 1) { prevLedger = {}; go(0); }
+  $('#play').setAttribute('aria-pressed', 'true');
+  $('#playTxt').textContent = 'وقّف';
+  $('#playIco').innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+  timer = setInterval(() => { if (cur >= STEPS.length - 1) stop(); else step(1); }, reduce ? 9000 : 6500);
+}
+function stop() {
+  clearInterval(timer); timer = null;
+  $('#play').setAttribute('aria-pressed', 'false');
+  $('#playTxt').textContent = 'شغّل الجولة';
+  $('#playIco').innerHTML = '<path d="M7 4v16l13-8z"/>';
+}
+
+$('#play').addEventListener('click', () => timer ? stop() : play());
+$('#next').addEventListener('click', () => { stop(); step(1); });
+$('#prev').addEventListener('click', () => { stop(); step(-1); });
+$('#restart').addEventListener('click', () => { stop(); prevLedger = {}; go(0); });
+// تبديل المباشر: اللي اتغير بس هو اللي يلمع
+direct.addEventListener('change', () => go(cur));
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input')) return;
+  // الصفحة يمين لشمال: السهم الشمال = التالي
+  if (e.key === 'ArrowLeft')  { stop(); step(1); }
+  if (e.key === 'ArrowRight') { stop(); step(-1); }
+  if (e.key === ' ') { e.preventDefault(); timer ? stop() : play(); }
+});
+addEventListener('resize', () => cur >= 0 && moveRoll(cur));
+
+go(0);
+</script>
+</body>
+</html>

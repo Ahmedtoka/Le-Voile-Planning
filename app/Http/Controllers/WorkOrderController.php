@@ -236,6 +236,10 @@ class WorkOrderController extends Controller
             'variance_reason' => ['required', 'string'],
         ], [], ['variance_reason' => 'سبب القفل']);
 
+        // أمر مقفول أو ملغي أو اتستبدل بنسخة أحدث ما يتقفلش تاني
+        abort_unless(in_array($work_order->status, WorkOrder::CLOSABLE_STATUSES, true), 403,
+            'أمر الشغل ده مش مفتوح علشان يتقفل.');
+
         $work_order->update(['status' => 'closed', 'variance_reason' => $data['variance_reason']]);
         $this->touchConsignments($work_order);
         ActivityLogger::log('closed', $work_order, 'قفل أمر شغل ' . $work_order->wo_no);

@@ -3,7 +3,7 @@
 
 <div class="note-box mb-3">
   الشاشة دي للأدمن بس. <b>المسح</b> بيشيل كل بيانات الشغل (طلبات، أحواض، أوامر، تقارير، تعليقات)
-  ويسيب <b>المستخدمين والأدوار والصلاحيات ودورات الاعتماد</b> زي ما هي.
+  ويسيب <b>المستخدمين والأدوار والصلاحيات</b> زي ما هي.
   <b>التوليد</b> بيملا السيستم بداتا ديمو مترابطة: طلبات في كل مرحلة، أحواض في كل حالة،
   أوامر شغل شغالة ومقفولة، ومبيعات 18 شهر — عشان كل شاشة تبان وهي شغّالة.
 </div>
@@ -56,7 +56,7 @@
           <li>نقاشات على المستندات</li>
         </ul>
         <div class="alert alert-warning py-2 small mb-3">
-          بيمسح الموجود الأول. المستخدمون والأدوار ودورات الاعتماد بيفضلوا.
+          بيمسح الموجود الأول. المستخدمون والأدوار بيفضلوا.
         </div>
         <label class="form-label req" for="c1">اكتب «توليد» للتأكيد</label>
         <input id="c1" name="confirm" class="form-control form-control-sm mb-2" placeholder="توليد" required autocomplete="off">
@@ -99,7 +99,7 @@
       <form method="post" action="{{ route('data.reset') }}" class="card-body">@csrf
         <div class="alert alert-danger py-2 small mb-3">
           <b>مفيش رجوع.</b> كل الطلبات والأحواض والأوامر والتقارير والتعليقات
-          <b>والبيانات الأساسية</b> هتتمسح. المستخدمون والأدوار ودورات الاعتماد هيفضلوا.
+          <b>والبيانات الأساسية</b> هتتمسح. المستخدمون والأدوار هيفضلوا.
         </div>
         <label class="form-label req" for="c3">اكتب «مسح» للتأكيد</label>
         <input id="c3" name="confirm" class="form-control form-control-sm mb-2" placeholder="مسح" required autocomplete="off">

@@ -70,7 +70,7 @@
               <td>
                 <input type="hidden" name="prices[{{ $i }}][id]" value="{{ $l->id }}">
                 <select name="prices[{{ $i }}][unit]" class="form-select form-select-sm">
-                  @foreach(['طن','كيلو','متر'] as $u)
+                  @foreach(array_unique(array_filter(['طن','كيلو','متر', $l->unit === 'كجم' ? null : $l->unit])) as $u)
                     <option value="{{ $u }}" @selected($l->unit===$u || ($l->unit==='كجم' && $u==='كيلو'))>{{ $u }}</option>
                   @endforeach
                 </select>

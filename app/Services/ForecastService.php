@@ -72,6 +72,7 @@ class ForecastService
         for ($month = 1; $month <= 12; $month++) {
             // الأساس: مبيعات نفس الشهر السنة اللي فاتت
             $base = (float) SalesSnapshot::where('product_model_id', $modelId)
+                ->monthly()->latestRevision()
                 ->whereYear('period_from', $baseYear)
                 ->whereMonth('period_from', $month)
                 ->sum('qty_pcs');
@@ -115,6 +116,7 @@ class ForecastService
         foreach (Forecast::where('year', $year)->cursor() as $f) {
             $actual = (float) SalesSnapshot::where('product_model_id', $f->product_model_id)
                 ->when($f->color_id, fn ($q) => $q->where('color_id', $f->color_id))
+                ->monthly()->latestRevision()
                 ->whereYear('period_from', $year)
                 ->whereMonth('period_from', $f->month)
                 ->where('is_locked', true)

@@ -77,11 +77,11 @@ class PlanningEngine
             ? round($rollLengthM - ($pliesPerRoll * $spreadLengthM), 2)
             : null;
 
-        // القطع المتوقعة من الكيلوهات المتاحة
-        $expectedPieces = $kgPerPiece > 0 ? (int) floor($availableKg / $kgPerPiece) : 0;
-
-        // إجمالي الرِقّات المتوقعة من الكمية كلها
-        $expectedPlies = $piecesPerSpread > 0 ? (int) floor($expectedPieces / $piecesPerSpread) : 0;
+        /* الرِقّات المتوقعة من الكمية كلها — رِقّات كاملة بس، لأن المصنع
+           ما بيقصّش نص رِقّة. والقطع = الرِقّات × قطع الفرشة.
+           (نفس طريقة أمر الشغل computeFabric — الحاسبة والأمر لازم يطلّعوا نفس الرقم) */
+        $expectedPlies  = $plyWeightKg > 0 ? (int) floor($availableKg / $plyWeightKg) : 0;
+        $expectedPieces = $expectedPlies * $piecesPerSpread;
 
         return [
             'ok'                => true,
@@ -405,6 +405,27 @@ class PlanningEngine
             'label' => WorkOrder::VARIANCE_FLAGS[$flag] ?? $flag,
             'needs_reason' => $flag === 'danger',
         ];
+    }
+
+    /**
+     * انحراف القص التراكمي عن المستهدف.
+     *
+     * أمر الشغل بيتقص على أكتر من بيان — فالقص الجزئي (لسه تحت المستهدف)
+     * مش انحراف ولا محتاج سبب: أقصى تصنيف له «تحذير». الأحمر بيبقى بس
+     * لما القص يعدّي المستهدف فوق الحد. النقص الحقيقي بيبان عند القفل:
+     * الأمر مش بيتقفل لوحده إلا لو القص وصل للمستهدف، والقفل اليدوي بسبب.
+     */
+    public static function cumulativeVariance(float $target, float $cumulativeCut): array
+    {
+        $v = self::variance($target, $cumulativeCut);
+
+        if ($v['flag'] === 'danger' && $v['pct'] < 0) {
+            $v['flag']         = 'warn';
+            $v['label']        = WorkOrder::VARIANCE_FLAGS['warn'];
+            $v['needs_reason'] = false;
+        }
+
+        return $v;
     }
 
     /**

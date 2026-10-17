@@ -190,6 +190,11 @@ class DoctorCommand extends Command
                 }
             }
 
+            // طلبات شراء واقفة في مراحل قديمة (اعتماد / مستني علم الحسابات)
+            if (Schema::hasColumn('purchase_orders', 'stage')) {
+                $stuck += DB::table('purchase_orders')->whereIn('stage', ['approval', 'finance'])->count();
+            }
+
             $stuck === 0
                 ? $this->ok('مفيش مستندات عالقة «تحت الاعتماد»')
                 : $this->bad("فيه {$stuck} مستند عالق من نسخة الاعتمادات القديمة",
@@ -204,7 +209,7 @@ class DoctorCommand extends Command
     private function schema(): void
     {
         $required = [
-            'users', 'roles', 'permissions', 'approval_flows', 'approvals',
+            'users', 'roles', 'permissions',
             'suppliers', 'factories', 'warehouses', 'fabric_types', 'colors',
             'product_models', 'accessories', 'model_boms',
             'purchase_orders', 'purchase_order_lines',

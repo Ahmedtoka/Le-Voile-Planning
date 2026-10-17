@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * أدوات الداتا — للأدمن بس.
  *
- * زرار بيمسح كل بيانات الشغل (ويسيب المستخدمين والأدوار ودورات الاعتماد)،
+ * زرار بيمسح كل بيانات الشغل (ويسيب المستخدمين والأدوار)،
  * وزرار بيولّد داتا ديمو كاملة تخلّي السيستم يبان شغّال من أول لحظة.
  */
 class DemoDataController extends Controller
@@ -82,7 +82,7 @@ class DemoDataController extends Controller
         (new DemoDataService())->reset();
         ActivityLogger::log('data_reset', null, 'مسح بيانات الشغل');
 
-        return back()->with('success', 'تم مسح كل بيانات الشغل. المستخدمون والأدوار ودورات الاعتماد زي ما هم.');
+        return back()->with('success', 'تم مسح كل بيانات الشغل. المستخدمون والأدوار زي ما هم.');
     }
 
     private function counts(): array

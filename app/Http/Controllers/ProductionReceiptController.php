@@ -56,7 +56,7 @@ class ProductionReceiptController extends Controller
                 ['label' => 'إجمالي الاستلامات', 'value' => $base->count(), 'note' => 'كل أذون الاستلام من المصانع.'],
                 ['label' => 'قطع مستلمة', 'value' => number_format((int) (clone $base)->where('status','approved')->sum('total_pieces')),
                  'tone' => 'ok', 'note' => 'منتج تام دخل المخزن.'],
-                ['label' => 'الشهر ده', 'value' => number_format((int) (clone $base)->where('status','approved')->whereMonth('doc_date', now()->month)->sum('total_pieces')),
+                ['label' => 'الشهر ده', 'value' => number_format((int) (clone $base)->where('status','approved')->whereYear('doc_date', now()->year)->whereMonth('doc_date', now()->month)->sum('total_pieces')),
                  'tone' => 'brand', 'note' => 'المستلم خلال الشهر الحالي.'],
             ],
         ]);

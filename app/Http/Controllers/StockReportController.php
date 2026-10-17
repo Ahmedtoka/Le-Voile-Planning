@@ -103,10 +103,15 @@ class StockReportController extends Controller
             'operations' => self::OPERATIONS,
             'summary'    => [
                 ['label' => 'إجمالي الحركات', 'value' => $base->count(), 'note' => 'كل حركة داخلة وخارجة.'],
-                ['label' => 'داخل (كجم)', 'value' => number_format((float) (clone $base)->where('direction', 'in')->where('item_type', 'fabric')->sum('qty'), 0),
-                 'tone' => 'ok', 'note' => 'استلامات القماش.'],
-                ['label' => 'خارج (كجم)', 'value' => number_format((float) (clone $base)->where('direction', 'out')->where('item_type', 'fabric')->sum('qty'), 0),
-                 'tone' => 'warn', 'note' => 'صرف للمصانع والمرتجعات.'],
+                /* الداخل والخارج الحقيقيين بس: وصول القماش من إذن الإضافة، وصرفه
+                   للمصانع بإذن الصرف. حركات إذن الاستلام (فك الحجز ونقل المرفوض
+                   للمرتجعات) تحويل داخلي — لو اتجمعت، الكيلو الواحد يتحسب مرتين. */
+                ['label' => 'داخل (كجم)', 'value' => number_format((float) (clone $base)->where('direction', 'in')->where('item_type', 'fabric')
+                    ->where('source_type', \App\Models\StockAddition::class)->sum('qty'), 0),
+                 'tone' => 'ok', 'note' => 'قماش وصل بأذون الإضافة.'],
+                ['label' => 'خارج (كجم)', 'value' => number_format((float) (clone $base)->where('direction', 'out')->where('item_type', 'fabric')
+                    ->where('source_type', \App\Models\MaterialIssue::class)->sum('qty'), 0),
+                 'tone' => 'warn', 'note' => 'قماش اتصرف للمصانع بأذون الصرف.'],
                 ['label' => 'حركات النهارده', 'value' => (clone $base)->whereDate('moved_at', now()->toDateString())->count(),
                  'tone' => 'brand', 'note' => 'اللي اتسجل اليوم.'],
             ],

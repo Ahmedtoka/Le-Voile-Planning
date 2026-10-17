@@ -77,7 +77,8 @@ class FinishPendingCommand extends Command
         }
 
         // مراحل طلب الشراء القديمة اللي كانت بتقف على الاعتماد
-        $stages = PurchaseOrder::whereIn('stage', ['approval'])->get();
+        // (finance كانت مرحلة «مستني علم الحسابات» — دلوقتي العلم متابعة مش بوابة)
+        $stages = PurchaseOrder::whereIn('stage', ['approval', 'finance'])->get();
         foreach ($stages as $po) {
             $total++;
             if (! $dry) {

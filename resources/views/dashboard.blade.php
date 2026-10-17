@@ -92,7 +92,7 @@
   <div class="col-6 col-lg-3">
     @include('partials.kpi', ['value'=>$fabric['ready'], 'label'=>'أحواض جاهزة للتشغيل', 'tone'=>'ok',
       'sub'=>$money($fabric['ready_kg']).' كجم متاحة',
-      'note'=>'مفرج عنها وعندها أقل عرض وبنشر — تقدر تعمل عليها أوامر شغل.',
+      'note'=>'مفرج عنها ولسه فيها رصيد متاح — تقدر تعمل عليها أوامر شغل.',
       'link'=>[route('consignments.index',['ready'=>1]),'افتح']])
   </div>
 </div>

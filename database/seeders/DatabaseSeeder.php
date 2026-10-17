@@ -8,7 +8,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // الأساس: أدوار وصلاحيات ومستخدمين ودورات اعتماد — ده مش داتا ديمو
+        // الأساس: أدوار وصلاحيات ومستخدمين — ده مش داتا ديمو
         $this->call([
             RolePermissionSeeder::class,
             UserSeeder::class,

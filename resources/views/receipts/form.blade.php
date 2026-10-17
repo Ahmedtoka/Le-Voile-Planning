@@ -181,6 +181,42 @@
   </div>
 
   @if($editable)
+    {{-- رفض جزئي / تعليق قبل الإفراج — اختياري. الحفظ = إفراج، فلازم يتسجل هنا
+         مع نفس الحفظ علشان المرفوض والمعلّق يتخصموا من المتاح للتشغيل. --}}
+    <details class="card mb-3" @if(old('rejects')) open @endif>
+      <summary class="card-header" style="cursor:pointer">
+        <i class="bi bi-x-octagon" aria-hidden="true"></i> فيه أتواب مرفوضة أو معلّقة؟ <span class="hint">(اختياري — سيبه فاضي لو الرسالة كلها سليمة)</span>
+      </summary>
+      <div class="card-body pb-1">
+        <div class="hint mb-2">
+          المرفوض بيروح مخزن المرتجعات كمطالبة على المورد، والمعلّق بيستنى قرار التخطيط والمشتريات.
+          الاتنين بيتخصموا من اللي هيتفرج عنه — والباقي بس هو اللي يبقى متاح لأوامر الشغل.
+        </div>
+        <table class="table table-sm align-middle mb-2">
+          <thead><tr><th style="width:150px">النوع</th><th style="width:90px">أتواب</th><th style="width:130px">الوزن (كجم)</th><th style="width:170px">الجهة</th><th>السبب</th></tr></thead>
+          <tbody>
+          @for($r = 0; $r < 3; $r++)
+            <tr>
+              <td><select name="rejects[{{ $r }}][kind]" class="form-select form-select-sm">
+                <option value="rejected" @selected(old("rejects.$r.kind") === 'rejected')>مرفوض</option>
+                <option value="on_hold" @selected(old("rejects.$r.kind") === 'on_hold')>معلّق لحين الرد</option>
+              </select></td>
+              <td><input type="number" min="0" name="rejects[{{ $r }}][rolls_count]" value="{{ old("rejects.$r.rolls_count") }}" class="form-control form-control-sm"></td>
+              <td><input type="number" step="0.001" min="0" name="rejects[{{ $r }}][qty]" value="{{ old("rejects.$r.qty") }}" class="form-control form-control-sm"></td>
+              <td><select name="rejects[{{ $r }}][party]" class="form-select form-select-sm">
+                <option value="quality">مصلحة الجودة</option>
+                <option value="planning" @selected(old("rejects.$r.party") === 'planning')>إدارة التخطيط</option>
+                <option value="purchasing" @selected(old("rejects.$r.party") === 'purchasing')>إدارة المشتريات</option>
+              </select></td>
+              <td><input name="rejects[{{ $r }}][reason]" value="{{ old("rejects.$r.reason") }}" class="form-control form-control-sm"
+                         placeholder="مثال: بيهم تل غريبة وتناسخ · لون غير مطابق"></td>
+            </tr>
+          @endfor
+          </tbody>
+        </table>
+      </div>
+    </details>
+
     <button class="btn btn-plum btn-sm">
       <i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> استلم ونزّل المخزن
     </button>

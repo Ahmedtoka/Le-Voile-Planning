@@ -447,11 +447,9 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
   $u   = auth()->user();
   $cnt = $navCounters ?? [];
 
-  /* المنيو مرتّب بترتيب الفلو الحقيقي. كل مجموعة تاب بيتفتح ويتقفل،
-     والتاب اللي فيه الشاشة المفتوحة بيفتح لوحده.
-     العنصر: [الراوت, العنوان, الأيقونة, الصلاحية, الشرح]
-     الرقم الأحمر الوحيد اللي بيظهر معناه: فيه شغل مستني منك هنا. */
-  /* المنيو مرتّب بترتيب الفلو الحقيقي.
+  /* المنيو مرتّب بترتيب الدورة الحقيقي، والخطوات مترقّمة 1 ← 13
+     بنفس ترتيب «دليل الفلو». كل مجموعة تاب بيتفتح ويتقفل، والتاب
+     اللي فيه الشاشة المفتوحة بيفتح لوحده.
      العنصر: [الراوت, العنوان, الأيقونة, الصلاحية, الشرح]
      الرقم الأحمر هو الرقم الوحيد في المنيو، ومعناه: فيه شغل مستني منك هنا. */
   $nav = [
@@ -460,44 +458,62 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
        'صورة السيستم كله: الشراء، القماش، التشغيل، التغطية'],
     ]],
 
-    /* مكاتب الإدارات — كل واحد بيفتح مكتبه فيلاقي شغله مستنيه */
+    /* مكاتب الإدارات — بنفس ترتيب الدورة: كل واحد بيفتح مكتبه فيلاقي شغله مستنيه */
     ['desks', 'مكاتب الإدارات', 'bi-person-workspace', [
       ['desk.planning',   'التخطيط', 'bi-graph-up-arrow', 'wo.view|po.request|forecast.view',
        'طلب الخامة، أوامر الشغل، التغطية والفوركاست'],
       ['desk.purchasing', 'المشتريات', 'bi-cart3', 'po.source',
        'تسعير الطلبات وتحديد المورد وتاريخ التوريد'],
       ['desk.finance',    'الحسابات', 'bi-cash-coin', 'po.finance',
-       'متابعة المستحق للموردين — من غير اعتمادات'],
+       'متابعة المستحق للموردين'],
       ['desk.store',      'المخزن', 'bi-box-seam', 'receipt.view|receipt.manage',
-       'الاستلام والفحص واستلام الخام وصرف المصانع'],
+       'الاستلام والإفراج وصرف الخام واستلام الإنتاج'],
       ['desk.quality',    'الجودة والمعمل', 'bi-search', 'qc.view|qc.manage',
        'فحص الأتواب وقراءات البنشر والمرفوضات'],
       ['desk.factory',    'متابعة المصانع', 'bi-buildings', 'cut.view|cut.manage|prod.manage|wo.view',
        'بيانات القص واستلامات الإنتاج'],
     ]],
 
-    ['buy', 'دورة الشراء', 'bi-cart3', [
-      ['purchase-orders.index', 'طلبات الشراء', 'bi-file-earmark-text',
+    ['buy', '① دورة الشراء', 'bi-cart3', [
+      ['purchase-orders.index', '1 · طلبات الشراء', 'bi-file-earmark-text',
        'po.view|po.request|po.source|po.finance',
-       'كل الطلبات بكل مراحلها — الحفظ بينزّل الطلب للمشتريات تلقائيًا'],
-      ['purchasing.queue', 'المشتريات', 'bi-cart3', 'po.source',
-       'الطلبات اللي نزلت من التخطيط ومستنية مورد وسعر وتاريخ توريد'],
-      ['finance.payables', 'الحسابات', 'bi-cash-coin', 'po.finance',
-       'الطلبات اللي المشتريات سعّرتها — المستحق المتوقع لكل مورد'],
+       'التخطيط بيطلب الخامة — الحفظ بينزّل الطلب للمشتريات على طول'],
+      ['purchasing.queue', '2 · التسعير', 'bi-tag', 'po.source',
+       'المشتريات: المورد والسعر وتاريخ التوريد — بعدها الطلب جاهز للاستلام'],
+      ['finance.payables', '3 · المستحقات', 'bi-cash-coin', 'po.finance',
+       'الحسابات: المستحق المتوقع لكل مورد — متابعة مش بوابة'],
     ]],
 
-    ['fabric', 'وصول القماش', 'bi-box-arrow-in-down', [
-      ['stock-additions.index', 'إذن إضافة', 'bi-box-arrow-in-down', 'receipt.view',
-       'أول مستند: بيولّد الحوض ويحجز الكمية تحت الفحص'],
-      ['inspections.index', 'تقرير فحص قماش', 'bi-search', 'qc.view',
+    ['fabric', '② وصول القماش', 'bi-box-arrow-in-down', [
+      ['stock-additions.index', '4 · إذن إضافة', 'bi-box-arrow-in-down', 'receipt.view',
+       'المخزن بيستلم على الطلب ⇐ كل (خامة + لون) رسالة محجوزة تحت الفحص'],
+      ['inspections.index', '5 · فحص القماش', 'bi-search', 'qc.view',
        'جرد الأتواب وقياس عرض وطول كل توب ⇐ أقل عرض'],
-      ['lab-reports.index', 'تقرير المعمل', 'bi-thermometer-half', 'qc.view',
+      ['lab-reports.index', '6 · تقرير المعمل', 'bi-thermometer-half', 'qc.view',
        'وزن البنشر والانكماش ومطابقة اللون'],
-      ['goods-receipts.index', 'إذن استلام خام', 'bi-truck', 'receipt.view',
-       'الرسايل اللي خلّصت — سامري وحفظ، والقماش يدخل المخزن'],
+      ['goods-receipts.index', '7 · إذن استلام خام', 'bi-truck', 'receipt.view',
+       'الإفراج: السليم يبقى متاح للتشغيل والمرفوض يروح المرفوضات'],
       ['rejections.index', 'المرفوضات والمعلّق', 'bi-x-octagon', 'qc.view|receipt.view|po.view',
        'أتواب مرفوضة وألوان معلّقة لحين رد التخطيط والمشتريات'],
-      ['consignments.index', 'الأحواض', 'bi-box-seam', 'receipt.view',
+    ]],
+
+    ['prod', '③ التشغيل', 'bi-hammer', [
+      ['markers.requests', '8 · طلبات الماركر', 'bi-envelope-paper', 'marker.view',
+       'المخطط بيطلب تعشيقة على أقل عرض'],
+      ['markers.index', '9 · الماركرات', 'bi-grid-3x3', 'marker.view',
+       'الباترونست: طول الفرشة وعدد القطع والموديلات'],
+      ['work-orders.index', '10 · أوامر الشغل', 'bi-hammer', 'wo.view',
+       'ورقة المصنع: الرسالة + الماركر + الحسبة، والخامة الحاكمة بتحدد الإنتاج'],
+      ['material-issues.index', '11 · إذن صرف خام', 'bi-box-arrow-up', 'receipt.view|wo.view',
+       'صرف الخامة من المخزن للمصنع مقابل أمر الشغل — الجزئي مسموح'],
+      ['cut-declarations.index', '12 · بيان القص', 'bi-scissors', 'cut.view',
+       'الفعلي من المصنع وانحرافه عن المتوقع'],
+      ['production-receipts.index', '13 · استلامات الإنتاج', 'bi-inboxes', 'prod.manage|wo.view',
+       'استلام على دفعات لحد ما أمر الشغل يتقفل لوحده'],
+    ]],
+
+    ['stock', 'المخزون', 'bi-boxes', [
+      ['consignments.index', 'الرسايل (الأحواض)', 'bi-box-seam', 'receipt.view',
        'كل رسالة قماش وحالتها ورصيدها المحجوز والمتاح'],
       ['stock.onhand', 'رصيد الرسايل', 'bi-clipboard-data', 'receipt.view',
        'نفس شيت ON Hand: رصيد كل رسالة — المتاح والمحجوز والأتواب'],
@@ -505,22 +521,7 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
        'نفس شيت IN&OUT: كل حركة داخلة وخارجة بمستندها'],
     ]],
 
-    ['prod', 'التشغيل', 'bi-hammer', [
-      ['markers.requests', 'طلبات الماركر', 'bi-envelope-paper', 'marker.view',
-       'المخطط بيطلب تعشيقة على أقل عرض'],
-      ['markers.index', 'الماركرات', 'bi-grid-3x3', 'marker.view',
-       'طول الفرشة وعدد القطع فيها والموديلات'],
-      ['work-orders.index', 'أوامر الشغل', 'bi-hammer', 'wo.view',
-       'ورقة المصنع: أكتر من خامة، وكل خامة بحسبتها والحاكمة بتحدد الإنتاج'],
-      ['material-issues.index', 'إذن صرف خام', 'bi-box-arrow-up', 'receipt.view|wo.view',
-       'صرف الخامات من المخزن للمصنع مقابل أمر الشغل'],
-      ['cut-declarations.index', 'بيانات القص', 'bi-scissors', 'cut.view',
-       'الفعلي من المصنع — وأهم رقم فيه طول الفرشة الفعلي'],
-      ['production-receipts.index', 'استلامات الإنتاج', 'bi-inboxes', 'prod.manage|wo.view',
-       'استلام على دفعات لحد ما أمر الشغل يتقفل'],
-    ]],
-
-    ['plan', 'التخطيط', 'bi-graph-up-arrow', [
+    ['plan', 'التخطيط والفوركاست', 'bi-graph-up-arrow', [
       ['planning.calculator', 'حاسبة التخطيط', 'bi-calculator', null,
        'جرّب الأرقام من غير ما تعمل مستند'],
       ['planning.coverage', 'أيام التغطية', 'bi-clock-history', 'forecast.view',
@@ -533,15 +534,16 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
        'الكمية اللي بتتخصم قبل حساب التغطية'],
     ]],
 
+    /* بترتيب التجهيز: كل حاجة بتعتمد على اللي فوقها */
     ['master', 'البيانات الأساسية', 'bi-database', [
-      ['product-models.index', 'الموديلات', 'bi-tags', 'master.view', 'المنتجات ومقاساتها وقائمة إكسسواراتها'],
-      ['colors.index', 'الألوان', 'bi-palette', 'master.view', 'أكواد الألوان — دمج وإيقاف، مفيش حذف'],
-      ['fabric-types.index', 'الخامات', 'bi-layers', 'master.view', 'الخامات ومواصفاتها المعتمدة'],
-      ['accessories.index', 'الإكسسوارات', 'bi-paperclip', 'master.view', 'الكياس والاستيكرات والزراير والسوست'],
-      ['sizes.index', 'المقاسات', 'bi-rulers', 'master.view', 'المقاسات المتاحة'],
       ['suppliers.index', 'الموردين', 'bi-shop', 'master.view', 'الموردين وبياناتهم وشروط الدفع'],
-      ['factories.index', 'المصانع', 'bi-building', 'master.view', 'المصانع وطاقتها اليومية ودورة تشغيلها'],
       ['warehouses.index', 'المخازن', 'bi-house-gear', 'master.view', 'المخازن وتاريخ آخر جرد'],
+      ['factories.index', 'المصانع', 'bi-building', 'master.view', 'المصانع وطاقتها اليومية ودورة تشغيلها'],
+      ['fabric-types.index', 'الخامات', 'bi-layers', 'master.view', 'الخامات ومواصفاتها المعتمدة'],
+      ['colors.index', 'الألوان', 'bi-palette', 'master.view', 'أكواد الألوان — دمج وإيقاف، مفيش حذف'],
+      ['sizes.index', 'المقاسات', 'bi-rulers', 'master.view', 'المقاسات المتاحة'],
+      ['accessories.index', 'الإكسسوارات', 'bi-paperclip', 'master.view', 'الكياس والاستيكرات والزراير والسوست'],
+      ['product-models.index', 'الموديلات', 'bi-tags', 'master.view', 'المنتجات ومقاساتها وقائمة إكسسواراتها'],
     ]],
 
     ['sys', 'النظام', 'bi-gear', [

@@ -70,7 +70,7 @@ class DashboardController extends Controller
 
         $meta = [
             'purchasing.queue'        => ['طلبات مستنية تسعير', 'حدد المورد والسعر وتاريخ التوريد'],
-            'stock-additions.index'   => ['قماش مستني استلام', 'طلبات اتسعّرت والبضاعة في الطريق'],
+            'stock-additions.index'   => ['أذون إضافة لسه مسودة', 'أذون بدأتها وما خلصتهاش — كمّلها واحفظها'],
             'inspections.index'       => ['رسايل مستنية فحص', 'جرد الأتواب وقياس العرض والطول'],
             'lab-reports.index'       => ['رسايل مستنية المعمل', 'قراءات البنشر والانكماش'],
             'goods-receipts.index'    => ['رسايل مستنية الإفراج', 'خلصت فحص ومعمل — افرج عنها'],
@@ -79,7 +79,10 @@ class DashboardController extends Controller
             'production-receipts.index' => ['قطع مستنية استلام', 'استلم التام من المصنع'],
             'markers.requests'        => ['طلبات ماركر مفتوحة', 'الباترونست لسه ما رفعش الماركر'],
             'rejections.index'        => ['مرفوضات ومعلّق', 'محتاجة قرار وردّ على المورد'],
-            'consignments.index'      => ['أحواض جاهزة للتشغيل', 'مفرج عنها ومستنية أمر شغل'],
+            'consignments.index'      => ['رسايل مستنية أمر شغل', 'مفرج عنها ولسه ما اتعملهاش أمر شغل'],
+            'work-orders.index'       => ['أوامر شغل محتاجة متابعة', 'مسوداتك + الأوامر المتأخرة عن موعدها'],
+            'markers.index'           => ['ماركرات لسه مسودة', 'كمّل بيانات الماركر وارفعه'],
+            'planning.coverage'       => ['موديلات في خطر نفاد', 'التغطية أقل من 15 يوم أو خلصت'],
         ];
 
         $out = [];
@@ -106,8 +109,9 @@ class DashboardController extends Controller
                                 ->whereNotIn('stage', ['closed', 'cancelled'])->count(),
             'receiving'  => (int) ($byStage['receiving'] ?? 0),
             'open'       => PurchaseOrder::whereNotIn('stage', ['closed','cancelled'])->count(),
+            // نفس تعريف شاشة الحسابات بالظبط: طلب اتسعّر واتحدد له مورد ولسه ما اتقفلش
             'payable'    => (float) PurchaseOrder::whereIn('stage', ['finance','approved','receiving'])
-                                ->sum('total'),
+                                ->whereNotNull('supplier_id')->sum('total'),
             'due_30'     => (float) PurchaseOrder::whereIn('stage', ['approved','receiving'])
                                 ->whereNotNull('delivery_date')
                                 ->whereDate('delivery_date', '<=', now()->addDays(30))->sum('total'),
@@ -125,10 +129,7 @@ class DashboardController extends Controller
                 ->whereDoesntHave('inspections', fn ($q) => $q->where('status', 'approved'))->count(),
             'awaiting_lab' => Consignment::where('status', 'inspected')
                 ->whereDoesntHave('labReports', fn ($q) => $q->where('status', 'approved'))->count(),
-            'awaiting_release' => Consignment::whereIn('status', ['inspected','lab_done'])
-                ->whereHas('inspections', fn ($q) => $q->where('status', 'approved'))
-                ->whereHas('labReports',  fn ($q) => $q->where('status', 'approved'))
-                ->whereDoesntHave('goodsReceipts', fn ($q) => $q->where('status', 'approved'))->count(),
+            'awaiting_release' => Consignment::awaitingRelease()->count(),
             'hold_kg'     => (float) Consignment::onHold()->sum('total_kg'),
             'ready'       => Consignment::readyForProduction()->count(),
             'ready_kg'    => (float) Consignment::readyForProduction()->sum('remaining_kg'),
@@ -157,9 +158,12 @@ class DashboardController extends Controller
             'cut_pending'     => WorkOrder::whereIn('status', ['sent_to_factory','cutting'])
                                     ->whereDoesntHave('cutDeclarations', fn ($q) => $q->where('status','approved'))
                                     ->count(),
+            // الشهر ده = الشهر والسنة — من غير السنة كان بيجمع أكتوبر كل السنين
             'closed_month'    => WorkOrder::where('status', 'closed')
+                                    ->whereYear('updated_at', now()->year)
                                     ->whereMonth('updated_at', now()->month)->count(),
             'received_month'  => (int) ProductionReceipt::where('status', 'approved')
+                                    ->whereYear('doc_date', now()->year)
                                     ->whereMonth('doc_date', now()->month)->sum('total_pieces'),
             'cut_docs'        => CutDeclaration::count(),
         ];

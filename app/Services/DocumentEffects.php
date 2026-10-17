@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\DB;
  */
 class DocumentEffects
 {
+    /** حالات الرسالة بعد الإفراج — الفحص والمعمل ما يرجّعوهاش محجوزة */
+    public const RELEASED_STATES = ['released', 'in_production', 'closed'];
+
     public static function onApproved(Model $doc): void
     {
         match (true) {
@@ -384,26 +387,28 @@ class DocumentEffects
 
                 $consignment->recalcRemaining();
 
-                // فك الحجز في حركة المخزون: خروج محجوز + دخول مفرج عنه
-                foreach ($gr->lines as $line) {
-                    foreach ([['out', 'hold'], ['in', 'released']] as [$dir, $state]) {
-                        StockMovement::create([
-                            'moved_at'       => $gr->doc_date,
-                            'warehouse_id'   => $gr->warehouse_id,
-                            'item_type'      => 'fabric',
-                            'fabric_type_id' => $line->fabric_type_id,
-                            'color_id'       => $line->color_id,
-                            'consignment_id' => $consignment->id,
-                            'direction'      => $dir,
-                            'quality_state'  => $state,
-                            'qty'            => $line->qty,
-                            'unit'           => $line->unit,
-                            'source_type'    => GoodsReceipt::class,
-                            'source_id'      => $gr->id,
-                            'reference'      => $gr->doc_no,
-                            'created_by'     => auth()->id(),
-                        ]);
-                    }
+                /* فك الحجز في حركة المخزون — بالكيلو دايمًا:
+                   • خروج من «محجوز» = السليم + المرفوض (المعلّق بيفضل محجوز لحد القرار)
+                   • دخول «مفرج عنه»  = السليم بس
+                   • المرفوض اتسجّل فوق كدخول لمخزن المرتجعات */
+                foreach ([['out', 'hold', $releasedKg + $rejectedKg], ['in', 'released', $releasedKg]] as [$dir, $state, $kg]) {
+                    if ($kg <= 0) continue;
+                    StockMovement::create([
+                        'moved_at'       => $gr->doc_date,
+                        'warehouse_id'   => $gr->warehouse_id,
+                        'item_type'      => 'fabric',
+                        'fabric_type_id' => $consignment->fabric_type_id,
+                        'color_id'       => $consignment->color_id,
+                        'consignment_id' => $consignment->id,
+                        'direction'      => $dir,
+                        'quality_state'  => $state,
+                        'qty'            => round($kg, 3),
+                        'unit'           => 'كجم',
+                        'source_type'    => GoodsReceipt::class,
+                        'source_id'      => $gr->id,
+                        'reference'      => $gr->doc_no,
+                        'created_by'     => auth()->id(),
+                    ]);
                 }
 
                 Notifier::broadcastToRole('planner', 'consignment_released',
@@ -455,6 +460,16 @@ class DocumentEffects
             $payload['total_length_m'] = $insp->sampled_rolls >= $insp->counted_rolls
                 ? $insp->total_length_m
                 : round(($insp->total_length_m / $insp->sampled_rolls) * $insp->counted_rolls, 2);
+        }
+
+        /* رسالة مُفرَج عنها (استلام مباشر/حاويات) أو دخلت التشغيل:
+           الفحص هنا استدلالي — بياخد القياسات بس (العرض والعيوب)
+           ومش بيرجّعها «تحت الفحص» ولا بيرفضها، وإلا القماش يختفي من المتاح.
+           الوزن/عدد الأتواب كمان مش بيتغيروا لأن الإفراج اتعمل عليهم. */
+        if (in_array($c->status, self::RELEASED_STATES, true)) {
+            unset($payload['rolls_count'], $payload['total_kg']);
+            $c->forceFill($payload)->save();
+            return;
         }
 
         $payload['status'] = $insp->result === 'rejected'
@@ -521,10 +536,14 @@ class DocumentEffects
             'shrink_len_pct'   => $lab->avg_shrink_len_pct,
             'shrink_width_pct' => $lab->avg_shrink_width_pct,
             'color_match_ok'   => $lab->color_match_ok,
-            // الحوض بيفضل محجوز — الإفراج بإذن الاستلام بس
-            'status'           => $c->status === 'rejected'
-                                    ? 'rejected'
-                                    : ($c->min_width_cm ? 'lab_done' : 'under_inspection'),
+            // الحوض المحجوز بيفضل محجوز — الإفراج بإذن الاستلام بس.
+            // والمُفرَج عنه (استلام مباشر) بياخد القراءات وحالته زي ما هي.
+            'status'           => match (true) {
+                $c->status === 'rejected'                             => 'rejected',
+                in_array($c->status, self::RELEASED_STATES, true)     => $c->status,
+                (bool) $c->min_width_cm                               => 'lab_done',
+                default                                               => 'under_inspection',
+            },
         ])->save();
     }
 
@@ -623,14 +642,16 @@ class DocumentEffects
 
             $wo->refresh()->recalc();
 
-            $v = PlanningEngine::variance((float) $wo->target_qty, (float) $wo->cut_pieces);
+            // المقصوص التراكمي مقابل المستهدف — القص الجزئي مش انحراف
+            $v = PlanningEngine::cumulativeVariance((float) $wo->target_qty, (float) $wo->cut_pieces);
 
             $wo->forceFill([
                 'actual_spread_length_m' => $cd->actual_spread_length_m,
                 'actual_plies'           => $cd->actual_plies,
                 'variance_pct'           => $v['pct'],
                 'variance_flag'          => $v['flag'],
-                'status'                 => 'in_production',
+                // أمر مقفول ما يتفتحش تاني من بيان قص متأخر
+                'status'                 => $wo->status === 'closed' ? 'closed' : 'in_production',
             ])->save();
 
             if ($v['flag'] === 'danger') {
@@ -656,7 +677,11 @@ class DocumentEffects
                         ->where('size_id', $line->size_id)
                         ->first();
                     if ($woLine) {
-                        $woLine->increment('received_qty', (int) $line->qty);
+                        /* المرفوض من المصنع رجع فعلًا بس معيب — بيتحسب ضمن المستلم
+                           علشان المتبقي على المصنع يصفّر، ومش بيدخل مخزون التام */
+                        $rejected = (int) ($line->rejected_qty ?? 0);
+                        $woLine->increment('received_qty', (int) $line->qty + $rejected);
+                        if ($rejected > 0) $woLine->increment('rejected_qty', $rejected);
                         $woLine->refresh()->syncRemaining();
                     }
                 }
@@ -683,7 +708,11 @@ class DocumentEffects
                 $wo->refresh()->recalc();
                 $wo->refresh();
 
-                $status = $wo->outstanding_pieces <= 0 && $wo->cut_pieces > 0
+                /* القفل التلقائي: كل المقصوص اتسلّم **و** القص وصل للمستهدف
+                   (في حدود نسبة الانحراف المقبولة). لو القص لسه ناقص، الأمر
+                   بيفضل مفتوح لبيان القص الجاي — والقفل اليدوي بسبب مكتوب متاح. */
+                $minCut = (int) floor($wo->target_qty * (1 - (float) config('lvplanning.variance.warn_pct', 4) / 100));
+                $status = $wo->outstanding_pieces <= 0 && $wo->cut_pieces > 0 && $wo->cut_pieces >= $minCut
                     ? 'closed'
                     : 'partially_received';
 
