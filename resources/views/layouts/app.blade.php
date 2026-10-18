@@ -465,6 +465,68 @@ td.num,th.num{display:table-cell}
 .chip.on{background:var(--lv-brand-ink);border-color:var(--lv-brand-ink);color:#fff}
 .chip-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 16px;border-bottom:1px solid var(--lv-line-soft)}
 
+/* ── طابور «مستني منك» المشترك: لوحة التحكم ومكاتب الإدارات ── */
+.section-head .count-badge{font-size:.72rem;min-width:24px;height:22px;line-height:22px;padding:0 8px;
+  border-radius:var(--r-pill);background:var(--lv-alert);color:#fff;font-weight:700;text-align:center;
+  font-variant-numeric:tabular-nums;align-self:center}
+
+/* ① الطابور الشخصي: بلاطات صغيرة قابلة للضغط */
+.q-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--sp-3)}
+.q-tile{position:relative;display:flex;flex-direction:column;gap:2px;padding:12px 14px 10px;
+  background:linear-gradient(180deg,#fff 0%,#FDF8FB 100%);border:1px solid var(--lv-soft);border-radius:var(--r-md);
+  color:var(--lv-ink);transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.q-tile:hover{border-color:#DDB3D2;box-shadow:var(--e-2);text-decoration:none;color:var(--lv-ink)}
+.q-tile:focus-visible{outline:0;box-shadow:var(--ring)}
+.q-tile .q-top{display:flex;align-items:baseline;gap:10px}
+.q-tile .q-n{font-size:var(--fs-xl);font-weight:700;line-height:1.1;color:var(--lv-brand-ink);font-variant-numeric:tabular-nums}
+.q-tile .q-l{font-size:var(--fs-sm);font-weight:600;color:var(--lv-ink-2);line-height:1.4}
+.q-tile .q-go{margin-top:4px;font-size:var(--fs-xs);font-weight:600;color:var(--lv-brand);display:inline-flex;align-items:center;gap:4px}
+.q-tile:hover .q-go i{transform:translateX(-3px)}
+.q-tile .q-go i{transition:transform var(--dur) var(--ease)}
+.calm-line{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--lv-white);
+  border:1px solid var(--lv-line);border-radius:var(--r-md);font-size:var(--fs-sm);color:var(--lv-ink-2)}
+.calm-line .ic{width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:var(--lv-ok-bg);color:var(--lv-ok);
+  display:inline-flex;align-items:center;justify-content:center}
+.calm-line .hint{margin-inline-start:auto}
+
+.q-tile.is-zero{background:var(--lv-white);border-color:var(--lv-line)}
+.q-tile.is-zero .q-n{color:#A79BA4}
+.q-tile.is-zero .q-go{color:var(--lv-muted);font-weight:500}
+.q-tile .q-l .dot{vertical-align:middle;margin-inline-end:6px}
+
+
+/* ── شاشات المستندات: شريط الحفظ، شريط الإجراءات، الحقول المقروءة ── */
+/* شريط الحفظ: الزرار الأساسي دايمًا ظاهر تحت الفورم وبيلزق في آخر الشاشة */
+.form-actions{position:sticky;bottom:0;z-index:5;display:flex;align-items:center;gap:var(--sp-2) var(--sp-3);flex-wrap:wrap;
+  margin-top:var(--sp-4);padding:12px 16px;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);
+  border:1px solid var(--lv-line);border-radius:var(--r-md);box-shadow:0 -6px 18px -12px rgba(59,9,47,.25)}
+.form-actions .btn-plum,.form-actions .btn-success{min-width:140px}
+.card-footer.form-actions{border:0;border-top:1px solid var(--lv-line);border-radius:0 0 var(--r-md) var(--r-md)!important}
+.form-actions .hint{font-size:var(--fs-sm)}
+.form-actions .fa-end{margin-inline-start:auto;display:flex;gap:var(--sp-2);flex-wrap:wrap}
+@media (max-width:600px){.form-actions{flex-wrap:nowrap;padding:10px 12px}.form-actions .hint{display:none}
+  .form-actions .btn-plum,.form-actions .btn-success{min-width:0;flex:1 1 auto}}
+/* شريط إجراءات المستند فوق التفاصيل */
+.doc-actions{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-4);
+  padding:10px 14px;background:var(--lv-white);border:1px solid var(--lv-line);border-radius:var(--r-md)}
+.doc-actions .da-label{font-size:var(--fs-xs);color:var(--lv-muted);font-weight:600;margin-inline-end:4px}
+.doc-actions form{display:inline-flex;margin:0}
+.doc-actions .da-end{margin-inline-start:auto;display:flex;gap:var(--sp-2);flex-wrap:wrap}
+/* رأس الكارت اللي فيه زرار: نفس المحاذاة في كل الشاشات */
+.card-header.d-flex{align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.card-header .hint,.card-header small{font-weight:400}
+/* قيمة مقروءة جوه فورم: باينة إنها مش حقل للكتابة */
+.form-control[readonly],.form-control-plaintext.ro{background:var(--lv-surface-2);border-style:dashed;border-color:var(--lv-line);
+  color:var(--lv-ink-2);cursor:default}
+.form-control[readonly]:focus{box-shadow:none;border-color:var(--lv-line)}
+/* جداول الإدخال: السيلكت ما يتقصّش */
+.line-table select{min-width:64px;padding-inline:6px;text-overflow:ellipsis}
+.line-table td.num input,.line-table input[type=number]{font-variant-numeric:tabular-nums}
+.line-table thead th{white-space:nowrap}
+/* أفعال الصف: مجموعة واحدة متلزقة */
+.row-actions{display:inline-flex;gap:4px;flex-wrap:nowrap;justify-content:flex-end}
+.row-actions form{display:inline-flex;margin:0}
+
 /* ── حالة تحميل الأزرار ── */
 .btn .spin{display:none;width:13px;height:13px;border:2px solid currentColor;border-top-color:transparent;
   border-radius:50%;animation:lvspin .6s linear infinite;vertical-align:-2px}
@@ -785,7 +847,17 @@ a.flow-step:hover{background:var(--lv-surface-2);color:var(--lv-ink);text-decora
     </button>
     <div class="page-title">
       <h2>{{ $title ?? '' }}</h2>
-      @php $purpose = $purpose ?? null; @endphp
+      @php
+        /* سطر الغرض: لو الشاشة ما حددتش، بناخده من شرح نفس القسم في القايمة الجانبية */
+        $purpose = $purpose ?? null;
+        if (!$purpose) {
+          $rn = (string) request()->route()?->getName();
+          foreach ($nav as $navGroup) foreach ($navGroup[3] as $it) {
+            $base = str_replace('.index', '', $it[0]);
+            if ($rn === $it[0] || str_starts_with($rn, $it[0] . '.') || ($base !== $it[0] && str_starts_with($rn, $base . '.'))) { $purpose = $it[4]; break 2; }
+          }
+        }
+      @endphp
       @hasSection('purpose')
         <div class="page-purpose">@yield('purpose')</div>
       @elseif($purpose)

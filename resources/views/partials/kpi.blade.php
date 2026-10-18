@@ -15,9 +15,13 @@
     'warn'   => ['var(--lv-warn)',      null,                           'dot-warn'],
     'danger' => ['var(--lv-danger)',    'bi-exclamation-triangle-fill', 'dot-danger'],
   ];
+  // صفر في كارت تحذير/خطر مش إنذار — بيتعرض هادي من غير مثلث أحمر
+  $raw = is_string($value) ? str_replace([',', ' '], '', strip_tags($value)) : $value;
+  $isZero = is_numeric($raw) && (float) $raw == 0;
+  if ($isZero && in_array($tone, ['danger', 'warn'], true)) $tone = 'muted';
   [$color, $icon, $dot] = $tones[$tone] ?? $tones['ink'];
 @endphp
-<div class="stat h-100 d-flex flex-column {{ $link ? 'is-link' : '' }}">
+<div class="stat h-100 d-flex flex-column {{ $link ? 'is-link' : '' }} {{ $isZero ? 'is-zero' : '' }}">
   <div class="stat-head">
     <span class="dot {{ $dot }}" aria-hidden="true"></span>
     <div class="l">{{ $label }}</div>

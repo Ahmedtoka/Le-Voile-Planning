@@ -10,28 +10,26 @@
     <h2 id="h-desk-queue">اللي مستني منك دلوقتي</h2>
     <span class="hint">كل رقم شغل حقيقي — دوس على الكارت تدخل عليه</span>
   </div>
-  <div class="row g-3">
+  @php $dots = ['brand'=>'dot-brand','warn'=>'dot-warn','danger'=>'dot-danger','ok'=>'dot-ok']; @endphp
+  <div class="q-grid">
     @foreach($queue as $q)
-      @php
-        $dots = ['brand'=>'dot-brand','warn'=>'dot-warn','danger'=>'dot-danger','ok'=>'dot-ok'];
-        $dot  = $q['count'] ? ($dots[$q['tone']] ?? 'dot-ink') : 'dot-muted';
-      @endphp
-      <div class="col-6 col-xl-3">
-        <div class="stat h-100 d-flex flex-column {{ $q['count'] > 0 ? 'is-waiting is-link' : 'is-zero' }}">
-          <div class="stat-head">
-            <span class="dot {{ $dot }}" aria-hidden="true"></span>
-            <div class="l">{{ $q['label'] }}</div>
+      @if($q['count'] > 0)
+        <a href="{{ $q['link'] }}" class="q-tile">
+          <div class="q-top">
+            <span class="q-n">{{ number_format($q['count']) }}</span>
+            <span class="q-l"><span class="dot {{ $dots[$q['tone']] ?? 'dot-ink' }}" aria-hidden="true"></span>{{ $q['label'] }}</span>
           </div>
-          <div class="v num text-start">{{ number_format($q['count']) }}</div>
-          @if($q['count'] > 0)
-            <a href="{{ $q['link'] }}" class="stat-link stretched-link">
-              {{ $q['action'] }} <i class="bi bi-arrow-left" aria-hidden="true"></i>
-            </a>
-          @else
-            <div class="hint mt-auto pt-2"><i class="bi bi-check2" aria-hidden="true"></i> مفيش حاجة مستنية</div>
-          @endif
+          <span class="q-go">{{ $q['action'] }} <i class="bi bi-arrow-left" aria-hidden="true"></i></span>
+        </a>
+      @else
+        <div class="q-tile is-zero">
+          <div class="q-top">
+            <span class="q-n">0</span>
+            <span class="q-l">{{ $q['label'] }}</span>
+          </div>
+          <span class="q-go"><i class="bi bi-check2" aria-hidden="true"></i> مفيش حاجة مستنية</span>
         </div>
-      </div>
+      @endif
     @endforeach
   </div>
 </section>

@@ -21,6 +21,7 @@
     ]],
     'prod' => ['label' => 'دورة التشغيل', 'steps' => [
       ['k'=>'consign',   't'=>'حوض مُفرَج عنه',   'r'=>'consignments.index',        'i'=>'bi-box-seam'],
+      ['k'=>'mreq',      't'=>'طلب الماركر',      'r'=>'markers.requests',          'i'=>'bi-envelope-paper'],
       ['k'=>'marker',    't'=>'الماركر',          'r'=>'markers.index',             'i'=>'bi-grid-3x3'],
       ['k'=>'wo',        't'=>'أمر الشغل',        'r'=>'work-orders.index',         'i'=>'bi-hammer'],
       ['k'=>'issue',     't'=>'صرف الخام',        'r'=>'material-issues.index',     'i'=>'bi-box-arrow-up'],
@@ -30,6 +31,16 @@
   ];
 
   $f = $flows[$flow] ?? null;
+
+  /* رقم الخطوة = نفس رقمها في القايمة الجانبية (1 ← 13)، عشان المستخدم
+     يشوف نفس الرقم في المكانين. الخطوة اللي ملهاش رقم (الأحواض) بتاخد أيقونة. */
+  $cycleNo = [
+    'purchase-orders.index' => 1, 'purchasing.queue' => 2, 'finance.payables' => 3,
+    'stock-additions.index' => 4, 'inspections.index' => 5, 'lab-reports.index' => 6,
+    'goods-receipts.index' => 7, 'markers.requests' => 8, 'markers.index' => 9,
+    'work-orders.index' => 10, 'material-issues.index' => 11, 'cut-declarations.index' => 12,
+    'production-receipts.index' => 13,
+  ];
 @endphp
 
 @if($f)
@@ -48,14 +59,14 @@
         @if($state === 'now')
           {{-- الخطوة اللي إنت فيها مش لينك — عشان ما تودّيش لصفحة تانية --}}
           <span class="flow-step now" aria-current="step">
-            <span class="n">{{ $i + 1 }}</span>
+            @if(isset($cycleNo[$s['r']]))<span class="n">{{ $cycleNo[$s['r']] }}</span>@else<span class="n"><i class="bi {{ $s['i'] }}" style="display:inline;font-size:.68rem" aria-hidden="true"></i></span>@endif
             <i class="bi {{ $s['i'] }}" aria-hidden="true"></i>
             <span>{{ $s['t'] }}</span>
             <span class="visually-hidden">(إنت هنا)</span>
           </span>
         @else
           <a class="flow-step {{ $state }}" href="{{ route($s['r']) }}">
-            <span class="n">{{ $i + 1 }}</span>
+            @if(isset($cycleNo[$s['r']]))<span class="n">{{ $cycleNo[$s['r']] }}</span>@else<span class="n"><i class="bi {{ $s['i'] }}" style="display:inline;font-size:.68rem" aria-hidden="true"></i></span>@endif
             <i class="bi {{ $s['i'] }}" aria-hidden="true"></i>
             <span>{{ $s['t'] }}</span>
             @if($state === 'done')

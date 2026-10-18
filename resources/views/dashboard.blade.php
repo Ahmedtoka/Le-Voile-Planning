@@ -89,29 +89,6 @@
 /* ══ لوحة التحكم — مكونات خاصة بالشاشة دي بس ══ */
 .dash-section{margin-bottom:var(--sp-6)}
 .dash-section > .section-head{margin-top:0}
-.section-head .count-badge{font-size:.72rem;min-width:24px;height:22px;line-height:22px;padding:0 8px;
-  border-radius:var(--r-pill);background:var(--lv-alert);color:#fff;font-weight:700;text-align:center;
-  font-variant-numeric:tabular-nums;align-self:center}
-
-/* ① الطابور الشخصي: بلاطات صغيرة قابلة للضغط */
-.q-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--sp-3)}
-.q-tile{position:relative;display:flex;flex-direction:column;gap:2px;padding:12px 14px 10px;
-  background:linear-gradient(180deg,#fff 0%,#FDF8FB 100%);border:1px solid var(--lv-soft);border-radius:var(--r-md);
-  color:var(--lv-ink);transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
-.q-tile:hover{border-color:#DDB3D2;box-shadow:var(--e-2);text-decoration:none;color:var(--lv-ink)}
-.q-tile:focus-visible{outline:0;box-shadow:var(--ring)}
-.q-tile .q-top{display:flex;align-items:baseline;gap:10px}
-.q-tile .q-n{font-size:var(--fs-xl);font-weight:700;line-height:1.1;color:var(--lv-brand-ink);font-variant-numeric:tabular-nums}
-.q-tile .q-l{font-size:var(--fs-sm);font-weight:600;color:var(--lv-ink-2);line-height:1.4}
-.q-tile .q-go{margin-top:4px;font-size:var(--fs-xs);font-weight:600;color:var(--lv-brand);display:inline-flex;align-items:center;gap:4px}
-.q-tile:hover .q-go i{transform:translateX(-3px)}
-.q-tile .q-go i{transition:transform var(--dur) var(--ease)}
-.calm-line{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--lv-white);
-  border:1px solid var(--lv-line);border-radius:var(--r-md);font-size:var(--fs-sm);color:var(--lv-ink-2)}
-.calm-line .ic{width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:var(--lv-ok-bg);color:var(--lv-ok);
-  display:inline-flex;align-items:center;justify-content:center}
-.calm-line .hint{margin-inline-start:auto}
-
 /* ② الدورة دلوقتي — البايبلاين */
 .pipe{background:var(--lv-white);border:1px solid var(--lv-line);border-radius:var(--r-lg);box-shadow:var(--e-1);overflow:hidden}
 .pipe-hot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--lv-line-soft);

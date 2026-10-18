@@ -79,7 +79,9 @@
   @endif
 
   <div class="table-responsive">
-    <table class="table table-sm">
+    {{-- أرقام المستندات والتواريخ ما تتكسرش على سطرين --}}
+    <style>.doc-table td.num{white-space:nowrap}</style>
+    <table class="table table-sm doc-table">
       <thead><tr>
         @php
           $sortMap = $sortable ?? [];
@@ -112,14 +114,14 @@
       @forelse($rows as $r)
         <tr>
           {!! $rowRenderer($r) !!}
-          <td class="text-nowrap">
+          <td class="text-nowrap text-end"><div class="row-actions">
             <a href="{{ route($editRoute, $r) }}" class="btn btn-sm btn-outline-plum py-0"
                title="فتح" aria-label="فتح المستند"><i class="bi bi-pencil" aria-hidden="true"></i></a>
             @if(!empty($printRoute))
               <a href="{{ route($printRoute, $r) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0"
                  title="طباعة" aria-label="طباعة المستند"><i class="bi bi-printer" aria-hidden="true"></i></a>
             @endif
-          </td>
+          </div></td>
         </tr>
       @empty
         <tr><td colspan="{{ count($cols) + 1 }}">
