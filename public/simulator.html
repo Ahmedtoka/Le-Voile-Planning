@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>محاكي الدورة — Le Voile</title>
+<link rel="icon" href="assets/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --plum:#9D197E; --plum-dk:#7A1362; --ink:#3B092F; --ink-2:#560D45;
+  --tint:#F7E8F3; --line:#ECD1E5; --paper:#F8F4F1;
+  --ok:#2f7d4f; --bad:#b3261e; --warn:#c98a00;
+  --display:'Reem Kufi','IBM Plex Sans Arabic',Tahoma,sans-serif;
+  --body:'IBM Plex Sans Arabic',Tahoma,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#f6e9f1;font-family:var(--body);color:var(--ink);
+  font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #fff;outline-offset:2px;border-radius:8px}
+
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block}
+#scene text{font-family:var(--body)}
+
+/* ── الشريط العلوي ── */
+.bar{position:fixed;top:0;inset-inline:0;z-index:5;display:flex;gap:14px;align-items:center;justify-content:space-between;
+  padding:12px 20px;background:linear-gradient(180deg,rgba(59,9,47,.92),rgba(59,9,47,.0));color:#fff;pointer-events:none}
+.bar > *{pointer-events:auto}
+.brand{display:flex;gap:12px;align-items:center}
+.brand img{height:28px}
+.brand b{font-family:var(--display);font-weight:600;font-size:1.15rem}
+.ctl{display:flex;gap:6px;align-items:center}
+.ctl button{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;border-radius:999px;
+  padding:7px 14px;cursor:pointer;backdrop-filter:blur(6px)}
+.ctl button:hover{background:rgba(255,255,255,.25)}
+.ctl button.main{background:#fff;color:var(--ink);font-weight:600;border-color:#fff}
+.dots{display:flex;gap:5px;margin-inline:6px}
+.dots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35);cursor:pointer;transition:all .3s}
+.dots i.on{background:#fff;width:22px;border-radius:6px}
+.dots i.done{background:rgba(255,255,255,.75)}
+
+/* ── كارت الشرح ── */
+.cap{position:fixed;z-index:4;top:84px;right:22px;width:min(390px,calc(100vw - 44px));
+  background:rgba(255,255,255,.93);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:20px;
+  padding:18px 20px 16px;box-shadow:0 18px 50px -20px rgba(59,9,47,.45);transition:opacity .35s, transform .35s}
+.cap.swap{opacity:0;transform:translateY(8px)}
+.cap .no{font-family:var(--display);color:var(--plum);font-size:.95rem}
+.cap h2{font-family:var(--display);font-weight:600;font-size:1.35rem;line-height:1.35;margin:2px 0 8px}
+.cap .who{display:inline-flex;gap:8px;align-items:center;background:var(--tint);border-radius:999px;padding:3px 12px 3px 4px;font-size:.85rem;color:var(--ink-2)}
+.cap .who i{width:22px;height:22px;border-radius:50%;display:inline-block}
+.cap p{margin:10px 0 0;font-size:.95rem;line-height:1.7}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{border-radius:10px;background:var(--ink);color:#fff;padding:5px 10px;font-size:.85rem;animation:pop .45s cubic-bezier(.3,1.6,.5,1) both}
+.chip.ok{background:var(--ok)} .chip.bad{background:var(--bad)} .chip.lt{background:var(--tint);color:var(--ink-2)}
+.chip small{opacity:.75;margin-inline-start:4px}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+.f{margin-top:10px;font-size:.82rem;color:#7d6476;border-top:1px dashed var(--line);padding-top:8px}
+
+/* ── شاشة البداية ── */
+.intro{position:fixed;inset:0;z-index:9;display:grid;place-items:center;background:radial-gradient(ellipse at center,rgba(59,9,47,.55),rgba(59,9,47,.85));color:#fff;text-align:center;transition:opacity .6s}
+.intro.gone{opacity:0;pointer-events:none}
+body:has(.intro:not(.gone)) .cap{opacity:0}
+.intro h1{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4.4vw,3.4rem);line-height:1.25;margin:0 0 10px}
+.intro p{font-size:1.1rem;opacity:.85;margin:0 auto 26px;max-width:46ch;line-height:1.7}
+.intro button{background:#fff;color:var(--ink);border:0;border-radius:999px;padding:14px 34px;font-size:1.15rem;font-weight:700;cursor:pointer;
+  box-shadow:0 10px 40px -10px #000}
+.intro button:hover{transform:translateY(-1px)}
+.intro img{height:54px;margin-bottom:18px}
+.intro small{display:block;margin-top:16px;opacity:.6;font-size:.85rem}
+
+/* ── حركة دايمة في المشهد ── */
+.spin{transform-box:fill-box;transform-origin:center}
+.moving .spin{animation:spin .45s linear infinite}
+@keyframes spin{to{transform:rotate(-360deg)}}
+.cloud{animation:drift 70s linear infinite}
+.cloud.c2{animation-duration:95s;animation-delay:-40s}
+.cloud.c3{animation-duration:120s;animation-delay:-80s}
+@keyframes drift{from{transform:translateX(-300px)}to{transform:translateX(2300px)}}
+.typing{animation:type .35s ease-in-out infinite alternate;transform-box:fill-box}
+@keyframes type{to{transform:translateX(3px)}}
+.breathe{animation:breathe 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:bottom}
+@keyframes breathe{50%{transform:scaleY(1.02)}}
+.needle{animation:needle .18s linear infinite alternate}
+@keyframes needle{to{transform:translateY(5px)}}
+.blink{animation:blink .7s steps(2) infinite}
+@keyframes blink{50%{opacity:.15}}
+.glow{animation:glow 1.6s ease-in-out infinite}
+@keyframes glow{50%{opacity:.35}}
+
+@media (max-width:760px){
+  .cap{top:auto;bottom:12px;right:12px;width:calc(100vw - 24px);max-height:44vh;overflow:auto;padding:14px 16px}
+  .cap h2{font-size:1.1rem}
+  .bar{padding:10px 12px}
+  .brand b{display:none}
+  .brand img{height:22px}
+  .dots{display:none}
+  .ctl button{padding:6px 11px;font-size:.9rem}
+  #bRestart{font-size:0;padding:6px 10px}
+  #bRestart::before{content:"↺";font-size:17px;line-height:1}
+}
+@media (prefers-reduced-motion:reduce){
+  .cloud,.typing,.breathe,.needle,.blink,.glow,.moving .spin{animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<svg id="scene" viewBox="40 190 1840 1035" preserveAspectRatio="xMidYMid slice" role="img" aria-label="مشهد متحرك لمصنع لوفوال ودورة القماش">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#efd9e8"/><stop offset=".55" stop-color="#fbf1f7"/><stop offset="1" stop-color="#fff9fc"/>
+  </linearGradient>
+  <linearGradient id="rollG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#5a4763"/><stop offset=".35" stop-color="#2a1f30"/><stop offset=".6" stop-color="#1c1420"/><stop offset="1" stop-color="#3d2f45"/>
+  </linearGradient>
+  <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#e9f3f7"/><stop offset="1" stop-color="#cfe3ec"/>
+  </linearGradient>
+  <pattern id="brick" width="28" height="14" patternUnits="userSpaceOnUse">
+    <rect width="28" height="14" fill="#e6ddd4"/><path d="M0 0h28M0 7h28M14 0v7M0 7v7M28 7v7" stroke="#d5c9bd" stroke-width="1"/>
+  </pattern>
+  <pattern id="hazard" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="16" height="16" fill="#f2c230"/><rect width="8" height="16" fill="#2a2030"/>
+  </pattern>
+  <pattern id="mesh" width="8" height="8" patternUnits="userSpaceOnUse">
+    <path d="M0 0L8 8M8 0L0 8" stroke="#b3261e" stroke-width="1"/>
+  </pattern>
+  <pattern id="fabricP" width="6" height="6" patternUnits="userSpaceOnUse">
+    <rect width="6" height="6" fill="#2a1f30"/><path d="M0 0h3v3H0zM3 3h3v3H3z" fill="#352a3c"/>
+  </pattern>
+
+  <!-- ── الشخصيات (الرجلين عند 0,0) ── -->
+  <symbol id="man" overflow="visible">
+    <g class="breathe">
+      <rect x="-6" y="-30" width="5.5" height="30" rx="2.5" fill="var(--pants,#3a3550)"/>
+      <rect x=".5" y="-30" width="5.5" height="30" rx="2.5" fill="var(--pants,#3a3550)"/>
+      <rect x="-7" y="-2" width="7" height="3" rx="1.5" fill="#2a2030"/><rect x="0" y="-2" width="7" height="3" rx="1.5" fill="#2a2030"/>
+      <rect x="-15" y="-58" width="6" height="27" rx="3" fill="var(--shirt,#5b7db1)"/>
+      <rect x="9" y="-58" width="6" height="27" rx="3" fill="var(--shirt,#5b7db1)"/>
+      <rect x="-11" y="-61" width="22" height="34" rx="8" fill="var(--shirt,#5b7db1)"/>
+      <circle cx="-12" cy="-30" r="3.2" fill="var(--skin,#d9a77c)"/><circle cx="12" cy="-30" r="3.2" fill="var(--skin,#d9a77c)"/>
+      <rect x="-3" y="-66" width="6" height="6" fill="var(--skin,#d9a77c)"/>
+      <circle cy="-73" r="9.5" fill="var(--skin,#d9a77c)"/>
+      <path d="M-9.6 -74 a9.6 9.6 0 0 1 19.2 0 q-4 -4 -9 -3.5 q-6 .5 -10.2 3.5z" fill="var(--hair,#2b1d16)"/>
+      <circle cx="-3.4" cy="-73" r="1.1" fill="#2a2030"/><circle cx="3.4" cy="-73" r="1.1" fill="#2a2030"/>
+      <path d="M-3 -68.5 q3 2 6 0" stroke="#7a4b35" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+    </g>
+  </symbol>
+  <symbol id="woman" overflow="visible">
+    <g class="breathe">
+      <path d="M-12 -30 L12 -30 L15 0 L-15 0z" fill="var(--pants,#4a3a5c)"/>
+      <rect x="-15" y="-58" width="6" height="27" rx="3" fill="var(--shirt,#c36a9a)"/>
+      <rect x="9" y="-58" width="6" height="27" rx="3" fill="var(--shirt,#c36a9a)"/>
+      <rect x="-11" y="-61" width="22" height="34" rx="8" fill="var(--shirt,#c36a9a)"/>
+      <circle cx="-12" cy="-30" r="3.2" fill="var(--skin,#e2b48b)"/><circle cx="12" cy="-30" r="3.2" fill="var(--skin,#e2b48b)"/>
+      <path d="M-13 -60 q13 -10 26 0 l-3 -16 a10 10 0 0 0 -20 0z" fill="var(--hijab,#7A1362)"/>
+      <circle cy="-74" r="11.5" fill="var(--hijab,#7A1362)"/>
+      <circle cy="-73" r="7.6" fill="var(--skin,#e2b48b)"/>
+      <circle cx="-2.8" cy="-73.5" r="1" fill="#2a2030"/><circle cx="2.8" cy="-73.5" r="1" fill="#2a2030"/>
+      <path d="M-2.5 -69.5 q2.5 1.6 5 0" stroke="#9a5a45" stroke-width="1" fill="none" stroke-linecap="round"/>
+    </g>
+  </symbol>
+  <symbol id="doctor" overflow="visible">
+    <g class="breathe">
+      <rect x="-6" y="-30" width="5.5" height="30" rx="2.5" fill="#3a3550"/><rect x=".5" y="-30" width="5.5" height="30" rx="2.5" fill="#3a3550"/>
+      <path d="M-13 -60 h26 l2 44 h-30z" fill="#fff" stroke="#d9d2d8"/>
+      <path d="M0 -60 v44" stroke="#d9d2d8"/>
+      <rect x="-17" y="-58" width="6" height="28" rx="3" fill="#fff" stroke="#d9d2d8"/>
+      <rect x="11" y="-58" width="6" height="28" rx="3" fill="#fff" stroke="#d9d2d8"/>
+      <path d="M-6 -60 q6 14 12 0" stroke="#9D197E" stroke-width="1.6" fill="none"/>
+      <circle cx="0" cy="-47" r="2.4" fill="#9D197E"/>
+      <rect x="-3" y="-66" width="6" height="6" fill="#d9a77c"/>
+      <circle cy="-73" r="9.5" fill="#d9a77c"/>
+      <path d="M-9.6 -74 a9.6 9.6 0 0 1 19.2 0 q-9.6 -3 -19.2 0z" fill="#6b6b6b"/>
+      <rect x="-7.5" y="-75.5" width="6" height="4" rx="2" fill="none" stroke="#2a2030" stroke-width="1"/>
+      <rect x="1.5" y="-75.5" width="6" height="4" rx="2" fill="none" stroke="#2a2030" stroke-width="1"/>
+      <path d="M-2.5 -68.5 q2.5 1.8 5 0" stroke="#7a4b35" stroke-width="1" fill="none"/>
+    </g>
+  </symbol>
+  <!-- قاعد على مكتب وبيبص شمال — المقعد عند 0,0 -->
+  <symbol id="sitM" overflow="visible">
+    <rect x="9" y="-44" width="6" height="44" rx="3" fill="#6b5a66"/>
+    <rect x="-11" y="-38" width="22" height="34" rx="8" fill="var(--shirt,#5b7db1)"/>
+    <rect class="typing" x="-28" y="-27" width="22" height="6.5" rx="3.2" fill="var(--shirt,#5b7db1)"/>
+    <circle class="typing" cx="-28" cy="-23.7" r="3.2" fill="var(--skin,#d9a77c)"/>
+    <rect x="-3" y="-44" width="6" height="6" fill="var(--skin,#d9a77c)"/>
+    <circle cx="-1" cy="-51" r="9.5" fill="var(--skin,#d9a77c)"/>
+    <path d="M-10.6 -52 a9.6 9.6 0 0 1 19.2 0 l1 4 q-4 -8 -10 -8 q-6 0 -10.2 4z" fill="var(--hair,#2b1d16)"/>
+    <circle cx="-6" cy="-51" r="1.1" fill="#2a2030"/>
+  </symbol>
+  <symbol id="sitW" overflow="visible">
+    <rect x="9" y="-44" width="6" height="44" rx="3" fill="#6b5a66"/>
+    <rect x="-11" y="-38" width="22" height="34" rx="8" fill="var(--shirt,#c36a9a)"/>
+    <rect class="typing" x="-28" y="-27" width="22" height="6.5" rx="3.2" fill="var(--shirt,#c36a9a)"/>
+    <circle class="typing" cx="-28" cy="-23.7" r="3.2" fill="var(--skin,#e2b48b)"/>
+    <path d="M-13 -36 q13 -10 26 0 l-3 -16 a10 10 0 0 0 -20 0z" fill="var(--hijab,#7A1362)"/>
+    <circle cx="-1" cy="-52" r="11.5" fill="var(--hijab,#7A1362)"/>
+    <circle cx="-3" cy="-51" r="7.4" fill="var(--skin,#e2b48b)"/>
+    <circle cx="-7" cy="-51.5" r="1" fill="#2a2030"/>
+  </symbol>
+
+  <!-- لفة قماش 44×20 -->
+  <symbol id="roll" overflow="visible">
+    <rect x="0" y="0" width="38" height="20" rx="3" fill="url(#rollG)"/>
+    <rect x="3" y="4" width="32" height="2" rx="1" fill="#fff" opacity=".12"/>
+    <ellipse cx="38" cy="10" rx="6" ry="10" fill="#241a29"/>
+    <ellipse cx="38" cy="10" rx="2.6" ry="4.2" fill="#e5d6e0"/>
+    <ellipse cx="1" cy="10" rx="5" ry="10" fill="#45364d"/>
+  </symbol>
+  <!-- كرتونة 30×24 -->
+  <symbol id="box" overflow="visible">
+    <rect width="30" height="24" rx="2" fill="#c99a62"/>
+    <rect x="12" width="6" height="24" fill="#e5c08d"/>
+    <rect x="0" y="0" width="30" height="5" fill="#b8874f"/>
+    <circle cx="23" cy="15" r="3.4" fill="#9D197E"/>
+  </symbol>
+  <!-- ورقة 26×32 -->
+  <symbol id="doc" overflow="visible">
+    <rect width="26" height="32" rx="2" fill="#fff" stroke="#d8c3d1"/>
+    <rect x="3" y="3" width="20" height="5" rx="1" fill="#9D197E"/>
+    <rect x="4" y="12" width="18" height="2" fill="#d8c3d1"/><rect x="4" y="17" width="14" height="2" fill="#d8c3d1"/>
+    <rect x="4" y="22" width="18" height="2" fill="#d8c3d1"/><rect x="4" y="27" width="10" height="2" fill="#d8c3d1"/>
+  </symbol>
+  <symbol id="tree" overflow="visible">
+    <rect x="-4" y="-40" width="8" height="40" fill="#8a6a50"/>
+    <circle cy="-62" r="30" fill="#8fb37f"/><circle cx="-18" cy="-48" r="20" fill="#7da56d"/><circle cx="18" cy="-50" r="22" fill="#9cc08b"/>
+  </symbol>
+</defs>
+
+<!-- ═════════ الخلفية ═════════ -->
+<rect x="-1400" y="-1200" width="4800" height="2300" fill="url(#sky)"/>
+<circle cx="1640" cy="330" r="60" fill="#fff3d6" opacity=".9"/>
+<g fill="#fff" opacity=".9">
+  <g class="cloud"><ellipse cx="0" cy="300" rx="70" ry="22"/><ellipse cx="40" cy="285" rx="45" ry="24"/><ellipse cx="-40" cy="292" rx="35" ry="18"/></g>
+  <g class="cloud c2"><ellipse cx="0" cy="240" rx="90" ry="24"/><ellipse cx="50" cy="222" rx="50" ry="26"/></g>
+  <g class="cloud c3"><ellipse cx="0" cy="360" rx="60" ry="18"/><ellipse cx="30" cy="348" rx="38" ry="20"/></g>
+</g>
+<!-- مدينة بعيدة -->
+<g fill="#ead3e2">
+  <rect x="40" y="560" width="70" height="340"/><rect x="120" y="610" width="50" height="290"/><rect x="600" y="520" width="80" height="380"/>
+  <rect x="1520" y="580" width="60" height="320"/><rect x="1590" y="520" width="90" height="380"/><rect x="1700" y="600" width="60" height="300"/>
+  <rect x="1770" y="540" width="80" height="360"/>
+</g>
+
+<!-- ═════════ الشارع ═════════ -->
+<rect x="-1400" y="900" width="4800" height="18" fill="#d9cfc6"/>
+<rect x="-1400" y="918" width="4800" height="96" fill="#4a4550"/>
+<g id="lanes" fill="#f3eef1"></g>
+<rect x="-1400" y="1014" width="4800" height="14" fill="#d9cfc6"/>
+<rect x="-1400" y="1028" width="4800" height="1600" fill="#a9c79a"/>
+<use href="#tree" x="640" y="900"/><use href="#tree" x="1560" y="900"/><use href="#tree" x="1640" y="900"/><use href="#tree" x="30" y="900"/>
+<use href="#tree" x="1000" y="1080"/><use href="#tree" x="300" y="1090"/><use href="#tree" x="1500" y="1100"/>
+
+<!-- ═════════ المصنع ═════════ -->
+<g id="factory">
+  <path d="M80 520 L80 460 L170 520 L170 460 L260 520 L260 460 L350 520 L350 460 L440 520 L440 460 L530 520 L530 460 L600 505 L600 520z" fill="#7d6476"/>
+  <path d="M80 460 L170 520 M170 460 L260 520 M260 460 L350 520 M350 460 L440 520 M440 460 L530 520" stroke="#b6a3b1" stroke-width="3"/>
+  <rect x="510" y="380" width="30" height="90" fill="#8b7484"/>
+  <rect x="80" y="520" width="520" height="380" fill="url(#brick)"/>
+  <rect x="96" y="534" width="488" height="150" fill="#f4eef2"/>
+  <rect x="96" y="706" width="488" height="194" fill="#f1ece6"/>
+  <rect x="80" y="684" width="520" height="22" fill="#6b5a66"/>
+  <rect x="200" y="486" width="280" height="36" rx="6" fill="#3B092F"/>
+  <text x="340" y="510" text-anchor="middle" fill="#fff" font-size="19" font-weight="700">مصنع سيني — تشغيل خارجي</text>
+  <text x="560" y="555" text-anchor="end" fill="#7d6476" font-size="14">الدور التاني · الخياطة</text>
+  <text x="560" y="727" text-anchor="end" fill="#7d6476" font-size="14">الأرضي · القص</text>
+  <rect x="584" y="790" width="16" height="110" fill="#5b4a56"/>
+
+  <!-- الخياطة -->
+  <g id="sewing">
+    <g transform="translate(180 684)"><use href="#sitW" x="34" y="-12" style="--shirt:#d48bb3;--hijab:#5b2a6e"/>
+      <rect x="-45" y="-44" width="90" height="8" rx="2" fill="#a07e62"/><rect x="-40" y="-36" width="5" height="36" fill="#7a5f4a"/><rect x="35" y="-36" width="5" height="36" fill="#7a5f4a"/>
+      <path d="M-30 -44 v-22 h34 v8 h-8 v14" fill="#e9e3ea" stroke="#9e8fa0"/><line class="needle" x1="-0" y1="-58" x2="0" y2="-46" stroke="#555" stroke-width="2"/>
+      <rect x="-26" y="-48" width="30" height="4" fill="#2a1f30"/></g>
+    <g transform="translate(330 684)"><use href="#sitW" x="34" y="-12" style="--shirt:#8bb3d4;--hijab:#2a3b6e"/>
+      <rect x="-45" y="-44" width="90" height="8" rx="2" fill="#a07e62"/><rect x="-40" y="-36" width="5" height="36" fill="#7a5f4a"/><rect x="35" y="-36" width="5" height="36" fill="#7a5f4a"/>
+      <path d="M-30 -44 v-22 h34 v8 h-8 v14" fill="#e9e3ea" stroke="#9e8fa0"/><line class="needle" x1="0" y1="-58" x2="0" y2="-46" stroke="#555" stroke-width="2"/>
+      <rect x="-26" y="-48" width="30" height="4" fill="#2a1f30"/></g>
+    <g transform="translate(480 684)"><use href="#sitW" x="34" y="-12" style="--shirt:#e0b36a;--hijab:#7A1362"/>
+      <rect x="-45" y="-44" width="90" height="8" rx="2" fill="#a07e62"/><rect x="-40" y="-36" width="5" height="36" fill="#7a5f4a"/><rect x="35" y="-36" width="5" height="36" fill="#7a5f4a"/>
+      <path d="M-30 -44 v-22 h34 v8 h-8 v14" fill="#e9e3ea" stroke="#9e8fa0"/><line class="needle" x1="0" y1="-58" x2="0" y2="-46" stroke="#555" stroke-width="2"/>
+      <rect x="-26" y="-48" width="30" height="4" fill="#2a1f30"/></g>
+    <g id="sewBoxes"><use href="#box" x="546" y="660"/><use href="#box" x="546" y="636"/></g>
+  </g>
+
+  <!-- القص -->
+  <use href="#man" x="552" y="898" style="--shirt:#4f8a6b;--pants:#2f3b4a"/>
+  <rect x="140" y="836" width="380" height="9" rx="2" fill="#a07e62"/>
+  <rect x="150" y="845" width="7" height="55" fill="#7a5f4a"/><rect x="503" y="845" width="7" height="55" fill="#7a5f4a"/>
+  <g id="layers"></g>
+  <g id="pieces"></g>
+  <g id="knife"><rect x="-4" y="-48" width="8" height="40" rx="2" fill="#9aa3ad"/><rect x="-14" y="-62" width="28" height="16" rx="4" fill="#9D197E"/><path d="M-2 -8 L2 -8 L0 2z" fill="#cfd6dc"/></g>
+</g>
+
+<!-- ═════════ مبنى لوفوال ═════════ -->
+<g id="hq">
+  <rect x="690" y="282" width="820" height="618" fill="#fff" stroke="#e2c9da" stroke-width="2"/>
+  <rect x="700" y="300" width="800" height="180" fill="#faf2f7"/>
+  <rect x="700" y="495" width="800" height="185" fill="#f1f5f8"/>
+  <rect x="700" y="695" width="800" height="205" fill="#f6f1ea"/>
+  <rect x="690" y="480" width="820" height="15" fill="#560D45"/>
+  <rect x="690" y="680" width="820" height="15" fill="#560D45"/>
+  <rect x="680" y="266" width="840" height="20" rx="4" fill="#3B092F"/>
+  <rect x="930" y="214" width="340" height="56" rx="10" fill="#9D197E"/>
+  <text x="1100" y="252" text-anchor="middle" fill="#fff" font-size="30" font-weight="700" style="font-family:var(--display)">Le Voile · لوفوال</text>
+  <!-- فواصل المكاتب -->
+  <g stroke="#e8d3e1" stroke-width="3"><line x1="900" y1="300" x2="900" y2="480"/><line x1="1100" y1="300" x2="1100" y2="480"/><line x1="1300" y1="300" x2="1300" y2="480"/>
+    <line x1="1100" y1="495" x2="1100" y2="680"/></g>
+  <g fill="#9D197E" font-size="15" font-weight="600" text-anchor="middle">
+    <text x="800" y="326">التخطيط</text><text x="1000" y="326">المشتريات</text><text x="1200" y="326">الحسابات</text><text x="1400" y="326">الباترونست</text>
+    <text x="900" y="521">الجودة · فحص القماش</text><text x="1300" y="521">المعمل</text>
+    <text x="810" y="718">محجوز تحت الفحص</text><text x="1000" y="718">متاح للتشغيل</text><text x="1150" y="718">منتج تام</text><text x="1385" y="718">الاستلام</text>
+  </g>
+  <text x="1232" y="718" text-anchor="middle" fill="#b3261e" font-size="12" font-weight="600">مرتجعات</text>
+
+  <!-- ─ المكاتب ─ -->
+  <g id="offices">
+    <!-- التخطيط -->
+    <use href="#sitM" x="832" y="466" style="--shirt:#9D197E"/>
+    <g id="planMon"><rect x="760" y="402" width="50" height="32" rx="3" fill="#2a2030"/><rect x="763" y="405" width="44" height="26" rx="2" fill="#f3e6ef"/>
+      <rect x="767" y="420" width="5" height="8" fill="#9D197E"/><rect x="775" y="414" width="5" height="14" fill="#9D197E"/><rect x="783" y="424" width="5" height="4" fill="#b3261e"/>
+      <g id="planAlert" opacity="0"><rect x="763" y="405" width="44" height="26" rx="2" fill="#b3261e" class="blink"/><text x="785" y="423" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">12.9 يوم</text></g>
+      <rect x="782" y="434" width="6" height="5" fill="#2a2030"/></g>
+    <!-- المشتريات -->
+    <use href="#sitM" x="1032" y="466" style="--shirt:#3f6fa3;--hair:#1c140f"/>
+    <g><rect x="960" y="402" width="50" height="32" rx="3" fill="#2a2030"/><rect x="963" y="405" width="44" height="26" rx="2" fill="#e6eef6"/>
+      <rect x="967" y="409" width="30" height="3" fill="#3f6fa3"/><rect x="967" y="415" width="22" height="3" fill="#9fb4c8"/><rect x="967" y="421" width="26" height="3" fill="#9fb4c8"/>
+      <rect x="982" y="434" width="6" height="5" fill="#2a2030"/></g>
+    <g id="phone"><rect x="1050" y="430" width="16" height="8" rx="3" fill="#2a2030"/></g>
+    <!-- الحسابات -->
+    <use href="#sitW" x="1232" y="466" style="--shirt:#4f8a6b;--hijab:#2d4a3c"/>
+    <g><rect x="1160" y="402" width="50" height="32" rx="3" fill="#2a2030"/><rect x="1163" y="405" width="44" height="26" rx="2" fill="#eaf4ee"/>
+      <text x="1185" y="422" text-anchor="middle" fill="#2f7d4f" font-size="9" font-weight="700">مستحقات</text>
+      <g id="finCheck" opacity="0"><circle cx="1185" cy="418" r="11" fill="#2f7d4f"/><path d="M1179 418 l4 4 l8 -8" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/></g>
+      <rect x="1182" y="434" width="6" height="5" fill="#2a2030"/></g>
+    <!-- الباترونست -->
+    <use href="#sitW" x="1432" y="466" style="--shirt:#e08a4f;--hijab:#7A1362"/>
+    <g><rect x="1346" y="398" width="66" height="36" rx="3" fill="#2a2030"/><rect x="1349" y="401" width="60" height="30" rx="2" fill="#fff"/>
+      <g id="markerArea"><rect x="1352" y="404" width="54" height="24" fill="#2a1f30" opacity=".12"/></g>
+      <rect x="1376" y="434" width="6" height="5" fill="#2a2030"/></g>
+    <!-- المكاتب نفسها (قدام الناس عشان تخبي الرجلين) -->
+    <g fill="#c49a7a"><rect x="740" y="438" width="120" height="8" rx="2"/><rect x="940" y="438" width="120" height="8" rx="2"/><rect x="1140" y="438" width="120" height="8" rx="2"/><rect x="1340" y="438" width="120" height="8" rx="2"/></g>
+    <g fill="#a97f60"><rect x="746" y="446" width="108" height="34"/><rect x="946" y="446" width="108" height="34"/><rect x="1146" y="446" width="108" height="34"/><rect x="1346" y="446" width="108" height="34"/></g>
+    <g fill="#8d6a50"><rect x="756" y="452" width="40" height="12" rx="2"/><rect x="956" y="452" width="40" height="12" rx="2"/><rect x="1156" y="452" width="40" height="12" rx="2"/><rect x="1356" y="452" width="40" height="12" rx="2"/></g>
+    <!-- نباتات وساعة -->
+    <g><rect x="874" y="452" width="14" height="28" rx="2" fill="#c49a7a"/><circle cx="881" cy="444" r="12" fill="#8fb37f"/></g>
+    <circle cx="1100" cy="360" r="14" fill="#fff" stroke="#9D197E" stroke-width="2"/><path d="M1100 352v8l6 4" stroke="#3B092F" stroke-width="2" fill="none"/>
+  </g>
+
+  <!-- ─ الفحص ─ -->
+  <g id="inspection">
+    <rect x="740" y="566" width="10" height="70" rx="3" fill="#8d6a50"/><rect x="1050" y="566" width="10" height="70" rx="3" fill="#8d6a50"/>
+    <circle cx="745" cy="566" r="12" fill="#3d2f45"/><circle cx="1055" cy="566" r="12" fill="#3d2f45"/>
+    <rect x="752" y="596" width="296" height="10" fill="#d9e7ee" stroke="#a9c3cf"/>
+    <rect x="760" y="606" width="6" height="74" fill="#a9c3cf"/><rect x="1034" y="606" width="6" height="74" fill="#a9c3cf"/>
+    <rect x="756" y="590" width="290" height="5" fill="url(#glass)" opacity=".8" class="glow"/>
+    <g id="sheet"><rect x="0" y="0" width="290" height="14" fill="url(#fabricP)"/><rect x="0" y="0" width="290" height="2" fill="#fff" opacity=".15"/></g>
+    <g id="widths" font-size="12" font-weight="700" text-anchor="middle"></g>
+    <use href="#man" x="1075" y="678" style="--shirt:#2f6f8f;--pants:#2a2a3a"/>
+    <g id="lens"><circle r="22" fill="#cfe9f5" fill-opacity=".45" stroke="#3B092F" stroke-width="5"/><path d="M15 15 L34 34" stroke="#3B092F" stroke-width="8" stroke-linecap="round"/>
+      <circle r="22" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="10 40" transform="rotate(-140)"/></g>
+  </g>
+
+  <!-- ─ المعمل ─ -->
+  <g id="lab">
+    <rect x="1130" y="600" width="350" height="10" rx="2" fill="#e6eef2" stroke="#b9cbd3"/>
+    <rect x="1140" y="610" width="330" height="70" fill="#dfe8ed"/>
+    <g fill="#fff" stroke="#b9cbd3"><rect x="1150" y="540" width="120" height="6"/><rect x="1150" y="560" width="120" height="6"/></g>
+    <g><path d="M1160 540 v-14 h8 v14z" fill="#c7e6d3"/><path d="M1180 540 q0 -18 6 -18 q6 0 6 18z" fill="#f6c9ea"/><path d="M1205 540 v-10 h10 v10z" fill="#cfe3f7"/>
+       <path d="M1230 560 v-12 h8 v12z" fill="#f2d39a"/><path d="M1250 560 q0 -14 5 -14 q5 0 5 14z" fill="#c7e6d3"/></g>
+    <!-- ميكروسكوب -->
+    <g transform="translate(1185 600)"><rect x="-14" y="-6" width="28" height="6" fill="#3B092F"/><path d="M-4 -6 v-26 l10 -10" stroke="#3B092F" stroke-width="6" fill="none" stroke-linecap="round"/><rect x="-10" y="-20" width="18" height="4" fill="#9D197E"/></g>
+    <use href="#doctor" x="1330" y="678"/>
+    <!-- الميزان -->
+    <g><rect x="1370" y="578" width="70" height="22" rx="4" fill="#3B092F"/><rect x="1376" y="583" width="40" height="12" rx="2" fill="#d4f5dc"/>
+      <text id="scaleTxt" x="1396" y="593" text-anchor="middle" font-size="10" font-weight="700" fill="#14532d">0.0</text>
+      <rect x="1380" y="572" width="52" height="6" rx="2" fill="#9aa3ad"/></g>
+    <g id="sample"><circle r="9" fill="url(#fabricP)" stroke="#9D197E" stroke-width="1.5"/></g>
+  </g>
+
+  <!-- ─ المخزن ─ -->
+  <g id="warehouse">
+    <g id="holdRack"><rect x="720" y="736" width="180" height="162" fill="none" stroke="#c9b8a6" stroke-width="4"/>
+      <rect x="720" y="798" width="180" height="6" fill="#c9b8a6"/><rect x="720" y="894" width="180" height="6" fill="#c9b8a6"/>
+      <rect id="hazardTape" x="720" y="728" width="180" height="10" fill="url(#hazard)"/></g>
+    <g id="relRack"><rect x="910" y="736" width="180" height="162" fill="none" stroke="#c9b8a6" stroke-width="4"/>
+      <rect x="910" y="798" width="180" height="6" fill="#c9b8a6"/><rect x="910" y="894" width="180" height="6" fill="#c9b8a6"/>
+      <rect id="greenTape" x="910" y="728" width="180" height="10" fill="#2f7d4f" opacity=".35"/></g>
+    <rect x="1100" y="736" width="100" height="162" fill="none" stroke="#c9b8a6" stroke-width="4"/>
+    <rect x="1100" y="894" width="100" height="6" fill="#c9b8a6"/>
+    <rect x="1206" y="790" width="54" height="108" fill="url(#mesh)" stroke="#b3261e" stroke-width="2"/>
+    <!-- مكتب الاستلام -->
+    <rect x="1290" y="830" width="70" height="8" fill="#c49a7a"/><rect x="1296" y="838" width="58" height="62" fill="#a97f60"/>
+    <use href="#doc" x="1300" y="800" opacity=".9"/>
+    <rect x="1494" y="760" width="12" height="140" fill="#5b4a56"/>
+  </g>
+</g>
+
+<!-- ═════════ الحاجات اللي بتتحرك ═════════ -->
+<g id="movers">
+  <g id="clerk"><use href="#man" style="--shirt:#e07b2f;--pants:#2f3b4a"/><rect x="10" y="-52" width="12" height="16" rx="2" fill="#fff" stroke="#9D197E"/></g>
+
+  <g id="truck">
+    <rect x="80" y="-126" width="270" height="108" rx="6" fill="#f4f0f3" stroke="#cdbfc9" stroke-width="2"/>
+    <text x="215" y="-80" text-anchor="middle" fill="#3B092F" font-size="17" font-weight="700">سنترال تكستايل</text>
+    <text x="215" y="-58" text-anchor="middle" fill="#9D197E" font-size="13">PO-2026-0196 · 2 طن</text>
+    <g id="curtain"><rect x="84" y="-122" width="262" height="100" rx="4" fill="#d8ccd5" opacity=".0"/></g>
+    <path d="M6 -18 V-74 q0 -12 12 -16 l40 -6 h22 v78z" fill="#9D197E"/>
+    <path d="M18 -84 l36 -6 v26 h-38z" fill="#d6ecf5"/>
+    <circle cx="36" cy="-72" r="6" fill="#d9a77c"/><path d="M30 -74 a6 6 0 0 1 12 0z" fill="#2b1d16"/>
+    <rect x="0" y="-26" width="352" height="10" rx="4" fill="#3B092F"/>
+    <g class="spin"><circle cx="48" cy="-14" r="16" fill="#2a2030"/><circle cx="48" cy="-14" r="6" fill="#9aa3ad"/><rect x="46" y="-28" width="4" height="10" fill="#9aa3ad"/></g>
+    <g class="spin"><circle cx="262" cy="-14" r="16" fill="#2a2030"/><circle cx="262" cy="-14" r="6" fill="#9aa3ad"/><rect x="260" y="-28" width="4" height="10" fill="#9aa3ad"/></g>
+    <g class="spin"><circle cx="304" cy="-14" r="16" fill="#2a2030"/><circle cx="304" cy="-14" r="6" fill="#9aa3ad"/><rect x="302" y="-28" width="4" height="10" fill="#9aa3ad"/></g>
+  </g>
+
+  <g id="tri">
+    <rect x="60" y="-46" width="104" height="8" rx="2" fill="#9D197E"/>
+    <path d="M60 -46 v-22 h104 v22" fill="none" stroke="#9D197E" stroke-width="4"/>
+    <path d="M28 -40 L60 -40 M40 -40 L46 -66 M38 -66 h18" stroke="#3B092F" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <use href="#man" x="52" y="-36" transform="scale(.8) translate(13 -9)" style="--shirt:#2f6f8f"/>
+    <rect x="44" y="-44" width="22" height="7" rx="3" fill="#3B092F"/>
+    <g class="spin"><circle cx="24" cy="-15" r="15" fill="#2a2030"/><circle cx="24" cy="-15" r="5" fill="#9aa3ad"/><rect x="22" y="-28" width="4" height="9" fill="#9aa3ad"/></g>
+    <g class="spin"><circle cx="138" cy="-15" r="15" fill="#2a2030"/><circle cx="138" cy="-15" r="5" fill="#9aa3ad"/><rect x="136" y="-28" width="4" height="9" fill="#9aa3ad"/></g>
+    <rect x="70" y="-38" width="90" height="6" fill="#3B092F"/>
+  </g>
+
+  <g id="rolls"></g>
+  <g id="boxes"></g>
+  <g id="papers"></g>
+  <g id="bubbles"></g>
+  <g id="stamp"><rect x="-90" y="-30" width="180" height="60" rx="10" fill="none" stroke="#2f7d4f" stroke-width="6"/>
+    <text y="12" text-anchor="middle" fill="#2f7d4f" font-size="34" font-weight="700" style="font-family:var(--display)">مقفول ✓</text></g>
+</g>
+</svg>
+
+<header class="bar">
+  <div class="brand"><img src="assets/logo-white.png" alt="Le Voile" onerror="this.remove()"><b>محاكي دورة الإنتاج</b></div>
+  <div class="ctl" role="group" aria-label="التحكم">
+    <button id="bPrev" aria-label="الخطوة السابقة">السابق</button>
+    <button id="bPlay" class="main" aria-pressed="true">وقّف</button>
+    <button id="bNext" aria-label="الخطوة التالية">التالي</button>
+    <div class="dots" id="dots"></div>
+    <button id="bRestart">من الأول</button>
+    <button onclick="location.href='tour.html'" title="الشرح خطوة خطوة بالأرقام">الشرح بالتفصيل</button>
+  </div>
+</header>
+
+<aside class="cap" id="cap" aria-live="polite">
+  <div class="no" id="cNo"></div>
+  <h2 id="cTitle"></h2>
+  <span class="who"><i id="cWhoC"></i><span id="cWho"></span></span>
+  <p id="cText"></p>
+  <div class="chips" id="cChips"></div>
+  <div class="f" id="cF"></div>
+</aside>
+
+<div class="intro" id="intro">
+  <div>
+    <img src="assets/logo-white.png" alt="" onerror="this.remove()">
+    <h1>رسالة قماش واحدة<br>من «اللون هيخلص» لحد الكرتونة في المخزن</h1>
+    <p>اتفرّج على الدورة كلها وهي بتحصل: المكاتب، العربية، الفحص، المعمل، المخزن، والمصنع — بنفس الأرقام اللي السيستم بيحسبها.</p>
+    <button id="bStart">ابدأ الجولة</button>
+    <small>الأسهم ← → للتنقل · المسافة للإيقاف</small>
+  </div>
+</div>
+
+<script>
+/* ════════════ محرك الحركة الصغير ════════════ */
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const NS = 'http://www.w3.org/2000/svg';
+const $ = id => document.getElementById(id);
+const svg = $('scene');
+let GEN = 0;
+
+const ST = new WeakMap();
+const S = el => { let s = ST.get(el); if (!s) { s = { x:0, y:0, s:1, sx:1, sy:1, r:0, o:1 }; ST.set(el, s); } return s; };
+function apply(el) {
+  const s = S(el);
+  el.setAttribute('transform', `translate(${s.x.toFixed(2)} ${s.y.toFixed(2)}) rotate(${s.r.toFixed(2)}) scale(${(s.s*s.sx).toFixed(3)} ${(s.s*s.sy).toFixed(3)})`);
+  el.style.opacity = s.o;
+}
+function set(el, p) { Object.assign(S(el), p); apply(el); }
+const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+const lin = t => t;
+const back = t => { const c = 1.7; return 1 + (c+1)*Math.pow(t-1,3) + c*Math.pow(t-1,2); };
+
+/* لما المستخدم يقفز لخطوة تانية، الخطوة القديمة لازم توقف فورًا —
+   كل وعد قديم بيترفض بـ STALE فالـ async function بتاعتها بتقف عند أول await */
+const STALE = Symbol('stale');
+addEventListener('unhandledrejection', e => { if (e.reason === STALE) e.preventDefault(); });
+
+function to(el, p, dur = 800, opt = {}) {
+  const g = GEN, s = S(el), from = {};
+  if (opt.arc && !('y' in p)) p.y = s.y;
+  for (const k in p) from[k] = s[k];
+  const d = REDUCE ? 0 : dur, delay = REDUCE ? 0 : (opt.delay || 0);
+  return new Promise((res, rej) => {
+    const t0 = performance.now() + delay;
+    function f(now) {
+      if (g !== GEN) return rej(STALE);
+      if (now < t0) return requestAnimationFrame(f);
+      const t = d ? Math.min(1, (now - t0) / d) : 1, e = (opt.ease || ease)(t);
+      for (const k in p) s[k] = from[k] + (p[k] - from[k]) * e;
+      if (opt.arc) s.y -= opt.arc * 4 * t * (1 - t);
+      apply(el);
+      t < 1 ? requestAnimationFrame(f) : res();
+    }
+    requestAnimationFrame(f);
+  });
+}
+const wait = ms => { const g = GEN; return new Promise((r, j) => setTimeout(() => g === GEN ? r() : j(STALE), REDUCE ? Math.min(ms, 150) : ms)); };
+// لوب حركة مخصوص (عداد/سكينة): fn(t) لكل فريم من 0 لـ 1
+const run = (ms, fn) => { const g = GEN; return new Promise((r, j) => { const t0 = performance.now(), d = REDUCE ? 1 : ms;
+  (function f(n) { if (g !== GEN) return j(STALE); const t = Math.min(1, (n - t0) / d); fn(t); t < 1 ? requestAnimationFrame(f) : r(); })(t0); }); };
+const all = a => Promise.all(a);
+function mk(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+/* الكاميرا = viewBox */
+let cam = [40, 190, 1840, 1035], camTarget = null;
+/* كل مشهد بيحدد «المنطقة اللي لازم تبان»، والكاميرا بتحسب viewBox
+   يحطها في الجزء الفاضي من الشاشة — كارت الشرح بياخد اليمين على الكمبيوتر
+   وتحت على الموبايل. نسبة الـ viewBox = نسبة الشاشة، فمفيش قص. */
+function fit(r) {
+  const W = innerWidth, H = innerHeight, wide = W > 760;
+  const left = 16, right = wide ? W - 430 : W - 16, top = 70, bottom = wide ? H - 16 : H * 0.54;
+  const vw = right - left, vh = bottom - top;
+  const sc = Math.min(vw / r[2], vh / r[3]);
+  const cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2;
+  return [cx - (left + vw / 2) / sc, cy - (top + vh / 2) / sc, W / sc, H / sc];
+}
+addEventListener('resize', () => { if (camTarget) { cam = fit(camTarget); svg.setAttribute('viewBox', cam.join(' ')); } });
+function camTo(target, dur = 1500) {
+  camTarget = target;
+  const r = fit(target);
+  const g = GEN, from = cam.slice(), d = REDUCE ? 0 : dur;
+  return new Promise((res, rej) => {
+    const t0 = performance.now();
+    (function f(now) {
+      if (g !== GEN) return rej(STALE);
+      const t = d ? Math.min(1, (now - t0) / d) : 1, e = ease(t);
+      cam = from.map((v, i) => v + (r[i] - v) * e);
+      svg.setAttribute('viewBox', cam.map(v => v.toFixed(1)).join(' '));
+      t < 1 ? requestAnimationFrame(f) : res();
+    })(t0);
+  });
+}
+// المنطقة اللي لازم تبان في كل مشهد [x, y, عرض, ارتفاع]
+const CAM = {
+  wide:    [40, 200, 1840, 880],
+  offices: [700, 300, 800, 190],
+  plan:    [700, 330, 240, 160],
+  purch:   [900, 330, 240, 160],
+  fin:     [1100, 330, 240, 160],
+  patt:    [1300, 330, 210, 160],
+  dock:    [710, 700, 960, 320],
+  insp:    [710, 520, 400, 165],
+  lab:     [1110, 520, 390, 165],
+  ware:    [710, 700, 580, 320],
+  street:  [520, 700, 820, 320],
+  cut:     [90, 720, 510, 190],
+  sew:     [90, 530, 510, 165],
+};
+
+/* ════════════ عناصر بتتولد ════════════ */
+// خطوط الشارع
+for (let x = -1400; x < 3400; x += 70) mk('rect', { x, y: 963, width: 36, height: 4, rx: 2 }, $('lanes'));
+
+// اللفات: 8 لفات بتمثل 36 توب
+const rolls = [];
+for (let i = 0; i < 8; i++) { const g = mk('g', {}, $('rolls')); mk('use', { href: '#roll' }, g); rolls.push(g); }
+const TRUCK_STOP = 1290, TRI_HOME = 1110, TRI_FACTORY = 612, ROAD = 1000;
+const truckSlot = i => ({ x: TRUCK_STOP + 98 + (i % 4) * 56, y: ROAD - 108 + Math.floor(i / 4) * 40 });
+const rackSlot = (rx, i) => ({ x: rx + 6 + (i % 4) * 44, y: Math.floor(i / 4) ? 874 : 778 });
+const HOLD = 720, REL = 910;
+const retSlot = i => ({ x: 1212, y: i ? 852 : 874 });
+const bedSlot = (tx, i) => [{ x: tx + 72, y: ROAD - 66 }, { x: tx + 116, y: ROAD - 66 }, { x: tx + 94, y: ROAD - 86 }][i];
+
+// الكراتين
+const boxes = [];
+for (let i = 0; i < 3; i++) { const g = mk('g', {}, $('boxes')); mk('use', { href: '#box' }, g); boxes.push(g); }
+const shelfSlot = i => [{ x: 1110, y: 874 }, { x: 1148, y: 874 }, { x: 1129, y: 850 }][i];
+
+// الورق
+const paper = n => { const g = mk('g', {}, $('papers')); mk('use', { href: '#doc' }, g); return g; };
+const pPO = paper(), pStore = paper(), pMarker = paper(), pWO = paper(), pCut = paper();
+
+// الفقاعات
+function bubble(text, w = 150, tone = '#3B092F') {
+  const g = mk('g', {}, $('bubbles'));
+  mk('rect', { x: -w/2, y: -30, width: w, height: 30, rx: 15, fill: tone }, g);
+  mk('path', { d: 'M-6 0 L0 9 L6 0z', fill: tone }, g);
+  const t = mk('text', { y: -10, 'text-anchor': 'middle', fill: '#fff', 'font-size': 14, 'font-weight': 700 }, g);
+  t.textContent = text;
+  g.txt = t;
+  return g;
+}
+const bCover  = bubble('البادي الأسود هيخلص!', 170, '#b3261e');
+const bPlan   = bubble('محتاجين 2 طن أسود', 160);
+const bPrice  = bubble('210 ج للكيلو · 25 أكتوبر', 190);
+const bFin    = bubble('علمت بالمستحق ✓', 140, '#2f7d4f');
+const bCheck  = [bubble('① مطابق للطلب', 130, '#2f7d4f'), bubble('② 38 توب', 100, '#2f7d4f'), bubble('③ 1,960 كجم', 120, '#2f7d4f')];
+const bTag    = bubble('SL30-181026-196-00 · تحت الفحص', 250, '#c98a00');
+const bMin    = bubble('أقل عرض = 172 سم', 160, '#b3261e');
+const bGsm    = bubble('متوسط البنشر 192 جم/م²', 200);
+const bRel    = bubble('متاح للتشغيل 1,850 كجم', 190, '#2f7d4f');
+const bRet    = bubble('توبين مرفوضين ⇐ مرتجعات', 200, '#b3261e');
+const bMReq   = bubble('ماركر بادي + معصم على 172', 210);
+const bCalc   = bubble('586 رِقّة × 12 = 7,032 قطعة', 230, '#9D197E');
+const bLoad   = bubble('صرف 600 كجم للمصنع', 170);
+const bCut    = bubble('6,960 قطعة · انحراف −1.0%', 220, '#2f7d4f');
+const bSew    = bubble('6,920 سليم + 40 مرفوض', 190);
+const BUBBLES = [bCover, bPlan, bPrice, bFin, ...bCheck, bTag, bMin, bGsm, bRel, bRet, bMReq, bCalc, bLoad, bCut, bSew];
+
+// طبقات الفرشة + القطع
+const layers = [];
+for (let i = 0; i < 12; i++) layers.push(mk('rect', { x: 160, y: 832 - i * 3.3, width: 340, height: 3, fill: i % 2 ? '#3d2f45' : '#241a29' }, $('layers')));
+const pieces = [];
+const PIECE = 'M0 0 q6 -3 12 0 l2 8 l-3 2 l0 14 h-10 l0 -14 l-3 -2z';
+for (let i = 0; i < 7; i++) pieces.push(mk('path', { d: PIECE, transform: `translate(${178 + i * 46} 792)`, fill: '#f6c9ea', stroke: '#9D197E', 'stroke-width': 1.4 }, $('pieces')));
+
+// قياسات العرض
+const WIDTHS = [176, 174, 172, 175, 173, 176];
+const wTexts = WIDTHS.map((w, i) => { const t = mk('text', { x: 790 + i * 46, y: 584, fill: w === 172 ? '#b3261e' : '#3B092F' }, $('widths')); t.textContent = w; return t; });
+
+// قطع الماركر على شاشة الباترونست
+const mPieces = [];
+const MP = [[1354,406,12,10],[1367,406,10,20],[1378,406,12,10],[1391,406,13,20],[1354,417,12,9],[1378,417,12,9]];
+MP.forEach(([x, y, w, h], i) => { const r = mk('rect', { x: 0, y: 0, width: w, height: h, rx: 2, fill: i % 2 ? '#9D197E' : '#f6c9ea', stroke: '#3B092F', 'stroke-width': .6 }, $('markerArea')); r.dest = { x, y }; mPieces.push(r); });
+
+/* ════════════ الحالة الابتدائية ════════════ */
+function reset() {
+  BUBBLES.forEach(b => set(b, { o: 0, s: .8 }));
+  [pPO, pStore, pMarker, pWO, pCut].forEach(p => set(p, { x: 785, y: 404, o: 0, s: 1, r: 0 }));
+  set($('planAlert'), { o: 0 }); set($('finCheck'), { o: 0, s: 1 });
+  set($('truck'), { x: 2150, y: ROAD }); $('truck').classList.remove('moving');
+  set($('clerk'), { x: 1430, y: 898 });
+  rolls.forEach((r, i) => set(r, { ...truckSlot(i), o: 0, s: 1, r: 0 }));
+  set($('sheet'), { x: 756, y: 596, sx: 0, o: 1 });
+  set($('lens'), { x: 790, y: 560, o: 0 });
+  wTexts.forEach(t => set(t, { o: 0 }));
+  set($('sample'), { x: 1262, y: 594, o: 1 }); $('scaleTxt').textContent = '0.0';
+  set($('hazardTape'), { o: 1 }); set($('greenTape'), { o: .35 });
+  mPieces.forEach(r => set(r, { x: r.dest.x + 70, y: r.dest.y, o: 0 }));
+  set($('tri'), { x: TRI_HOME, y: ROAD }); $('tri').classList.remove('moving');
+  layers.forEach(l => set(l, { o: 0 }));
+  pieces.forEach((p, i) => { p.style.opacity = 0; });
+  set($('knife'), { x: 170, y: 830, o: 0 });
+  boxes.forEach(b => set(b, { x: 0, y: 0, o: 0 }));
+  set($('sewBoxes'), { o: 0 });
+  set($('stamp'), { x: 1150, y: 790, o: 0, s: 2.2, r: -12 });
+}
+const show = (el, x, y, d = 400) => { if (x !== undefined) set(el, { x, y }); return to(el, { o: 1, s: 1 }, d, { ease: back }); };
+const hide = (el, d = 300) => to(el, { o: 0, s: .8 }, d);
+
+/* ════════════ الخطوات ════════════
+   play() = الحركة · done() = آخر شكل للخطوة فورًا (علشان القفز) */
+const STEPS = [
+ { cam: 'plan', who: 'التخطيط', c: '#9D197E', title: 'السيستم بيقولك إن اللون هيخلص',
+   text: 'قبل أي طلب: شاشة أيام التغطية بتحسب الرصيد يكفي كام يوم بيع. البادي الأسود باقيله 13 يوم — «خطر».',
+   chips: [['38.7 قطعة/يوم', 'lt', 'متوسط البيع'], ['500 قطعة', 'lt', 'الرصيد بعد الأمان'], ['12.9 يوم ⇐ خطر', 'bad']],
+   f: 'أيام التغطية = (الرصيد − مخزون الأمان) ÷ متوسط البيع اليومي',
+   async play() { await camTo(CAM.wide, 600); await wait(500); await camTo(CAM.plan, 1800); await to($('planAlert'), { o: 1 }, 400); await show(bCover, 810, 370); await wait(1800); },
+   done() { set($('planAlert'), { o: 1 }); } },
+
+ { cam: 'offices', who: 'التخطيط ← المشتريات', c: '#9D197E', title: 'طلب الشراء بيتكتب ويطير للمشتريات',
+   text: 'المخطط بيكتب الصنف واللون والكمية ونسبة السماح. الحفظ بينزّل الطلب للمشتريات على طول — من غير اعتماد.',
+   chips: [['PO-2026-0196'], ['فسكوز فل ليكرا أسود', 'lt'], ['2 طن · سماح 5%', 'lt']],
+   f: 'المسموح استلامه: من 1.9 لـ 2.1 طن (الكمية × 1 ± 5%)',
+   async play() { await camTo(CAM.offices, 1200); await show(bPlan, 810, 370); await wait(700);
+     set(pPO, { x: 790, y: 404, o: 0 }); await to(pPO, { o: 1 }, 300); await hide(bPlan);
+     await to(pPO, { x: 990, y: 404, r: 360 }, 1500, { arc: 90 }); set(pPO, { r: 0 }); await wait(500); },
+   done() { set($('planAlert'), { o: 0 }); set(pPO, { x: 990, y: 404, o: 1, r: 0 }); } },
+
+ { cam: 'purch', who: 'المشتريات', c: '#3f6fa3', title: 'المشتريات بتسعّر وبتحدد المورد',
+   text: 'المورد والسعر وطريقة الدفع وتاريخ التوريد. الحفظ = الطلب جاهز للاستلام، وبينزل في نفس اللحظة عند الحسابات وعند المخزن.',
+   chips: [['سنترال تكستايل', 'lt'], ['210 ج/كجم', 'lt'], ['469,224 ج.م', '', 'الإجمالي']],
+   f: 'الإجمالي = الكمية × السعر − الخصم + الضريبة على اللي بعد الخصم',
+   async play() { await camTo(CAM.purch, 1100); await to($('phone'), { y: -8, r: -10 }, 300); await show(bPrice, 1010, 370);
+     await to($('phone'), { y: 0, r: 0 }, 300); await wait(900); await hide(bPrice);
+     await to(pPO, { s: 1.4 }, 200); await to(pPO, { s: 1 }, 200);
+     set(pStore, { x: 990, y: 404, o: 1 });
+     await camTo(CAM.offices, 900);
+     await all([to(pPO, { x: 1190, y: 404 }, 1300, { arc: 80 }), to(pStore, { x: 1310, y: 800 }, 1800, { arc: 120 })]); await wait(300); },
+   done() { set(pPO, { x: 1190, y: 404, o: 1 }); set(pStore, { x: 1310, y: 800, o: 1 }); } },
+
+ { cam: 'fin', who: 'الحسابات', c: '#4f8a6b', title: 'الحسابات بتشوف المستحق — متابعة مش بوابة',
+   text: 'المستحق بيظهر عندها لوحده. «سجّل علمك» بيشيله من قايمة الجديد — ومش بيوقّف الاستلام.',
+   chips: [['مستحق خلال 30 يوم', 'lt'], ['حسب المورد', 'lt']],
+   f: 'مفيش توقيعات ولا اعتمادات: اللي بيعمل المستند هو اللي بيقرره',
+   async play() { await camTo(CAM.fin, 1100); set($('finCheck'), { o: 0, s: .3 }); await to($('finCheck'), { o: 1, s: 1 }, 500, { ease: back }); await show(bFin, 1210, 370); await wait(1600); },
+   done() { set($('finCheck'), { o: 1, s: 1 }); } },
+
+ { cam: 'dock', who: 'المخزن', c: '#e07b2f', title: 'العربية وصلت — والرسالة بتتولد لوحدها',
+   text: 'أمين المخزن بيقابل العربية ويراجع: الطلب، عدد الأتواب، الوزن. كل (خامة + لون) بتبقى رسالة برقم، وبتدخل محجوزة «تحت الفحص».',
+   chips: [['1,960 كجم', '', 'الطن × 1000'], ['38 توب', 'lt'], ['محجوز — مش متاح للتشغيل', 'bad']],
+   f: 'الطلب بيتقفل لوحده: 1.96 طن ≥ 1.9 (الأقل المقبول)',
+   async play() {
+     await camTo(CAM.dock, 1300);
+     $('truck').classList.add('moving'); await to($('truck'), { x: TRUCK_STOP }, 2600, { ease: t => 1 - Math.pow(1 - t, 3) }); $('truck').classList.remove('moving');
+     await to($('clerk'), { x: 1480 }, 900);
+     for (let i = 0; i < 3; i++) { await show(bCheck[i], 1480, 790 - i * 36); await wait(450); }
+     await wait(500); bCheck.forEach(b => hide(b));
+     rolls.forEach(r => to(r, { o: 1 }, 300));
+     await wait(300);
+     for (let i = 0; i < 8; i++) { to(rolls[i], rackSlot(HOLD, i), 1100, { arc: 45 }); await wait(230); }
+     await wait(1100); await to($('clerk'), { x: 1430 }, 700);
+     await show(bTag, 810, 724); await wait(900);
+     $('truck').classList.add('moving'); await to($('truck'), { x: -600 }, 3200, { ease: t => t * t }); $('truck').classList.remove('moving');
+   },
+   done() { set($('truck'), { x: -600 }); rolls.forEach((r, i) => set(r, { ...rackSlot(HOLD, i), o: 1 })); } },
+
+ { cam: 'insp', who: 'الجودة', c: '#2f6f8f', title: 'العدسة بتعدّي: جرد وقياس عرض كل توب',
+   text: 'الفاحص بيعدّ الأتواب (36 بدل 38 ⇐ تنبيه لمراقب المخزون) ويقيس عيّنة. أهم رقم: أقل عرض — الماركر لازم يتحط عليه، وإلا جنب التوب الضيق هيتحرق ويترمي.',
+   chips: [['أقل عرض 172 سم', 'bad'], ['فرق العرض 4 سم — سليم', 'ok'], ['العيّنة 16.7%', 'lt'], ['36 توب (فرق 2)', 'lt']],
+   f: 'أقل عرض = أصغر قياس · فرق العرض = الأعرض − الأضيق (فوق 5 سم = قماش بايظ)',
+   async play() {
+     await camTo(CAM.insp, 1300);
+     await to($('sheet'), { sx: 1 }, 1400, { ease: lin });
+     set($('lens'), { x: 780, y: 560, o: 0 }); await to($('lens'), { o: 1 }, 300);
+     for (let i = 0; i < 6; i++) { await to($('lens'), { x: 790 + i * 46 + 3 }, 420); set(wTexts[i], { o: 0, s: 1 }); to(wTexts[i], { o: 1 }, 250); await wait(160); }
+     await to($('lens'), { x: 790 + 2 * 46 + 3 }, 700); await show(bMin, 880, 540); await wait(1700);
+   },
+   done() { set($('sheet'), { sx: 1 }); wTexts.forEach(t => set(t, { o: 1 })); set($('lens'), { o: 0 }); } },
+
+ { cam: 'lab', who: 'المعمل', c: '#6b6b6b', title: 'الدكتور بيوزن العيّنة: البنشر والانكماش',
+   text: 'فني المعمل بيوزن متر مربع من كل توب ويقيس الانكماش ومطابقة اللون. المتوسط بيروح للرسالة ومنها لحسبة أمر الشغل.',
+   chips: [['192 جم/م²', '', 'متوسط البنشر'], ['انكماش طول 2.5%', 'lt'], ['اللون مطابق', 'ok']],
+   f: 'متوسط البنشر = مجموع القراءات ÷ عددها = 1,152 ÷ 6',
+   async play() {
+     await camTo(CAM.lab, 1200);
+     await to($('sample'), { x: 1404, y: 566 }, 1200, { arc: 50 });
+     await run(1400, t => { $('scaleTxt').textContent = (192 * ease(t)).toFixed(1); });
+     await show(bGsm, 1330, 548); await wait(1700);
+   },
+   done() { set($('sample'), { x: 1404, y: 566 }); $('scaleTxt').textContent = '192.0'; } },
+
+ { cam: 'ware', who: 'المخزن', c: '#e07b2f', title: 'إذن استلام الخام = الإفراج',
+   text: 'الفحص والمعمل خلصوا، فالمخزن بيراجع ويحفظ. السليم بيبقى متاح لأوامر الشغل في نفس اللحظة، والمرفوض بيتكتب في نفس الإذن ويروح المرتجعات.',
+   chips: [['1,850 كجم متاح', 'ok'], ['110 كجم مرفوض', 'bad'], ['ممنوع إفراج قبل الفحص', 'lt']],
+   f: 'المُفرَج عنه = الوارد − المرفوض − المعلّق = 1,960 − 110',
+   async play() {
+     await camTo(CAM.ware, 1300);
+     await all([to($('hazardTape'), { o: .15 }, 600), to($('greenTape'), { o: 1 }, 600)]);
+     for (let i = 0; i < 6; i++) { to(rolls[i], rackSlot(REL, i), 900, { arc: 50 }); await wait(160); }
+     await wait(600);
+     await all([to(rolls[6], retSlot(0), 1100, { arc: 90 }), to(rolls[7], retSlot(1), 1100, { arc: 110, delay: 150 })]);
+     await all([show(bRel, 1000, 726), show(bRet, 1230, 780)]); await wait(1800);
+   },
+   done() { set($('hazardTape'), { o: .15 }); set($('greenTape'), { o: 1 });
+     rolls.forEach((r, i) => set(r, i < 6 ? rackSlot(REL, i) : retSlot(i - 6))); } },
+
+ { cam: 'offices', who: 'التخطيط ← الباترونست', c: '#9D197E', title: 'طلب ماركر على أقل عرض',
+   text: '«محتاج بادي ومعصم على عرض 172». الطلب بيطير للباترونست — والماركر الواحد ممكن يشيل أكتر من موديل.',
+   chips: [['عرض 172 سم', 'lt'], ['بادي + معصم', 'lt']],
+   f: '',
+   async play() { await camTo(CAM.offices, 1300); await show(bMReq, 820, 370); set(pMarker, { x: 790, y: 404, o: 0 }); await to(pMarker, { o: 1 }, 300); await wait(400); await hide(bMReq);
+     await to(pMarker, { x: 1390, y: 404, r: 720 }, 2000, { arc: 120 }); set(pMarker, { r: 0 }); await wait(400); },
+   done() { set(pMarker, { x: 1390, y: 404, o: 1 }); } },
+
+ { cam: 'patt', who: 'الباترونست', c: '#e08a4f', title: 'الباترونست بتعشّق القطع على الفرشة',
+   text: 'التعشيقة بتطلّع طول الفرشة وعدد القطع في الرِقّة الواحدة: 3.10 م · 12 قطعة (6 بادي + 6 معصم).',
+   chips: [['طول الفرشة 3.10 م', 'lt'], ['12 قطعة في الفرشة', 'lt']],
+   f: 'لو فيه طول أمان، الحسبة بتستخدمه — ده اللي المصنع بيفرش بيه فعلًا',
+   async play() { await camTo(CAM.patt, 1200); await hide(pMarker, 200);
+     for (const r of mPieces) { await to(r, { x: r.dest.x, y: r.dest.y, o: 1 }, 420, { ease: back }); } await wait(1500); },
+   done() { set(pMarker, { o: 0 }); mPieces.forEach(r => set(r, { x: r.dest.x, y: r.dest.y, o: 1 })); } },
+
+ { cam: 'plan', who: 'التخطيط', c: '#9D197E', title: 'أمر الشغل: الحسبة اللي كانت في الإكسيل',
+   text: 'المخطط بيختار الرسالة والماركر والمصنع والكمية. السيستم بيحسب لحظيًا: وزن الرِقّة، الرِقّات، القطع المتوقعة ونصيب كل موديل — وبيحجز الكمية على الرسالة.',
+   chips: [['وزن الرِقّة 1.0237 كجم', 'lt'], ['586 رِقّة', 'lt'], ['7,032 قطعة متوقعة', ''], ['مصنع سيني · 1 نوفمبر', 'lt']],
+   f: 'وزن الرِقّة = 3.10 × 1.72 × 0.192 · الرِقّات = 600 ÷ 1.0237 (رِقّات كاملة) · القطع = 586 × 12',
+   async play() { await camTo(CAM.plan, 1300); await show(bCalc, 810, 370); await wait(1200);
+     set(pWO, { x: 790, y: 404, o: 0, s: .4 }); await to(pWO, { o: 1, s: 1.3 }, 500, { ease: back }); await to(pWO, { s: 1 }, 300); await wait(1500); },
+   done() { set(pWO, { x: 790, y: 404, o: 1, s: 1 }); } },
+
+ { cam: 'street', who: 'المخزن', c: '#e07b2f', title: 'الصرف: التروسيكل شايل القماش للمصنع',
+   text: 'إذن الصرف بيتملّى من أمر الشغل. الصرف الجزئي مسموح — والأمر بيفضل في طابور المخزن لحد ما الخامة تتصرف كلها.',
+   chips: [['600 كجم منصرف', ''], ['المتاح في الرسالة 1,250 كجم', 'lt']],
+   f: 'المتاح = المُفرَج عنه − المخصص لأوامر الشغل = 1,850 − 600',
+   async play() {
+     await camTo(CAM.ware, 1100); await show(bLoad, 1000, 726);
+     for (let i = 0; i < 3; i++) { to(rolls[i], bedSlot(TRI_HOME, i), 1100, { arc: 120 }); await wait(250); }
+     await wait(1100); await hide(bLoad);
+     await camTo(CAM.street, 1300);
+     $('tri').classList.add('moving');
+     const dx = TRI_FACTORY - TRI_HOME;
+     await all([to($('tri'), { x: TRI_FACTORY }, 3200), ...[0, 1, 2].map(i => to(rolls[i], { x: bedSlot(TRI_FACTORY, i).x }, 3200))]);
+     $('tri').classList.remove('moving');
+     await all([0, 1, 2].map(i => to(rolls[i], { x: 560, y: 840, o: 0 }, 800, { arc: 60, delay: i * 120 })));
+   },
+   done() { set($('tri'), { x: TRI_FACTORY }); [0, 1, 2].forEach(i => set(rolls[i], { x: 560, y: 840, o: 0 })); } },
+
+ { cam: 'cut', who: 'متابعة المصانع', c: '#4f8a6b', title: 'القص: الفرشة بتعلى والسكينة بتجري',
+   text: 'المصنع فرش 3.13 م بدل 3.10 — 3 سنتي زيادة أكلوا 6 رِقّات (72 قطعة). بيان القص بيقارن الفعلي بالمتوقع ويطلّع الانحراف.',
+   chips: [['580 رِقّة فعلي', 'lt'], ['6,960 قطعة', ''], ['انحراف −1.0% ⇐ طبيعي', 'ok']],
+   f: 'الانحراف = (الفعلي − المتوقع) ÷ المتوقع · لحد 2% أخضر · لحد 4% أصفر · فوقها لازم سبب',
+   async play() {
+     await camTo(CAM.cut, 1400);
+     for (const l of layers) { set(l, { o: 0 }); to(l, { o: 1 }, 200); await wait(110); }
+     set($('knife'), { x: 170, o: 0 }); await to($('knife'), { o: 1 }, 300);
+     await run(3000, t => { const x = 170 + 320 * t;
+       set($('knife'), { x }); pieces.forEach((p, i) => { if (x > 186 + i * 46) p.style.opacity = 1; }); });
+     await to($('knife'), { o: 0 }, 300); await show(bCut, 340, 770); await wait(1800);
+   },
+   done() { layers.forEach(l => set(l, { o: 1 })); pieces.forEach(p => p.style.opacity = 1); set($('knife'), { o: 0 }); } },
+
+ { cam: 'sew', who: 'المخزن', c: '#e07b2f', title: 'الخياطة والاستلام — والأمر بيتقفل لوحده',
+   text: 'استلام على دفعات: 4,000 وبعدين 2,960 (منهم 40 مرفوض من المصنع). أول ما كل اللي اتقص يتسلّم والقص يكون وصل للمستهدف، الأمر بيتقفل والخامة اللي ما اتصرفتش بترجع متاحة.',
+   chips: [['6,920 سليم للمخزن', 'ok'], ['40 مرفوض', 'bad'], ['القص ≥ 6,750 ⇐ يتقفل', 'lt']],
+   f: 'القفل التلقائي: المتبقي على المصنع = 0 والمقصوص ≥ المستهدف × (1 − 4%)',
+   async play() {
+     await camTo(CAM.sew, 1300); await to($('sewBoxes'), { o: 1 }, 600); await show(bSew, 340, 560); await wait(1300);
+     await camTo(CAM.street, 1300);
+     boxes.forEach((b, i) => { set(b, { ...bedSlot(TRI_FACTORY, i), o: 0 }); to(b, { o: 1 }, 400, { delay: i * 150 }); });
+     await to($('sewBoxes'), { o: 0 }, 400); await wait(400);
+     $('tri').classList.add('moving');
+     await all([to($('tri'), { x: TRI_HOME }, 3200), ...boxes.map((b, i) => to(b, { x: bedSlot(TRI_HOME, i).x }, 3200))]);
+     $('tri').classList.remove('moving');
+     await camTo(CAM.ware, 1000);
+     for (let i = 0; i < 3; i++) { to(boxes[i], shelfSlot(i), 900, { arc: 90 }); await wait(200); }
+     await wait(900);
+     set($('stamp'), { o: 0, s: 2.2 }); await to($('stamp'), { o: 1, s: 1 }, 450, { ease: back }); await wait(1600);
+   },
+   done() { set($('tri'), { x: TRI_HOME }); boxes.forEach((b, i) => set(b, { ...shelfSlot(i), o: 1 })); set($('stamp'), { o: 1, s: 1 }); } },
+
+ { cam: 'wide', who: 'الكل', c: '#3B092F', title: 'وفي أي لحظة: مين واخد إيه، متوقع إيه، وجاي إمتى',
+   text: 'كل أوامر الشغل في مكان واحد: بأنهي رسالة، عند أنهي مصنع، المتوقع كام، اتسلّم كام، وميعادها إمتى. والرقم الأحمر في المنيو بيقول لكل واحد إيه اللي مستنيه هو.',
+   chips: [['13 خطوة', 'lt'], ['6 إدارات', 'lt'], ['من غير ولا اعتماد', 'ok'], ['كل رقم محسوب لوحده', '']],
+   f: 'الجولة دي بأرقام حقيقية من محرك الحسابات — جرّبها بنفسك من «حاسبة التخطيط»',
+   async play() { await camTo(CAM.wide, 2200); await wait(3000); },
+   done() {} },
+];
+
+/* ════════════ التشغيل ════════════ */
+let cur = -1, auto = true;
+const dots = $('dots');
+STEPS.forEach((_, i) => { const d = document.createElement('i'); d.title = `الخطوة ${i}`; d.onclick = () => { setAuto(false); go(i); }; dots.appendChild(d); });
+
+function caption(i) {
+  const s = STEPS[i], cap = $('cap');
+  cap.classList.add('swap');
+  setTimeout(() => {
+    $('cNo').textContent = i === 0 ? 'البداية' : (i === STEPS.length - 1 ? 'الخلاصة' : `الخطوة ${i} من 13`);
+    $('cTitle').textContent = s.title;
+    $('cWho').textContent = s.who; $('cWhoC').style.background = s.c;
+    $('cText').textContent = s.text;
+    $('cChips').innerHTML = s.chips.map(([t, k = '', sm], n) => `<span class="chip ${k}" style="animation-delay:${.6 + n * .35}s">${t}${sm ? `<small>${sm}</small>` : ''}</span>`).join('');
+    $('cF').textContent = s.f || ''; $('cF').style.display = s.f ? '' : 'none';
+    cap.classList.remove('swap');
+  }, 300);
+  [...dots.children].forEach((d, k) => { d.className = k === i ? 'on' : (k < i ? 'done' : ''); });
+}
+
+async function go(i) {
+  if (i < 0 || i >= STEPS.length) return;
+  const g = ++GEN;
+  cur = i;
+  reset();
+  for (let k = 0; k < i; k++) STEPS[k].done();
+  BUBBLES.forEach(b => set(b, { o: 0 }));
+  caption(i);
+  try { await STEPS[i].play(); } catch (e) { if (e === STALE) return; throw e; }
+  if (g !== GEN) return;
+  BUBBLES.forEach(b => hide(b));
+  STEPS[i].done();
+  if (auto && i < STEPS.length - 1) { await wait(2600); if (g === GEN && auto) go(i + 1); }
+  else if (i === STEPS.length - 1) setAuto(false);
+}
+function setAuto(v) { auto = v; $('bPlay').textContent = v ? 'وقّف' : 'شغّل'; $('bPlay').setAttribute('aria-pressed', v); }
+
+$('bNext').onclick = () => { setAuto(false); go(Math.min(cur + 1, STEPS.length - 1)); };
+$('bPrev').onclick = () => { setAuto(false); go(Math.max(cur - 1, 0)); };
+$('bRestart').onclick = () => { setAuto(true); go(0); };
+$('bPlay').onclick = () => { if (auto) { setAuto(false); } else { setAuto(true); go(cur >= STEPS.length - 1 ? 0 : cur + 1); } };
+$('bStart').onclick = () => { $('intro').classList.add('gone'); setAuto(true); go(0); };
+document.addEventListener('keydown', e => {
+  if (!$('intro').classList.contains('gone')) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('bStart').click(); } return; }
+  if (e.key === 'ArrowLeft') $('bNext').click();
+  if (e.key === 'ArrowRight') $('bPrev').click();
+  if (e.key === ' ') { e.preventDefault(); $('bPlay').click(); }
+});
+
+reset();
+caption(0);
+camTarget = CAM.wide; cam = fit(CAM.wide); svg.setAttribute('viewBox', cam.join(' '));
+</script>
+</body>
+</html>
