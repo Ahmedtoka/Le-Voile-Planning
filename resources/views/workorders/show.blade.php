@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'ورقة المصنع وحسبة الخامات، ومتابعة الصرف والقص والاستلام لحد ما الأمر يتقفل')
 @section('content')
 @php
   $gov = $row->governingFabric();
@@ -32,6 +33,35 @@
   </div>
 @endforeach
 
+<div class="doc-actions" role="toolbar" aria-label="إجراءات أمر الشغل">
+  <span class="da-label">إجراءات</span>
+  <span class="badge bg-{{ $row->status_color }}">{{ $row->status_name }}</span>
+
+        @if($row->isEditable())
+          <a href="{{ route('work-orders.edit',$row) }}" class="btn btn-sm btn-outline-plum">
+            <i class="bi bi-pencil" aria-hidden="true"></i> تعديل</a>
+          <form method="post" action="{{ route('work-orders.submit',$row) }}"
+                onsubmit="return confirm('أمر الشغل هيتقفل ويتحجز عليه الخام ويبقى جاهز للصرف للمصنع. متأكد؟')">@csrf
+            <button class="btn btn-sm btn-success"><i class="bi bi-check2-circle" aria-hidden="true"></i> اعتمده للتشغيل</button>
+          </form>
+        @endif
+        @if($row->status === 'approved')
+          <form method="post" action="{{ route('work-orders.send',$row) }}">@csrf
+            <button class="btn btn-sm btn-plum"><i class="bi bi-truck" aria-hidden="true"></i> إرسال للمصنع</button>
+          </form>
+        @endif
+        @if(in_array($row->status, ['approved','sent_to_factory']))
+          <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reviseModal">
+            <i class="bi bi-arrow-repeat" aria-hidden="true"></i> نسخة معدلة</button>
+        @endif
+        <a href="{{ route('work-orders.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-printer" aria-hidden="true"></i> طباعة ورقة المصنع</a>
+        @if(in_array($row->status, \App\Models\WorkOrder::CLOSABLE_STATUSES))
+          <button class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#closeModal">
+            <i class="bi bi-lock" aria-hidden="true"></i> قفل</button>
+        @endif
+</div>
+
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-2">
     @include('partials.kpi', ['value'=>number_format($target), 'label'=>'الكمية المستهدفة', 'tone'=>'brand',
@@ -58,8 +88,7 @@
   </div>
 </div>
 
-<div class="row g-3">
-  <div class="col-lg-7">
+<style>.wo-show-fab td.num{white-space:nowrap}</style>
     {{-- الخامات --}}
     <div class="card mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
@@ -67,7 +96,7 @@
         <span class="badge bg-{{ $row->status_color }}">{{ $row->status_name }}</span>
       </div>
       <div class="table-responsive">
-        <table class="table table-sm mb-0">
+        <table class="table table-sm mb-0 wo-show-fab">
           <thead><tr>
             <th>الخامة</th><th>الرسالة</th><th>اللون</th><th>الكمية</th>
             <th>طول الفرشة</th><th>العرض</th><th>الرقات</th><th>قطع الفرشة</th>
@@ -126,6 +155,8 @@
       </div>
     </div>
 
+<div class="row g-3">
+  <div class="col-lg-7">
     {{-- الموديلات وتوزيع الاستهلاك --}}
     @if($row->lines->isNotEmpty())
     @php
@@ -305,6 +336,33 @@
       </table>
     </div>
 
+    {{-- سجل الحالات والتغييرات --}}
+    <div class="card mt-3">
+      <div class="card-header">سجل الحالات والتغييرات</div>
+      <table class="table table-sm mb-0">
+        <thead><tr><th style="width:140px">إمتى</th><th style="width:130px">مين</th><th>إيه اللي حصل</th></tr></thead>
+        <tbody>
+        @forelse($history as $h)
+          <tr>
+            <td class="num hint">{{ $h->created_at?->format('Y-m-d H:i') }}</td>
+            <td>{{ $h->user?->name ?? 'السيستم' }}</td>
+            <td>{{ $h->title ?? $h->action }}</td>
+          </tr>
+        @empty
+          <tr><td colspan="3">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش أحداث مسجلة لسه.</div>
+            </div>
+          </td></tr>
+        @endforelse
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="mt-3">
     <div class="card mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>بيانات تخص المنتج (الإكسسوارات)</span>
@@ -318,7 +376,7 @@
           </form>
         @endif
       </div>
-      <table class="table table-sm mb-0">
+      <div class="table-responsive"><table class="table table-sm mb-0">
         <thead><tr><th>البند</th><th>كود الإكسسوار</th><th>المطلوب</th><th>الوحدة</th><th>المتاح</th><th>الناقص</th></tr></thead>
         <tbody>
         @forelse($accessories as $a)
@@ -347,62 +405,8 @@
           </td></tr>
         @endforelse
         </tbody>
-      </table>
+      </table></div>
     </div>
-
-    <div class="card">
-      <div class="card-header">إجراءات</div>
-      <div class="card-body d-flex gap-2 flex-wrap">
-        @if($row->isEditable())
-          <a href="{{ route('work-orders.edit',$row) }}" class="btn btn-sm btn-outline-plum">
-            <i class="bi bi-pencil" aria-hidden="true"></i> تعديل</a>
-          <form method="post" action="{{ route('work-orders.submit',$row) }}"
-                onsubmit="return confirm('أمر الشغل هيتقفل ويتحجز عليه الخام ويبقى جاهز للصرف للمصنع. متأكد؟')">@csrf
-            <button class="btn btn-sm btn-success"><i class="bi bi-check2-circle" aria-hidden="true"></i> اعتمده للتشغيل</button>
-          </form>
-        @endif
-        @if($row->status === 'approved')
-          <form method="post" action="{{ route('work-orders.send',$row) }}">@csrf
-            <button class="btn btn-sm btn-plum"><i class="bi bi-truck" aria-hidden="true"></i> إرسال للمصنع</button>
-          </form>
-        @endif
-        @if(in_array($row->status, ['approved','sent_to_factory']))
-          <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reviseModal">
-            <i class="bi bi-arrow-repeat" aria-hidden="true"></i> نسخة معدلة</button>
-        @endif
-        <a href="{{ route('work-orders.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
-          <i class="bi bi-printer" aria-hidden="true"></i> طباعة ورقة المصنع</a>
-        @if(in_array($row->status, \App\Models\WorkOrder::CLOSABLE_STATUSES))
-          <button class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#closeModal">
-            <i class="bi bi-lock" aria-hidden="true"></i> قفل</button>
-        @endif
-      </div>
-    </div>
-
-    {{-- سجل الحالات والتغييرات --}}
-    <div class="card mt-3">
-      <div class="card-header">سجل الحالات والتغييرات</div>
-      <table class="table table-sm mb-0">
-        <thead><tr><th style="width:140px">إمتى</th><th style="width:130px">مين</th><th>إيه اللي حصل</th></tr></thead>
-        <tbody>
-        @forelse($history as $h)
-          <tr>
-            <td class="num hint">{{ $h->created_at?->format('Y-m-d H:i') }}</td>
-            <td>{{ $h->user?->name ?? 'السيستم' }}</td>
-            <td>{{ $h->title ?? $h->action }}</td>
-          </tr>
-        @empty
-          <tr><td colspan="3">
-            <div class="empty-state">
-              <i class="bi bi-inbox ico" aria-hidden="true"></i>
-              <div class="t">مفيش أحداث مسجلة لسه.</div>
-            </div>
-          </td></tr>
-        @endforelse
-        </tbody>
-      </table>
-    </div>
-  </div>
 </div>
 
 <div class="modal fade" id="reviseModal"><div class="modal-dialog"><div class="modal-content">

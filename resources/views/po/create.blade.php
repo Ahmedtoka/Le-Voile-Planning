@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'اكتب الأصناف والكميات واضغط «اطلب» — الطلب بينزل للمشتريات على طول من غير اعتماد')
 @section('content')
 
 @include('partials.flow_bar', ['flow' => 'buy', 'step' => 'request'])
@@ -37,7 +38,7 @@
         <table class="table table-sm line-table mb-0">
           <thead><tr>
             <th style="width:35px">م</th><th style="width:170px">كود اللون</th><th>اسم الصنف</th>
-            <th style="width:100px">الكمية</th><th style="width:80px">الوحدة</th>
+            <th style="width:100px">الكمية</th><th style="width:96px">الوحدة</th>
             <th style="width:100px">نسبة الزيادة %</th><th>ملاحظات</th><th style="width:40px"></th>
           </tr></thead>
           <tbody id="lines">
@@ -50,8 +51,8 @@
         <i class="bi bi-plus-lg" aria-hidden="true"></i> صنف
       </button>
     </div>
-    <div class="card-footer bg-white d-flex gap-2 align-items-center">
-      <button class="btn btn-plum btn-sm px-4"><i class="bi bi-send" aria-hidden="true"></i> اطلب</button>
+    <div class="card-footer form-actions m-0 d-flex gap-2 align-items-center">
+      <button class="btn btn-plum px-4"><i class="bi bi-send" aria-hidden="true"></i> اطلب</button>
       <span class="hint">هيرجعك على طلبات الشراء، والطلب يظهر عند المشتريات فورًا.</span>
     </div>
   </div>

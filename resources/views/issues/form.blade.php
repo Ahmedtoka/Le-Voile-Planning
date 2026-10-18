@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'صرف الخامة من المخزن للمصنع مقابل أمر الشغل — الصرف الجزئي مسموح')
 @section('content')
 @php $lines = old('lines', $preset ?: []); $editable = $row->isEditable() || $mode==='create'; @endphp
 
@@ -71,7 +72,7 @@
       <table class="table table-sm line-table mb-0">
         <thead><tr>
           <th style="width:35px">م</th><th style="width:190px">أمر الشغل</th><th style="width:110px">الكود</th>
-          <th style="width:270px">رقم الرسالة</th><th style="width:75px">الوحدة</th>
+          <th style="width:270px">رقم الرسالة</th><th style="width:96px">الوحدة</th>
           <th style="width:80px">العرض</th><th style="width:80px">ع.أتواب</th>
           <th style="width:100px">الكمية</th><th>ملاحظات</th><th style="width:40px"></th>
         </tr></thead>
@@ -86,12 +87,16 @@
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
+  @if($editable || ($mode==='edit' && $row->isEditable()))
+  <div class="form-actions">
+  @if($editable)<button class="btn btn-plum"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm"
+    <button type="button" class="btn btn-success"
             onclick="if(confirm('الخامة هتتخصم من المخزن وتتسجل على أمر الشغل. متأكد؟')) document.getElementById('submitForm').submit()">
       <i class="bi bi-send" aria-hidden="true"></i> اصرف للمصنع
     </button>
+  @endif
+  </div>
   @endif
 </form>
 

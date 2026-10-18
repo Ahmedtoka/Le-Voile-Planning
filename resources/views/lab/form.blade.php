@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'وزن البنشر والانكماش ومطابقة اللون — بعد الحفظ الرسالة بتظهر في استلام الخام')
 @section('content')
 @php $readings = old('readings', $row->readings?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
 
@@ -152,13 +153,15 @@
   </div>
 
   @if($editable)
-    <button class="btn btn-plum btn-sm">
+  <div class="form-actions">
+    <button class="btn btn-plum">
       <i class="bi bi-save" aria-hidden="true"></i> حفظ المعمل
     </button>
-    <span class="hint ms-2">
+    <span class="hint">
       <i class="bi bi-info-circle" aria-hidden="true"></i>
       الحفظ بيخلّص التقرير على طول — الرسالة بتظهر في شاشة استلام الخام.
     </span>
+  </div>
   @endif
 </form>
 

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'حدد المورد والسعر وتاريخ التوريد — بعد الحفظ الطلب بيبقى مستني الاستلام في المخزن')
 @section('content')
 
 @include('partials.flow_bar', ['flow' => 'buy', 'step' => 'sourcing'])
@@ -89,8 +90,8 @@
         </table>
       </div>
     </div>
-    <div class="card-footer bg-white d-flex gap-2 align-items-center">
-      <button class="btn btn-plum btn-sm px-4"><i class="bi bi-check2" aria-hidden="true"></i> احفظ</button>
+    <div class="card-footer form-actions m-0 d-flex gap-2 align-items-center">
+      <button class="btn btn-plum px-4"><i class="bi bi-check2" aria-hidden="true"></i> احفظ</button>
       <span class="hint">
         «احفظ» بيقفل التسعير: الطلب يبقى مستني الاستلام في المخزن،
         والحسابات توصلها الترانزاكشن للمتابعة — وهترجع على المشتريات.

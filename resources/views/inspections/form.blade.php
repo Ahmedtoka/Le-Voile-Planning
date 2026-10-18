@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'جرد الأتواب وقياس طول وعرض كل توب — أقل عرض هو اللي الماركر هيتبني عليه')
 @section('content')
 @php
   /* الصفحة بتفتح على توب واحد. عدد السطور بيتولّد من «الأتواب المجرودة فعليًا»
@@ -209,13 +210,15 @@
   </div>
 
   @if($editable)
-    <button class="btn btn-plum btn-sm">
+  <div class="form-actions">
+    <button class="btn btn-plum">
       <i class="bi bi-save" aria-hidden="true"></i> حفظ الفحص
     </button>
-    <span class="hint ms-2">
+    <span class="hint">
       <i class="bi bi-info-circle" aria-hidden="true"></i>
       الحفظ بيخلّص الفحص على طول — المقبول بينزل المعمل، والمرفوض بينزل شاشة المرفوضات.
     </span>
+  </div>
   @endif
 </form>
 

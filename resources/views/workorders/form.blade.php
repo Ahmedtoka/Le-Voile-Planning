@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'ورقة المصنع: الرسالة + الماركر + الحسبة — الخامة اللي بتدي أقل قطع هي اللي بتحكم الإنتاج')
 @section('content')
 @php
   $fabs  = old('fabrics', $fabrics ?: []);
@@ -76,24 +77,30 @@
         <i class="bi bi-plus-lg" aria-hidden="true"></i> خامة
       </button>
     </div>
-    <div class="table-responsive">
-      <table class="table table-sm line-table mb-0" style="min-width:1280px">
+    <div class="table-responsive wo-fab-wrap">
+      <table class="table table-sm line-table wo-fab mb-0">
+        <colgroup>
+          <col style="width:36px"><col style="width:260px"><col style="width:104px"><col style="width:84px">
+          <col style="width:112px"><col style="width:96px"><col style="width:96px"><col style="width:88px">
+          <col style="width:96px"><col style="width:84px"><col style="width:170px"><col style="width:84px">
+          <col style="width:96px"><col style="width:200px"><col style="width:44px">
+        </colgroup>
         <thead><tr>
-          <th style="width:32px">م</th>
-          <th style="width:250px">رقم الرسالة</th>
-          <th style="width:88px">الحساب</th>
-          <th style="width:70px">الوحدة</th>
-          <th style="width:90px">الكمية</th>
-          <th style="width:90px">طول الفرشة</th>
-          <th style="width:90px">بالأمان</th>
-          <th style="width:80px">العرض (م)</th>
-          <th style="width:90px">البنشر كجم/م²</th>
-          <th style="width:80px">قطع الفرشة</th>
-          <th style="width:150px">حسبة السيستم</th>
-          <th style="width:80px">الرقات</th>
-          <th style="width:90px">القص المعتمد</th>
-          <th style="width:110px">الماركر</th>
-          <th style="width:36px"></th>
+          <th>م</th>
+          <th class="req">رقم الرسالة</th>
+          <th>الحساب</th>
+          <th>الوحدة</th>
+          <th class="req">الكمية</th>
+          <th class="req">طول الفرشة</th>
+          <th>بالأمان</th>
+          <th>العرض (م)</th>
+          <th>البنشر كجم/م²</th>
+          <th class="req">قطع الفرشة</th>
+          <th>حسبة السيستم</th>
+          <th>الرقات</th>
+          <th>القص المعتمد</th>
+          <th>الماركر</th>
+          <th><span class="visually-hidden">حذف</span></th>
         </tr></thead>
         <tbody id="fabrics">
           @foreach($fabs as $i => $l) @include('workorders.fabric_row', ['i'=>$i,'l'=>$l]) @endforeach
@@ -164,8 +171,28 @@
     </div>
   </div>
 
-  <button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ أمر الشغل</button>
+  <div class="form-actions">
+    <button class="btn btn-plum"><i class="bi bi-save" aria-hidden="true"></i> حفظ أمر الشغل</button>
+    <span class="hint"><i class="bi bi-info-circle" aria-hidden="true"></i> بيتحفظ مسودة — تقدر تراجعه وتعتمده من شاشة أمر الشغل.</span>
+    <div class="fa-end">
+      <a href="{{ $mode==='edit' ? route('work-orders.show',$row) : route('work-orders.index') }}" class="btn btn-outline-secondary">إلغاء</a>
+    </div>
+  </div>
 </form>
+
+<style>
+/* جدول خامات أمر الشغل: عرض ثابت لكل عمود عشان السيلكت ما يتقصّش،
+   وعمود الرسالة ثابت مكانه وإنت بتعمل سكرول للحسبة */
+.wo-fab{table-layout:fixed;width:1650px}
+.wo-fab-wrap{contain:paint} /* من غيرها الجدول العريض بيوسّع الصفحة كلها في RTL */
+.wo-fab td,.wo-fab th{overflow:hidden}
+.wo-fab td.f-out{white-space:normal;font-size:var(--fs-xs);line-height:1.5;overflow:visible}
+.wo-fab tr > :nth-child(1),.wo-fab tr > :nth-child(2){position:sticky;z-index:2;background:var(--lv-white)}
+.wo-fab thead tr > :nth-child(1),.wo-fab thead tr > :nth-child(2){background:var(--lv-surface-2);z-index:3}
+.wo-fab tr > :nth-child(1){inset-inline-start:0}
+.wo-fab tr > :nth-child(2){inset-inline-start:36px;box-shadow:inset 1px 0 0 var(--lv-line)}
+.wo-fab .f-target{font-size:var(--fs-xs)!important;min-height:28px!important}
+</style>
 
 <template id="fabTpl">@include('workorders.fabric_row', ['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
 <template id="prodTpl">@include('workorders.product_row', ['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>

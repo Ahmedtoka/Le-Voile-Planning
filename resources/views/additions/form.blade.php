@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'استلام القماش على الطلب — كل (خامة + لون) بيتولّد له حوض محجوز تحت الفحص')
 @section('content')
 @php
   $lines = old('lines', ($preset ?? null) ?: ($row->lines?->toArray() ?? []));
@@ -179,7 +180,7 @@
             <th style="width:35px">م</th><th style="width:95px">كود الصنف</th><th>اسم الصنف</th>
             <th style="width:160px">الخامة</th><th style="width:170px">اللون</th>
             <th style="width:90px">ع. أتواب</th><th style="width:110px">الكمية</th>
-            <th style="width:80px">الوحدة</th><th style="width:40px"></th>
+            <th style="width:96px">الوحدة</th><th style="width:40px"></th>
           </tr></thead>
         @endif
         <tbody id="lines" class="{{ $editable ? '' : 'lines-locked' }}">
@@ -208,14 +209,16 @@
   </div>
 
   @if($editable)
-    <button class="btn btn-plum btn-sm">
+  <div class="form-actions">
+    <button class="btn btn-plum">
       <i class="bi bi-save" aria-hidden="true"></i> حفظ
     </button>
-    <span class="hint ms-2">
+    <span class="hint">
       <i class="bi bi-info-circle" aria-hidden="true"></i>
       الحفظ بيخلّص الإذن على طول — بيتولّد حوض لكل لون
       {{ ($row->receipt_type ?? 'normal') === 'container' ? 'ويدخل المخزن مباشرة' : 'وينزل طابور الفحص' }}.
     </span>
+  </div>
   @endif
 </form>
 

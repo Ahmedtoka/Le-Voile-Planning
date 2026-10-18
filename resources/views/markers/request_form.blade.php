@@ -43,7 +43,7 @@
           <input name="notes" class="form-control form-control-sm" value="{{ old('notes') }}"></div>
       </div>
     </div>
-    <div class="card-footer bg-white"><button class="btn btn-plum btn-sm">إرسال الطلب</button></div>
+    <div class="card-footer form-actions m-0"><button class="btn btn-plum"><i class="bi bi-send" aria-hidden="true"></i> إرسال الطلب</button></div>
   </div>
 </form>
 @push('scripts')
