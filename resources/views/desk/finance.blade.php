@@ -1,4 +1,5 @@
 @extends('partials.desk')
+@section('purpose', 'متابعة المستحق المتوقع للموردين — متابعة مش اعتماد')
 @php
   $flow='buy'; $flowStep='finance';
   $intro = 'دورك <b>متابعة</b> — مفيش اعتماد. بتشوف المستحق المتوقع لكل مورد وتاريخ التوريد، وتتابع الرصيد وتصفّيه دفعات أو كاش.';
@@ -11,6 +12,7 @@
     <span>المستحق المتوقع للموردين</span>
     <a href="{{ route('finance.payables') }}" class="btn btn-sm btn-outline-plum py-0">الشاشة الكاملة</a>
   </div>
+  <div class="table-responsive">
   <table class="table table-sm mb-0">
     <thead><tr><th>الطلب</th><th>المورد</th><th>الإجمالي</th><th>طريقة الدفع</th><th>توريد متوقع</th><th>الحالة</th></tr></thead>
     <tbody>
@@ -29,5 +31,6 @@
     @endforelse
     </tbody>
   </table>
+  </div>
 </div>
 @endsection

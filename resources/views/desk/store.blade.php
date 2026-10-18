@@ -1,4 +1,5 @@
 @extends('partials.desk')
+@section('purpose', 'استلام القماش والإفراج عنه، صرف الخام، واستلام الإنتاج')
 @php
   $flow='fabric'; $flowStep='addition';
   $intro = 'إنت بتستلم القماش وبتفرج عنه وبتصرفه. أول ما تستلم، بتحدد يروح <b>فحص</b> ولا <b>المخزن على طول</b> (حاويات) — والباقي بيمشي لوحده.';
@@ -11,6 +12,7 @@
     <span>آخر أذون الإضافة</span>
     <a href="{{ route('stock-additions.index') }}" class="btn btn-sm btn-outline-plum py-0">الكل</a>
   </div>
+  <div class="table-responsive">
   <table class="table table-sm mb-0">
     <thead><tr><th>الإذن</th><th>التاريخ</th><th>المورد</th><th>الرسالة</th><th>الكمية</th><th>الحالة</th></tr></thead>
     <tbody>
@@ -29,5 +31,6 @@
     @endforelse
     </tbody>
   </table>
+  </div>
 </div>
 @endsection

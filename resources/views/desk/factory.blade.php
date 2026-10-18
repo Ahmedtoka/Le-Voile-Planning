@@ -1,4 +1,5 @@
 @extends('partials.desk')
+@section('purpose', 'بيانات القص الفعلية واستلامات الإنتاج لحد ما أمر الشغل يقفل')
 @php
   $flow='prod'; $flowStep='cut';
   $intro = 'بتتابع الشغل جوه المصانع: بيان القص الفعلي واستلامات الإنتاج على دفعات لحد ما أمر الشغل يقفل.';
@@ -11,6 +12,7 @@
     <span>أوامر الشغل عند المصانع</span>
     <a href="{{ route('work-orders.index') }}" class="btn btn-sm btn-outline-plum py-0">الكل</a>
   </div>
+  <div class="table-responsive">
   <table class="table table-sm mb-0">
     <thead><tr><th>الأمر</th><th>المنتج</th><th>المصنع</th><th>متوقع</th><th>مقصوص</th><th>مستلم</th><th>متبقي</th><th></th></tr></thead>
     <tbody>
@@ -38,5 +40,6 @@
     @endforelse
     </tbody>
   </table>
+  </div>
 </div>
 @endsection

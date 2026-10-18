@@ -1,4 +1,5 @@
 @extends('partials.desk')
+@section('purpose', 'فحص الأتواب وقراءات المعمل وقرارات المرفوضات')
 @php
   $flow='fabric'; $flowStep='inspection';
   $intro = 'بتجرد الأتواب وتقيس العرض والطول، وتسجّل قراءات المعمل. <b>أقل عرض</b> هو المخرج اللي الماركر كله بيتبني عليه.';
@@ -11,6 +12,7 @@
     <span>رسايل تحت الفحص والمعمل</span>
     <a href="{{ route('inspections.index') }}" class="btn btn-sm btn-outline-plum py-0">تقارير الفحص</a>
   </div>
+  <div class="table-responsive">
   <table class="table table-sm mb-0">
     <thead><tr><th>الرسالة</th><th>الصنف</th><th>اللون</th><th>الكمية</th><th>الأتواب</th><th>الحالة</th><th></th></tr></thead>
     <tbody>
@@ -36,5 +38,6 @@
     @endforelse
     </tbody>
   </table>
+  </div>
 </div>
 @endsection
