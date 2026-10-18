@@ -13,20 +13,23 @@
 {{-- ① اللي مستني منك --}}
 <div class="section-head">
   <h2>اللي مستني منك دلوقتي</h2>
-  <span class="hint">كل صندوق فيه رقم شغل حقيقي — دوس تدخل عليه على طول</span>
+  <span class="hint">كل رقم شغل حقيقي — دوس على الكارت تدخل عليه</span>
 </div>
 <div class="row g-3 mb-4">
   @foreach($queue as $q)
     @php
-      $tones = ['brand'=>'var(--lv-brand)','warn'=>'var(--lv-warn)','danger'=>'var(--lv-danger)','ok'=>'var(--lv-ok)'];
-      $color = $tones[$q['tone']] ?? 'var(--lv-brand-ink)';
+      $dots = ['brand'=>'dot-brand','warn'=>'dot-warn','danger'=>'dot-danger','ok'=>'dot-ok'];
+      $dot  = $q['count'] ? ($dots[$q['tone']] ?? 'dot-ink') : 'dot-muted';
     @endphp
     <div class="col-6 col-lg-3">
-      <div class="stat h-100 d-flex flex-column" style="border-inline-start:3px solid {{ $color }}">
-        <div class="v num" style="color:{{ $q['count'] ? $color : 'var(--lv-muted)' }}">{{ number_format($q['count']) }}</div>
-        <div class="l">{{ $q['label'] }}</div>
+      <div class="stat h-100 d-flex flex-column {{ $q['count'] > 0 ? 'is-waiting is-link' : 'is-zero' }}">
+        <div class="stat-head">
+          <span class="dot {{ $dot }}" aria-hidden="true"></span>
+          <div class="l">{{ $q['label'] }}</div>
+        </div>
+        <div class="v num">{{ number_format($q['count']) }}</div>
         @if($q['count'] > 0)
-          <a href="{{ $q['link'] }}" class="btn btn-sm btn-plum mt-auto pt-1 mt-2">
+          <a href="{{ $q['link'] }}" class="stat-link stretched-link">
             {{ $q['action'] }} <i class="bi bi-arrow-left" aria-hidden="true"></i>
           </a>
         @else
@@ -39,16 +42,13 @@
 
 {{-- ② الإنشاء — شاشات منفصلة --}}
 @if(!empty($create))
-  <div class="card mb-4">
-    <div class="card-header">إنشاء مستند جديد</div>
-    <div class="card-body d-flex gap-2 flex-wrap">
-      @foreach($create as [$label, $link, $icon])
-        <a href="{{ $link }}" class="btn btn-outline-plum btn-sm">
-          <i class="bi {{ $icon }}" aria-hidden="true"></i> {{ $label }}
-        </a>
-      @endforeach
-      <span class="hint align-self-center ms-2">الإنشاء في شاشة لوحده — الشاشة دي للمتابعة</span>
-    </div>
+  <div class="d-flex gap-2 flex-wrap align-items-center mb-4">
+    <span class="hint me-1">إنشاء جديد:</span>
+    @foreach($create as [$label, $link, $icon])
+      <a href="{{ $link }}" class="btn btn-outline-plum btn-sm">
+        <i class="bi {{ $icon }}" aria-hidden="true"></i> {{ $label }}
+      </a>
+    @endforeach
   </div>
 @endif
 

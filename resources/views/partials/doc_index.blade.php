@@ -13,8 +13,8 @@
 
 {{-- جدول علوي اختياري — زي «طلبات مستنية استلام» في أذون الإضافة --}}
 @if(!empty($topTable))
-  <div class="card mb-3" style="border-color:var(--lv-soft)">
-    <div class="card-header py-2">{{ $topTable['title'] }}</div>
+  <div class="card mb-3">
+    <div class="card-header d-flex align-items-center gap-2"><span class="dot dot-warn" aria-hidden="true"></span>{{ $topTable['title'] }}</div>
     <div class="table-responsive">
       <table class="table table-sm mb-0">
         <thead><tr>@foreach($topTable['cols'] as $c)<th>{{ $c }}</th>@endforeach</tr></thead>
@@ -32,10 +32,10 @@
 
 <div class="card">
   <div class="card-header d-flex gap-2 flex-wrap align-items-center">
-    <span>{{ $title }} <span class="hint">({{ $rows->total() }})</span></span>
+    <span class="d-inline-flex align-items-center gap-2">{{ $title }} <span class="pill pill-muted num">{{ number_format($rows->total()) }}</span></span>
 
     <form class="d-flex gap-2 flex-wrap ms-auto align-items-center" method="get">
-      <input name="q" value="{{ request('q') }}" class="form-control form-control-sm" style="width:165px"
+      <input name="q" value="{{ request('q') }}" class="form-control form-control-sm" style="width:180px"
              placeholder="{{ $searchHint ?? 'بحث برقم المستند…' }}">
 
       @foreach(($filters ?? []) as $f)
@@ -63,7 +63,7 @@
 
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
       @if(collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty())
-        <a href="{{ url()->current() }}" class="btn btn-sm btn-link text-muted p-0" style="font-size:.78rem">مسح الفلاتر</a>
+        <a href="{{ url()->current() }}" class="btn btn-sm btn-link p-0">مسح الفلاتر</a>
       @endif
     </form>
 
@@ -139,7 +139,7 @@
     </table>
   </div>
 
-  <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>{{ $rows->links() }}</div>
     @if(!empty($footNote))<div class="hint">{{ $footNote }}</div>@endif
   </div>

@@ -10,13 +10,18 @@
 <link rel="apple-touch-icon" href="{{ asset('assets/favicon-180.png') }}">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════════════════════════
-   هوية Le Voile — #9D197E + أبيض + أوف وايت
-   الألوان كلها متحققة على تباين 4.5:1 على الأقل للنص العادي.
+   هوية Le Voile — نظام التصميم
+   البراند #9D197E · الجرأة في مكانين بس: القايمة الجانبية وعنوان الصفحة.
+   باقي الشاشة هادي: أبيض، خطوط رفيعة، ولون الحالة في نقطة صغيرة.
+   كل ألوان النص متحققة على تباين 4.5:1 على الأقل.
    ═══════════════════════════════════════════════════════════════ */
 :root{
+  /* البراند */
   --lv-brand:      #9D197E;
   --lv-brand-dark: #7A1362;
   --lv-brand-deep: #560D45;
@@ -25,403 +30,534 @@
   --lv-soft:       #ECD1E5;
   --lv-white:      #FFFFFF;
   --lv-offwhite:   #F8F4F1;
-  --lv-ink:        #2B2028;   /* 14.8:1 على الأبيض */
-  --lv-muted:      #6B606A;   /* 5.9:1 — كان #857A81 وكان تحت الحد */
-  --lv-line:       #E3D9E0;
-  --lv-line-soft:  #F0EAEE;
 
-  /* حالات دلالية — كل واحدة معاها نص أو أيقونة، مش لون بس */
-  --lv-ok:     #1B7A50;  --lv-ok-bg:     #E8F5EE;  --lv-ok-line:     #BFE3CE;
-  --lv-warn:   #8A5A0D;  --lv-warn-bg:   #FDF3E2;  --lv-warn-line:   #F0D9AE;
-  --lv-danger: #B5342B;  --lv-danger-bg: #FCEDEC;  --lv-danger-line: #F3C9C5;
-  --lv-info:   #1F5E8C;  --lv-info-bg:   #EAF3FA;  --lv-info-line:   #C3DCEE;
+  /* المحايد */
+  --lv-ink:        #2B2028;   /* 14.8:1 */
+  --lv-ink-2:      #4A3F48;   /* 9.6:1 — عناوين الحقول ورأس الجداول */
+  --lv-muted:      #6B606A;   /* 5.9:1 */
+  --lv-line:       #E7DEE4;
+  --lv-line-soft:  #F1ECEF;
+  --lv-field:      #DCD2D9;   /* حدود الحقول */
+  --lv-surface-2:  #FBF9FA;   /* رأس الجدول والفوتر */
+  --lv-hover:      rgba(157,25,126,.045);
+
+  /* حالات دلالية — نص + خلفية + حدود + نقطة */
+  --lv-ok:     #1B7A50;  --lv-ok-bg:     #EAF6EF;  --lv-ok-line:     #C5E5D2;  --lv-ok-dot:     #22A06B;
+  --lv-warn:   #8A5A0D;  --lv-warn-bg:   #FDF5E6;  --lv-warn-line:   #F0DDB6;  --lv-warn-dot:   #E0A100;
+  --lv-danger: #B5342B;  --lv-danger-bg: #FCEFEE;  --lv-danger-line: #F3CDC9;  --lv-danger-dot: #D8394F;
+  --lv-info:   #1F5E8C;  --lv-info-bg:   #EBF3FA;  --lv-info-line:   #C7DDEE;  --lv-info-dot:   #2F80C2;
+  --lv-alert:  #D8394F;  /* الكاونتر الأحمر: شغل مستني منك */
+
+  /* الخط */
+  --ff-ui: 'IBM Plex Sans Arabic', system-ui, 'Segoe UI', Tahoma, sans-serif;
+  --ff-display: 'Reem Kufi', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --fs-xs: .75rem;    /* 12 */
+  --fs-sm: .8125rem;  /* 13 */
+  --fs-base: .875rem; /* 14 */
+  --fs-md: 1rem;      /* 16 */
+  --fs-lg: 1.25rem;   /* 20 */
+  --fs-xl: 1.5rem;    /* 24 */
+  --fs-2xl: 1.875rem; /* 30 */
 
   /* إيقاع المسافات 4/8 */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
 
-  /* سلّم الاستدارة والارتفاع — قيمة واحدة لكل مستوى، مفيش ارتجال */
+  /* الاستدارة والارتفاع */
   --r-sm:6px; --r-md:10px; --r-lg:14px; --r-pill:999px;
   --radius:10px;
   --e-0:none;
-  --e-1:0 1px 2px rgba(59,9,47,.05);
+  --e-1:0 1px 2px rgba(59,9,47,.04);
   --e-2:0 2px 8px -2px rgba(59,9,47,.10), 0 1px 3px rgba(59,9,47,.05);
-  --e-3:0 8px 24px -6px rgba(59,9,47,.16), 0 2px 6px rgba(59,9,47,.06);
+  --e-3:0 10px 28px -8px rgba(59,9,47,.22), 0 2px 6px rgba(59,9,47,.06);
+  --ring: 0 0 0 3px rgba(157,25,126,.18);
 
-  --nav-w:250px;   /* عرض المنيو المفتوح */
-  --nav-rail:64px; /* عرض المنيو المطوي — أيقونات بس */
+  --nav-w:256px;
+  --nav-rail:64px;
+  --topbar-h:64px;
   --dur:180ms; --ease:cubic-bezier(.2,.7,.3,1);
 }
 
-*{font-family:'Cairo',system-ui,sans-serif}
-body{background:var(--lv-offwhite);color:var(--lv-ink);font-size:.9rem;line-height:1.65}
+*{font-family:var(--ff-ui)}
+.bi::before{font-family:bootstrap-icons !important}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--lv-offwhite);color:var(--lv-ink);font-size:var(--fs-base);line-height:1.6;
+  font-feature-settings:"tnum" 0;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5,h6{color:var(--lv-brand-ink);font-weight:700}
 a{text-decoration:none;color:var(--lv-brand)}
-a:hover{color:var(--lv-brand-dark);text-decoration:underline}
+a:hover{color:var(--lv-brand-dark);text-decoration:underline;text-underline-offset:3px}
+::selection{background:var(--lv-soft);color:var(--lv-brand-ink)}
 
-/* ── تركيز واضح على كل عنصر تفاعلي (مطلب وصولية) ── */
+/* ── تركيز واضح على كل عنصر تفاعلي ── */
 a:focus-visible, button:focus-visible, input:focus-visible,
-select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
-  outline:3px solid var(--lv-soft); outline-offset:2px; border-radius:6px;
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible, summary:focus-visible{
+  outline:2px solid var(--lv-brand); outline-offset:2px; border-radius:6px;
 }
+.form-control:focus-visible,.form-select:focus-visible,.form-check-input:focus-visible{outline:0}
+main.content:focus-visible{outline:0}
 .sidebar a:focus-visible, .sidebar button:focus-visible{
-  outline:2px solid #E8C9DE; outline-offset:-2px; border-radius:0;
+  outline:2px solid #F3C6E4; outline-offset:-2px; border-radius:8px;
 }
 
-/* ── تخطي للمحتوى — للكيبورد وقارئ الشاشة ── */
 .skip-link{position:absolute;inset-inline-start:-9999px;top:8px;z-index:2000;
   background:var(--lv-brand);color:#fff;padding:10px 18px;border-radius:8px}
 .skip-link:focus{inset-inline-start:8px;color:#fff}
 
-/* ── القايمة الجانبية ──────────────────────────────────────────
-   ثلاث حالات:
-   ① مفتوحة   — مجموعات + صفحات
-   ② مطوية    — أيقونات بس (rail)، والمجموعة بتفتح كـflyout عند الوقوف
-   ③ موبايل   — درج بينزلق من الجنب مع طبقة تعتيم
-
-   ولونين واضحين: المجموعات على خلفية القايمة، والصفحات على لوحة أغمق
-   بشريط جانبي فاتح — عشان تعرف إنت جوه أنهي تاب من أول نظرة.
-*/
+/* ══ القايمة الجانبية — المكان الجريء ══════════════════════════
+   ① مفتوحة  ② مطوية (أيقونات + لوحة عايمة)  ③ موبايل (درج)        */
 .sidebar{position:fixed;inset-block:0;inset-inline-start:0;width:var(--nav-w);
-  background:linear-gradient(180deg,var(--lv-brand-deep) 0%,#4A0B3B 100%);
+  background:linear-gradient(180deg,var(--lv-brand-deep) 0%,var(--lv-brand-ink) 100%);
   color:#F0E3EC;overflow-y:auto;overflow-x:hidden;z-index:1040;
-  border-inline-end:1px solid rgba(0,0,0,.25);
   transition:width var(--dur) var(--ease);
-  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent}
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
 .sidebar::-webkit-scrollbar{width:6px}
-.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:3px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:3px}
 
-.sidebar .brand{padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);
-  text-align:center;position:relative}
-.sidebar .brand img{width:140px;display:block;margin:0 auto 6px;transition:width var(--dur) var(--ease)}
-.sidebar .brand small{color:#DDB9CF;font-size:.71rem;letter-spacing:.4px;display:block}
+.sidebar .brand{padding:22px 18px 16px;text-align:start;position:relative}
+.sidebar .brand a{display:inline-block;color:#fff}
+.sidebar .brand a:hover{text-decoration:none}
+.sidebar .brand img{width:116px;height:auto;display:block;transition:width var(--dur) var(--ease)}
+.sidebar .brand .brand-word{font-family:var(--ff-display);font-size:1.6rem;color:#fff;line-height:1.1;letter-spacing:.5px}
+.sidebar .brand small{color:#D9B4CC;font-size:var(--fs-xs);display:block;margin-top:8px;font-weight:500}
 
-/* زرار طي/فتح المنيو كله */
-.nav-toggle{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 20px);
-  margin:10px auto 6px;border:1px solid rgba(255,255,255,.16);border-radius:var(--r-sm);
-  background:rgba(255,255,255,.06);color:#E9D2E1;font-size:.76rem;font-weight:600;
-  min-height:34px;transition:background var(--dur) var(--ease)}
-.nav-toggle:hover{background:rgba(255,255,255,.14);color:#fff}
-.nav-toggle i{font-size:.9rem;transition:transform var(--dur) var(--ease)}
+.nav-toggle{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 28px);
+  margin:0 auto 10px;border:1px solid rgba(255,255,255,.14);border-radius:8px;
+  background:transparent;color:#E4CCDC;font-size:var(--fs-xs);font-weight:500;
+  min-height:32px;transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+.nav-toggle:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-toggle i{font-size:.85rem;transition:transform var(--dur) var(--ease)}
 
-/* ── المستوى الأول: زرار المجموعة ── */
-.sidebar .nav-group-btn{display:flex;align-items:center;gap:11px;width:100%;border:0;
-  background:none;color:#E9D2E1;font-size:.855rem;font-weight:600;letter-spacing:.2px;
-  padding:11px 16px;text-align:start;min-height:46px;position:relative;
-  border-inline-start:3px solid transparent;transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
-.sidebar .nav-group-btn:hover{background:rgba(255,255,255,.08);color:#fff}
-.sidebar .nav-group-btn .gi{width:22px;min-width:22px;text-align:center;font-size:1rem;opacity:.92}
-.sidebar .nav-group-btn .caret{margin-inline-start:auto;font-size:.6rem;opacity:.65;
-  transition:transform var(--dur) var(--ease)}
-
-/* المجموعة المفتوحة */
-.sidebar .nav-group-btn[aria-expanded="true"]{
-  background:rgba(0,0,0,.3);color:#fff;border-inline-start-color:var(--lv-soft)}
-.sidebar .nav-group-btn[aria-expanded="true"] .caret{transform:rotate(180deg);opacity:1}
-.sidebar .nav-group-btn .badge-count{margin-inline-start:auto;margin-inline-end:8px}
-
-/* ── المستوى التاني: لوحة أغمق بشريط جانبي ── */
-.sidebar .nav-sub{background:var(--lv-brand-ink);
-  border-inline-start:3px solid var(--lv-soft);
-  box-shadow:inset 0 7px 9px -7px rgba(0,0,0,.55), inset 0 -7px 9px -7px rgba(0,0,0,.55)}
-
-.sidebar a.nav-item{display:flex;align-items:center;gap:10px;
-  padding:8px 14px;padding-inline-start:30px;
-  color:#D6BFD0;font-size:.825rem;min-height:40px;position:relative;
-  border-inline-start:3px solid transparent;margin-inline-start:-3px;
+/* المستوى الأول: زرار المجموعة */
+.sidebar .nav-group{position:relative;padding:0 10px}
+.sidebar .nav-group-btn{display:flex;align-items:center;gap:10px;width:100%;border:0;border-radius:8px;
+  background:none;color:#EBD7E4;font-size:var(--fs-base);font-weight:600;
+  padding:9px 10px;text-align:start;min-height:42px;position:relative;
   transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
-.sidebar a.nav-item:hover{background:rgba(255,255,255,.09);color:#fff;text-decoration:none}
-.sidebar a.nav-item .ni{width:18px;min-width:18px;text-align:center;opacity:.72;font-size:.85rem}
+.sidebar .nav-group-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.sidebar .nav-group-btn .gi{width:22px;min-width:22px;text-align:center;font-size:1.02rem;opacity:.85}
+.sidebar .nav-group-btn .caret{margin-inline-start:auto;font-size:.62rem;opacity:.55;
+  transition:transform var(--dur) var(--ease)}
+.sidebar .nav-group-btn[aria-expanded="true"]{color:#fff}
+.sidebar .nav-group-btn[aria-expanded="true"] .gi{opacity:1}
+.sidebar .nav-group-btn[aria-expanded="true"] .caret{transform:rotate(180deg);opacity:.9}
+.sidebar .nav-group-btn .badge-count{margin-inline-start:auto;margin-inline-end:6px}
+.sidebar .nav-group-btn .badge-count + .caret{margin-inline-start:0}
+
+/* المستوى التاني: خط إرشادي رفيع بدل اللوحة التقيلة */
+.sidebar .nav-sub{position:relative;margin:2px 0 8px;padding-inline-start:20px}
+.sidebar .nav-sub::before{content:"";position:absolute;inset-block:4px;inset-inline-start:21px;
+  width:1px;background:rgba(255,255,255,.14)}
+
+.sidebar a.nav-item{display:flex;align-items:center;gap:10px;border-radius:8px;
+  padding:7px 10px;padding-inline-start:16px;
+  color:#D8C1D1;font-size:var(--fs-sm);min-height:38px;position:relative;
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+.sidebar a.nav-item:hover{background:rgba(255,255,255,.07);color:#fff;text-decoration:none}
+.sidebar a.nav-item .ni{width:18px;min-width:18px;text-align:center;opacity:.7;font-size:.9rem}
 .sidebar a.nav-item:hover .ni{opacity:1}
 
-/* الصفحة اللي إنت فيها دلوقتي */
-.sidebar a.nav-item.active{
-  background:var(--lv-brand);color:#fff;font-weight:600;
-  border-inline-start-color:#fff}
-.sidebar a.nav-item.active .ni{opacity:1}
+/* الصفحة الحالية: لوح فاتح + علامة وردي ساطعة */
+.sidebar a.nav-item.active{background:rgba(255,255,255,.13);color:#fff;font-weight:600}
+.sidebar a.nav-item.active::before{content:"";position:absolute;inset-inline-start:0;inset-block:9px;
+  width:3px;border-radius:3px;background:#F5B6E0}
+.sidebar a.nav-item.active .ni{opacity:1;color:#F8CBEA}
 
 /* عنصر مستوى أول من غير مجموعة (لوحة التحكم) */
-.sidebar > a.nav-item{padding-inline-start:16px;margin-inline-start:0;min-height:46px;
-  border-inline-start:3px solid transparent;color:#E9D2E1;font-size:.855rem;font-weight:600}
-.sidebar > a.nav-item .ni{width:22px;min-width:22px;font-size:1rem}
-.sidebar > a.nav-item.active{background:var(--lv-brand);border-inline-start-color:#fff}
+.sidebar > a.nav-item{margin:0 10px 2px;padding-inline-start:10px;min-height:42px;
+  color:#EBD7E4;font-size:var(--fs-base);font-weight:600}
+.sidebar > a.nav-item .ni{width:22px;min-width:22px;font-size:1.02rem}
 
-.sidebar .badge-count{margin-inline-start:auto;background:#D8394F;color:#fff;font-size:.68rem;
-  min-width:20px;padding:2px 6px;font-variant-numeric:tabular-nums}
+/* الكاونتر الأحمر = شغل مستني منك — لازم يبان */
+.sidebar .badge-count{margin-inline-start:auto;background:var(--lv-alert)!important;color:#fff!important;
+  border:0;font-size:.7rem;font-weight:700;min-width:22px;height:20px;padding:0 7px;line-height:20px;
+  border-radius:var(--r-pill);font-variant-numeric:tabular-nums;font-family:var(--ff-ui);
+  box-shadow:0 0 0 2px rgba(59,9,47,.65)}
 
-.nav-sep{margin:10px 16px 4px;font-size:.66rem;letter-spacing:1px;color:#B892AC;
-  text-transform:uppercase;font-weight:700}
+.nav-sep{margin:16px 20px 6px;font-size:var(--fs-xs);color:#B892AC;font-weight:600}
 
-.nav-group{position:relative}
 .nav-sub-title{display:none}
 
-/* ── ② الوضع المطوي: أيقونات بس ──
-   ملاحظة مهمة: القايمة بتبقى overflow:visible هنا — لأن اللوحة العايمة
-   واللافتات بيطلعوا برّه حدودها، ولو فيه أي overflow هيتقصّوا. الريل نفسه
-   أيقونات بس فمساحته صغيرة ومش محتاج سكرول. */
+/* ── ② الوضع المطوي ── */
 body.nav-collapsed .sidebar{width:var(--nav-rail);overflow:visible}
-body.nav-collapsed .sidebar .brand{padding:14px 6px 12px}
-body.nav-collapsed .sidebar .brand img{width:38px}
+body.nav-collapsed .sidebar .brand{padding:18px 6px 12px;text-align:center}
+body.nav-collapsed .sidebar .brand img{width:40px;margin:0 auto}
 body.nav-collapsed .sidebar .brand small,
 body.nav-collapsed .nav-sep,
 body.nav-collapsed .nav-toggle span,
 body.nav-collapsed .sidebar .nav-group-btn > span:not(.badge),
 body.nav-collapsed .sidebar .nav-group-btn .caret,
 body.nav-collapsed .sidebar > a.nav-item > span:not(.badge){display:none}
+body.nav-collapsed .sidebar .nav-group{padding:0 8px}
 body.nav-collapsed .sidebar .nav-group-btn,
 body.nav-collapsed .sidebar > a.nav-item{justify-content:center;padding-inline:0;gap:0}
+body.nav-collapsed .sidebar > a.nav-item{margin-inline:8px}
+body.nav-collapsed .sidebar > a.nav-item.active::before{display:none}
 body.nav-collapsed .nav-toggle{width:44px;margin-inline:auto}
 body.nav-collapsed .nav-toggle i{transform:rotate(180deg)}
 body.nav-collapsed .nav-group-btn .badge-count{display:inline-block;position:absolute;
-  inset-block-start:6px;inset-inline-end:8px;margin:0;min-width:17px;padding:1px 4px;font-size:.6rem}
+  inset-block-start:2px;inset-inline-end:0;margin:0;min-width:18px;height:17px;line-height:17px;padding:0 4px;font-size:.62rem}
 body.nav-collapsed .main{margin-inline-start:var(--nav-rail)}
 
-/* اللوحة العايمة: بتفتح بالوقوف أو بالكيبورد، وبتفضل مفتوحة لو الصفحة جواها.
-   ليها سقف ارتفاع وسكرول لوحدها — عشان آخر مجموعة في القايمة ما تخرجش برّه الشاشة. */
 body.nav-collapsed .nav-group .nav-sub{position:absolute;inset-block-start:0;inset-inline-start:100%;
-  width:230px;box-shadow:var(--e-3);z-index:1050;border-inline-start:0;
-  border-start-end-radius:var(--r-md);border-end-end-radius:var(--r-md);
-  max-height:min(70vh,420px);overflow-y:auto}
+  width:236px;box-shadow:var(--e-3);z-index:1050;margin:0;padding:6px;
+  background:var(--lv-brand-ink);border-radius:var(--r-md);
+  max-height:min(70vh,440px);overflow-y:auto}
+body.nav-collapsed .nav-group .nav-sub::before{display:none}
 body.nav-collapsed .nav-group:hover > .nav-sub,
 body.nav-collapsed .nav-group:focus-within > .nav-sub{display:block}
-body.nav-collapsed .nav-sub-title{display:block;padding:9px 14px 7px;font-size:.75rem;font-weight:700;
-  color:#E9D2E1;letter-spacing:.3px;border-block-end:1px solid rgba(255,255,255,.12)}
-body.nav-collapsed .nav-group .nav-sub a.nav-item{padding-inline-start:14px}
+body.nav-collapsed .nav-sub-title{display:block;padding:8px 10px 8px;font-size:var(--fs-sm);font-weight:700;
+  color:#fff;border-block-end:1px solid rgba(255,255,255,.12);margin-bottom:4px}
+body.nav-collapsed .nav-group .nav-sub a.nav-item{padding-inline-start:12px}
 
-/* لافتة اسم التاب في الوضع المطوي */
 body.nav-collapsed .sidebar > a.nav-item::after{
-  content:attr(data-label);position:absolute;inset-inline-start:calc(100% + 8px);inset-block-start:9px;
-  background:var(--lv-brand-ink);color:#fff;font-size:.75rem;padding:5px 10px;border-radius:var(--r-sm);
+  content:attr(data-label);position:absolute;inset-inline-start:calc(100% + 10px);inset-block-start:9px;
+  background:var(--lv-brand-ink);color:#fff;font-size:var(--fs-xs);padding:5px 10px;border-radius:var(--r-sm);
   white-space:nowrap;opacity:0;pointer-events:none;transition:opacity var(--dur) var(--ease);
   box-shadow:var(--e-2);z-index:1060}
 body.nav-collapsed .sidebar > a.nav-item:hover::after,
 body.nav-collapsed .sidebar > a.nav-item:focus-visible::after{opacity:1}
 
-/* شاشة قصيرة: مفيش مكان للوحة عايمة — القايمة بترجع تسكرول والمجموعة
-   بتفتح جواها أيقونات (الاسم بيبان في التلميح) */
 @media (max-height:620px){
   body.nav-collapsed .sidebar{overflow-y:auto}
-  body.nav-collapsed .nav-group .nav-sub{position:static;width:auto;box-shadow:none;
-    max-height:none;overflow:visible;border-inline-start:3px solid var(--lv-soft)}
+  body.nav-collapsed .nav-group .nav-sub{position:static;width:auto;box-shadow:none;padding:0;
+    max-height:none;overflow:visible;background:rgba(0,0,0,.2)}
   body.nav-collapsed .nav-sub-title{display:none}
   body.nav-collapsed .nav-group .nav-sub a.nav-item{justify-content:center;padding-inline:0}
   body.nav-collapsed .nav-group .nav-sub a.nav-item > span:not(.badge){display:none}
 }
 
-/* ── الهيكل ── */
+/* ══ الهيكل والعنوان ═══════════════════════════════════════════ */
 .main{margin-inline-start:var(--nav-w);transition:margin var(--dur) var(--ease);min-height:100vh}
-.topbar{background:var(--lv-white);border-bottom:1px solid var(--lv-line);padding:10px 20px;
-  display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:1020;
-  box-shadow:0 1px 0 rgba(59,9,47,.03)}
-.topbar h2{font-size:1.05rem;margin:0;font-weight:700;color:var(--lv-brand-ink)}
+.topbar{background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(8px);
+  border-bottom:1px solid var(--lv-line);padding:0 28px;min-height:var(--topbar-h);
+  display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:1020}
+.topbar .page-title{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:10px 0}
+.topbar h2{font-family:var(--ff-display);font-size:1.4rem;margin:0;font-weight:600;color:var(--lv-brand-ink);
+  line-height:1.25;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .page-purpose{font-size:var(--fs-sm);color:var(--lv-muted);line-height:1.4;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .tb-actions{margin-inline-start:auto;display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.tb-icon{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:10px;border:1px solid transparent;background:transparent;
+  color:var(--lv-ink-2);font-size:1.08rem;transition:background var(--dur) var(--ease)}
+.tb-icon:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-decoration:none}
+.tb-icon .badge-alert{position:absolute;top:2px;inset-inline-end:0;min-width:18px;height:18px;line-height:18px;
+  padding:0 5px;font-size:.66rem;box-shadow:0 0 0 2px #fff}
+.tb-user{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 4px;border-inline-start:1px solid var(--lv-line);
+  margin-inline-start:6px;padding-inline-start:14px}
+.tb-avatar{width:34px;height:34px;border-radius:50%;background:var(--lv-tint);color:var(--lv-brand);
+  display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex:0 0 auto}
+.tb-who{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.tb-who b{font-size:var(--fs-sm);font-weight:600;color:var(--lv-ink)}
+.tb-who span{font-size:var(--fs-xs);color:var(--lv-muted);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 .nav-burger{display:none}
 .nav-scrim{position:fixed;inset:0;background:rgba(27,10,22,.5);z-index:1035;
   opacity:0;pointer-events:none;transition:opacity var(--dur) var(--ease)}
 body.nav-open .nav-scrim{opacity:1;pointer-events:auto}
-.content{padding:var(--sp-5) var(--sp-5) var(--sp-7)}
+.content{padding:var(--sp-5) 28px var(--sp-7);max-width:1600px}
 
 /* ── عناوين الأقسام ── */
-.section-head{display:flex;align-items:center;gap:10px;margin:var(--sp-6) 0 var(--sp-3)}
+.section-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:var(--sp-6) 0 var(--sp-3)}
 .section-head:first-child{margin-top:0}
-.section-head h2{font-size:.98rem;margin:0;font-weight:700;color:var(--lv-brand-ink);
-  padding-inline-start:10px;border-inline-start:4px solid var(--lv-brand);line-height:1.3}
+.section-head h2{font-size:var(--fs-md);margin:0;font-weight:700;color:var(--lv-brand-ink);line-height:1.35}
+.section-head .hint{font-size:var(--fs-sm)}
 
 /* ── الكروت ── */
 .card{border:1px solid var(--lv-line);border-radius:var(--r-md);
   box-shadow:var(--e-1);background:var(--lv-white);margin-bottom:var(--sp-4)}
 .card:last-child{margin-bottom:0}
 .card-header{background:var(--lv-white);border-bottom:1px solid var(--lv-line);font-weight:700;
-  border-radius:var(--r-md) var(--r-md) 0 0 !important;padding:.72rem 1rem;color:var(--lv-brand-ink);
-  font-size:.88rem;letter-spacing:.1px}
-.card-footer{border-top:1px solid var(--lv-line);border-radius:0 0 var(--r-md) var(--r-md) !important}
+  border-radius:var(--r-md) var(--r-md) 0 0 !important;padding:.8rem 1.1rem;color:var(--lv-brand-ink);
+  font-size:var(--fs-base)}
+.card-body{padding:1.1rem}
+.card-footer{background:var(--lv-surface-2);border-top:1px solid var(--lv-line);border-radius:0 0 var(--r-md) var(--r-md) !important;
+  padding:.65rem 1.1rem}
 
-/* ── الجداول: من غير هوفر — هيدر لاصق واضح وفواصل هادية ── */
-.table{font-size:.85rem;margin-bottom:0;--bs-table-hover-bg:transparent}
-.table>thead>tr>th{background:var(--lv-tint);color:var(--lv-brand-ink);font-weight:700;
-  white-space:nowrap;border-bottom:2px solid var(--lv-soft);font-size:.775rem;
-  padding:.58rem .6rem;letter-spacing:.2px}
+/* ── الجداول: رأس فاتح، صفوف مريحة، هوفر خفيف ── */
+.table{font-size:var(--fs-sm);margin-bottom:0;color:var(--lv-ink);--bs-table-hover-bg:var(--lv-hover)}
+.table>thead>tr>th{background:var(--lv-surface-2);color:var(--lv-ink-2);font-weight:600;
+  white-space:nowrap;border-bottom:1px solid var(--lv-line);font-size:var(--fs-xs);
+  padding:.65rem .75rem;vertical-align:middle}
 .table>tbody>tr>td{vertical-align:middle;border-color:var(--lv-line-soft);
-  padding:.55rem .6rem;line-height:1.5}
+  padding:.7rem .75rem;line-height:1.5}
+.table-sm>tbody>tr>td{padding:.6rem .7rem}
+.table-sm>thead>tr>th{padding:.55rem .7rem}
+.table>tbody>tr:hover>*{--bs-table-bg-state:var(--lv-hover)}
 .table>tbody>tr:last-child>td{border-bottom:0}
-.table>tfoot>tr>td,.table>tfoot>tr>th{border-top:2px solid var(--lv-soft);font-size:.82rem;
-  background:var(--lv-offwhite);font-weight:700}
-/* جداول البيان/القيمة: الهيدر هو العمود الأول */
-.table>tbody>tr>th{background:var(--lv-offwhite);color:#5A4E56;font-weight:600;
-  font-size:.8rem;border-color:var(--lv-line-soft);vertical-align:middle;white-space:nowrap}
+.table>tfoot>tr>td,.table>tfoot>tr>th{border-top:1px solid var(--lv-line);font-size:var(--fs-sm);
+  background:var(--lv-surface-2);font-weight:700}
+.table>tbody>tr>th{background:var(--lv-surface-2);color:var(--lv-ink-2);font-weight:600;
+  font-size:var(--fs-sm);border-color:var(--lv-line-soft);vertical-align:middle;white-space:nowrap}
 .table-responsive{border-radius:0 0 var(--r-md) var(--r-md)}
+.table a:not(.btn){font-weight:600}
 
-/* رأس عمود قابل للترتيب */
 .th-sort{color:inherit;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .th-sort:hover{color:var(--lv-brand);text-decoration:none}
 .th-sort i{font-size:.68rem;opacity:.35}
+.th-sort.on{color:var(--lv-brand-ink)}
 .th-sort.on i{opacity:1;color:var(--lv-brand)}
-th[aria-sort] .th-sort{font-weight:800}
+th[aria-sort] .th-sort{font-weight:700}
 
 /* حالة فاضية موحّدة */
 .empty-state{padding:var(--sp-6) var(--sp-4);text-align:center;color:var(--lv-muted)}
-.empty-state .ico{font-size:1.9rem;color:var(--lv-soft);display:block;margin-bottom:var(--sp-2)}
-.empty-state .t{font-weight:600;color:var(--lv-ink);font-size:.9rem;margin-bottom:2px}
+.empty-state .ico{width:48px;height:48px;line-height:48px;border-radius:50%;background:var(--lv-tint);
+  font-size:1.35rem;color:var(--lv-brand);display:inline-block;margin-bottom:var(--sp-3)}
+.empty-state .t{font-weight:600;color:var(--lv-ink);font-size:var(--fs-base);margin-bottom:2px}
 
-/* ── الأزرار: مساحة لمس كافية + حالات ثابتة ما بتزقّش التخطيط ── */
-.btn{min-height:34px;border-radius:var(--r-sm);font-weight:600;font-size:.82rem;
-  transition:background var(--dur) var(--ease),color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
-.btn-sm{min-height:31px;font-size:.79rem}
+/* ── الأزرار: أساسي واحد، وثانوي هادي ── */
+.btn{min-height:36px;border-radius:8px;font-weight:600;font-size:var(--fs-sm);
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease),border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.btn.w-100,.btn.d-block{display:flex}
+.btn-sm{min-height:32px;font-size:var(--fs-xs);border-radius:7px;padding-inline:.7rem}
+.btn-lg{min-height:44px;font-size:var(--fs-md)}
 .btn:active{transform:none}
-.table .btn-sm{min-height:28px;min-width:28px;padding-inline:.45rem}
-.btn-plum{background:var(--lv-brand);color:#fff;border:1px solid var(--lv-brand);box-shadow:var(--e-1)}
+.btn:focus-visible{box-shadow:var(--ring);outline:0}
+.table .btn-sm{min-height:30px;min-width:30px;padding-inline:.5rem}
+.btn-plum{background:var(--lv-brand);color:#fff;border:1px solid var(--lv-brand)}
 .btn-plum:hover,.btn-plum:focus{background:var(--lv-brand-dark);border-color:var(--lv-brand-dark);color:#fff}
-.btn-outline-plum{border:1px solid var(--lv-brand);color:var(--lv-brand);background:var(--lv-white)}
-.btn-outline-plum:hover{background:var(--lv-tint);color:var(--lv-brand-dark);border-color:var(--lv-brand-dark)}
+.btn-plum:active{background:var(--lv-brand-deep)!important;color:#fff!important}
+.btn-outline-plum{border:1px solid var(--lv-field);color:var(--lv-brand-dark);background:var(--lv-white)}
+.btn-outline-plum:hover,.btn-outline-plum:focus{background:var(--lv-tint);color:var(--lv-brand-dark);border-color:var(--lv-soft)}
+.btn-outline-plum:active{background:var(--lv-soft)!important;color:var(--lv-brand-ink)!important}
+.btn-outline-secondary,.btn-light{--bs-btn-color:var(--lv-ink-2);--bs-btn-bg:var(--lv-white);--bs-btn-border-color:var(--lv-field);
+  --bs-btn-hover-color:var(--lv-ink);--bs-btn-hover-bg:var(--lv-surface-2);--bs-btn-hover-border-color:#CDBFC8;
+  --bs-btn-active-color:var(--lv-ink);--bs-btn-active-bg:var(--lv-line-soft);--bs-btn-active-border-color:#CDBFC8}
+.btn-success{--bs-btn-bg:var(--lv-ok);--bs-btn-border-color:var(--lv-ok);--bs-btn-hover-bg:#156240;--bs-btn-hover-border-color:#156240}
+.btn-danger{--bs-btn-bg:var(--lv-danger);--bs-btn-border-color:var(--lv-danger);--bs-btn-hover-bg:#962a23;--bs-btn-hover-border-color:#962a23}
+.btn-outline-danger{--bs-btn-color:var(--lv-danger);--bs-btn-border-color:var(--lv-danger-line);--bs-btn-hover-bg:var(--lv-danger);--bs-btn-hover-border-color:var(--lv-danger)}
+.btn-link{color:var(--lv-brand);font-weight:500}
 .btn:disabled,.btn.disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
-/* الأكشن الخطر مفصول بصريًا */
-.btn-danger,.btn-outline-danger{--bs-btn-color:#fff}
 .actions-bar{display:flex;gap:var(--sp-2);flex-wrap:wrap;align-items:center}
 .actions-bar .danger-zone{margin-inline-start:auto;padding-inline-start:var(--sp-3);
   border-inline-start:1px dashed var(--lv-line)}
 
-.form-control:focus,.form-select:focus{border-color:var(--lv-soft);
-  box-shadow:0 0 0 .2rem rgba(157,25,126,.16)}
-.form-control[readonly]{background:var(--lv-offwhite);color:#5A4E56}
+/* ── الفورم ── */
+.form-label{font-size:var(--fs-sm);font-weight:600;margin-bottom:6px;color:var(--lv-ink-2)}
+.form-control,.form-select{font-size:var(--fs-base);border-radius:8px;border-color:var(--lv-field);
+  min-height:38px;color:var(--lv-ink);transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+textarea.form-control{min-height:76px}
+.form-control::placeholder{color:#A0939C}
+.form-control:hover,.form-select:hover{border-color:#CDBFC8}
+.form-control:focus,.form-select:focus{border-color:var(--lv-brand);box-shadow:var(--ring)}
+.form-control[readonly]{background:var(--lv-surface-2);color:var(--lv-ink-2)}
+.form-control:disabled,.form-select:disabled{background:var(--lv-line-soft)}
+.form-control-sm,.form-select-sm{font-size:var(--fs-sm);min-height:32px;border-radius:7px}
+.form-check-input:checked{background-color:var(--lv-brand);border-color:var(--lv-brand)}
+.form-check-input:focus{border-color:var(--lv-brand);box-shadow:var(--ring)}
+.form-text{color:var(--lv-muted);font-size:var(--fs-xs)}
+.input-group-text{background:var(--lv-surface-2);border-color:var(--lv-field);font-size:var(--fs-sm);color:var(--lv-muted)}
+.is-invalid{border-color:var(--lv-danger)!important}
+.invalid-feedback{color:var(--lv-danger)}
+.req::after{content:' *';color:var(--lv-danger);font-weight:700}
 
-/* ── العناصر ── */
-.stat{background:var(--lv-white);border:1px solid var(--lv-line);border-radius:var(--r-md);
-  padding:14px 16px;height:100%;box-shadow:var(--e-1)}
-.stat .v{font-size:1.55rem;font-weight:700;line-height:1.15;color:var(--lv-brand-ink);
-  font-variant-numeric:tabular-nums}
-.stat .l{color:var(--lv-muted);font-size:.79rem;line-height:1.45}
-.form-label{font-size:.8rem;font-weight:600;margin-bottom:.25rem;color:#4C4150}
-.form-control,.form-select{font-size:.85rem;border-radius:var(--r-sm);border-color:#DDD2DA}
-.form-control-sm,.form-select-sm{font-size:.8rem;min-height:31px}
-.req::after{content:' *';color:var(--lv-danger)}
-.badge{font-weight:600;font-size:.72rem;padding:.32em .6em;border-radius:var(--r-pill)}
-.hint{font-size:.77rem;color:var(--lv-muted);line-height:1.6}
+/* ── أرقام: KPI ── */
+.stat{position:relative;background:var(--lv-white);border:1px solid var(--lv-line);border-radius:var(--r-md);
+  padding:16px 18px 14px;height:100%;transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.stat{container-type:inline-size}
+.stat .v{font-size:clamp(1.25rem, 13cqi, var(--fs-2xl));font-weight:700;line-height:1.1;color:var(--lv-brand-ink);
+  font-variant-numeric:tabular-nums;letter-spacing:-.3px;max-width:100%}
+.stat .l{color:var(--lv-ink-2);font-size:var(--fs-sm);line-height:1.45;font-weight:500}
+.stat .stat-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.stat .stat-value{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.stat .stat-sub{font-size:var(--fs-xs);color:var(--lv-muted);font-variant-numeric:tabular-nums}
+.stat .stat-note{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.55;margin-top:6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.stat .stat-link{margin-top:auto;padding-top:10px;font-size:var(--fs-xs);font-weight:600;color:var(--lv-brand);
+  display:inline-flex;align-items:center;gap:4px;align-self:flex-start}
+.stat .stat-link i{transition:transform var(--dur) var(--ease)}
+.stat:hover .stat-link i{transform:translateX(-3px)}
+.stat.is-link:hover{border-color:var(--lv-soft);box-shadow:var(--e-2)}
+.stat.is-waiting{border-color:var(--lv-soft);background:linear-gradient(180deg,#FFFFFF 0%,#FDF8FB 100%)}
+.stat.is-zero .v{color:#A79BA4}
 
-/* شرايح الحالة: لون + حدود + نص — مش لون لوحده */
-.pill{display:inline-flex;align-items:center;gap:5px;font-size:.73rem;font-weight:600;
-  padding:.22em .62em;border-radius:var(--r-pill);border:1px solid transparent;white-space:nowrap}
+/* نقطة الحالة */
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:0 0 8px;background:var(--lv-line)}
+.dot-brand{background:var(--lv-brand)} .dot-ok{background:var(--lv-ok-dot)} .dot-warn{background:var(--lv-warn-dot)}
+.dot-danger{background:var(--lv-danger-dot)} .dot-info{background:var(--lv-info-dot)} .dot-muted{background:#BFB3BB}
+.dot-ink{background:var(--lv-brand-ink)}
+/* نص حالة بنقطة: <span class="status is-ok">مفرج</span> */
+.status{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);font-weight:600;color:var(--lv-ink-2);white-space:nowrap}
+.status::before{content:"";width:7px;height:7px;border-radius:50%;background:#BFB3BB;flex:0 0 7px}
+.status.is-ok{color:var(--lv-ok)} .status.is-ok::before{background:var(--lv-ok-dot)}
+.status.is-warn{color:var(--lv-warn)} .status.is-warn::before{background:var(--lv-warn-dot)}
+.status.is-danger{color:var(--lv-danger)} .status.is-danger::before{background:var(--lv-danger-dot)}
+.status.is-info{color:var(--lv-info)} .status.is-info::before{background:var(--lv-info-dot)}
+.status.is-brand{color:var(--lv-brand-dark)} .status.is-brand::before{background:var(--lv-brand)}
+
+.badge{font-weight:600;font-size:.72rem;padding:.34em .65em;border-radius:var(--r-pill);font-variant-numeric:tabular-nums}
+.hint{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.6}
+.text-muted{color:var(--lv-muted)!important}
+
+/* شرايح الحالة: خلفية خفيفة + نص — من غير حدود تقيلة */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-xs);font-weight:600;line-height:1.5;
+  padding:.18em .65em;border-radius:var(--r-pill);border:1px solid transparent;white-space:nowrap}
 .pill-ok{background:var(--lv-ok-bg);color:var(--lv-ok);border-color:var(--lv-ok-line)}
 .pill-warn{background:var(--lv-warn-bg);color:var(--lv-warn);border-color:var(--lv-warn-line)}
 .pill-danger{background:var(--lv-danger-bg);color:var(--lv-danger);border-color:var(--lv-danger-line)}
 .pill-info{background:var(--lv-info-bg);color:var(--lv-info);border-color:var(--lv-info-line)}
-.pill-muted{background:var(--lv-offwhite);color:var(--lv-muted);border-color:var(--lv-line)}
+.pill-muted{background:var(--lv-surface-2);color:var(--lv-muted);border-color:var(--lv-line)}
+.pill-brand{background:var(--lv-tint);color:var(--lv-brand-dark);border-color:var(--lv-soft)}
+.pill .dot{width:6px;height:6px;flex-basis:6px}
 
-/* بادچات الحالة الجاهزة من بوتستراب: بنعيد تلوينها بحدود ونص مقروء —
-   الأصفر الافتراضي بنص أبيض كان تباينه تحت الحد بكتير. */
 .badge.bg-success,.badge.bg-warning,.badge.bg-danger,.badge.bg-info,
-.badge.bg-secondary,.badge.bg-light,.badge.bg-primary{border:1px solid transparent}
+.badge.bg-secondary,.badge.bg-light,.badge.bg-primary,.badge.bg-dark{border:1px solid transparent}
 .badge.bg-success{background:var(--lv-ok-bg)!important;color:var(--lv-ok)!important;border-color:var(--lv-ok-line)}
 .badge.bg-warning{background:var(--lv-warn-bg)!important;color:var(--lv-warn)!important;border-color:var(--lv-warn-line)}
 .badge.bg-danger{background:var(--lv-danger-bg)!important;color:var(--lv-danger)!important;border-color:var(--lv-danger-line)}
 .badge.bg-info{background:var(--lv-info-bg)!important;color:var(--lv-info)!important;border-color:var(--lv-info-line)}
-.badge.bg-secondary,.badge.bg-light,.badge.bg-dark{background:var(--lv-offwhite)!important;color:#5A4E56!important;border-color:var(--lv-line)}
-/* التنبيه الأحمر (إشعارات غير مقروءة / كاونتر المنيو) بيفضل صريح — ده تنبيه مش حالة */
-.badge.badge-alert{background:#D8394F!important;color:#fff!important;border-color:#D8394F!important}
+.badge.bg-secondary,.badge.bg-light,.badge.bg-dark{background:var(--lv-surface-2)!important;color:var(--lv-ink-2)!important;border-color:var(--lv-line)}
 .badge.bg-primary{background:var(--lv-tint)!important;color:var(--lv-brand-dark)!important;border-color:var(--lv-soft)}
-/* الكاونتر الأحمر في المنيو بيفضل صريح — ده تنبيه مش حالة */
-.sidebar .badge-count{background:#D8394F!important;color:#fff!important;border:0}
+/* التنبيه الأحمر بيفضل صريح — ده تنبيه مش حالة */
+.badge.badge-alert{background:var(--lv-alert)!important;color:#fff!important;border-color:var(--lv-alert)!important}
 
-/* صفوف الحالات في الجداول — خفيفة عشان ما تغطّيش على النص */
 .table>tbody>tr.table-warning>td{background:var(--lv-warn-bg);--bs-table-bg:var(--lv-warn-bg)}
 .table>tbody>tr.table-danger>td{background:var(--lv-danger-bg);--bs-table-bg:var(--lv-danger-bg)}
 .table>tbody>tr.table-success>td{background:var(--lv-ok-bg);--bs-table-bg:var(--lv-ok-bg)}
 
-/* التنبيهات بنفس لغة الألوان */
-.alert{border-radius:var(--r-md);font-size:.83rem;border-width:1px}
+.alert{border-radius:var(--r-md);font-size:var(--fs-sm);border-width:1px;display:block}
+.alert>.bi:first-child{margin-inline-end:4px}
 .alert-warning{background:var(--lv-warn-bg);border-color:var(--lv-warn-line);color:var(--lv-warn)}
 .alert-danger{background:var(--lv-danger-bg);border-color:var(--lv-danger-line);color:var(--lv-danger)}
 .alert-success{background:var(--lv-ok-bg);border-color:var(--lv-ok-line);color:var(--lv-ok)}
 .alert-info{background:var(--lv-info-bg);border-color:var(--lv-info-line);color:var(--lv-info)}
 .alert a{color:inherit;text-decoration:underline}
 
-.note-box{background:var(--lv-tint);border:1px solid var(--lv-soft);border-radius:var(--r-md);
-  padding:11px 13px;font-size:.81rem;color:#453040;line-height:1.75}
-.calc-box{background:var(--lv-tint);border:1px solid var(--lv-soft);border-radius:var(--r-md);padding:14px}
-.calc-box .kv{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--lv-soft)}
+/* ملاحظة توضيحية: هادية، مش صندوق وردي صارخ */
+.note-box{background:var(--lv-white);border:1px solid var(--lv-line);border-radius:var(--r-md);
+  padding:10px 14px;font-size:var(--fs-sm);color:var(--lv-ink-2);line-height:1.75}
+.note-box>.bi:first-child{color:var(--lv-brand);margin-inline-end:4px}
+.calc-box{background:var(--lv-surface-2);border:1px solid var(--lv-line);border-radius:var(--r-md);padding:14px 16px}
+.calc-box .kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed var(--lv-line)}
 .calc-box .kv:last-child{border:0}
-.calc-box .kv b{font-size:1rem;color:var(--lv-brand);font-variant-numeric:tabular-nums}
-.line-table input,.line-table select{border:1px solid #DDD2DA;border-radius:6px;padding:4px 6px;
-  font-size:.8rem;width:100%;background:var(--lv-white);min-height:30px}
-/* المستند المعتمد: سطوره للقراءة بس */
+.calc-box .kv b{font-size:var(--fs-md);color:var(--lv-brand-ink);font-variant-numeric:tabular-nums}
+.line-table input,.line-table select{border:1px solid var(--lv-field);border-radius:7px;padding:4px 8px;
+  font-size:var(--fs-sm);width:100%;background:var(--lv-white);min-height:32px}
+.line-table input:focus,.line-table select:focus{border-color:var(--lv-brand);box-shadow:var(--ring);outline:0}
 .lines-locked input,.lines-locked select,.lines-locked button{pointer-events:none;
-  background:var(--lv-offwhite);opacity:.75}
+  background:var(--lv-surface-2);opacity:.75}
 .lines-locked .btn{visibility:hidden}
-.line-table td{padding:.25rem}
-/* أرقام مصفوفة: عرض ثابت لكل رقم + اتجاه لاتيني.
-   ممنوع تغيير الـdisplay هنا — الكلاس ده بيتحط على <td> نفسه في 200+ مكان،
-   وأي display غير table-cell بيخرّج الخلية من الجدول وينثر الصفوف. */
+.line-table td{padding:.3rem}
+/* أرقام مصفوفة. ممنوع تغيير الـdisplay على td.num — بيتحط في 200+ مكان */
 .num{font-variant-numeric:tabular-nums;direction:ltr;text-align:center}
 span.num,b.num,strong.num,small.num,div.num{display:inline-block}
 td.num,th.num{display:table-cell}
-.page-item.active .page-link{background:var(--lv-brand);border-color:var(--lv-brand)}
-.page-link{color:var(--lv-brand);min-width:34px;min-height:34px}
+.pagination{--bs-pagination-border-radius:8px;margin:0;gap:4px}
+.page-link{color:var(--lv-ink-2);min-width:34px;min-height:34px;border-color:var(--lv-line);border-radius:8px!important;
+  display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
+.page-link:hover{background:var(--lv-tint);color:var(--lv-brand-dark);border-color:var(--lv-soft)}
+.page-item.active .page-link{background:var(--lv-brand);border-color:var(--lv-brand);color:#fff}
+.page-link:focus{box-shadow:var(--ring)}
 .accordion-button:not(.collapsed){background:var(--lv-tint);color:var(--lv-brand-ink)}
-.accordion-button:focus{box-shadow:0 0 0 .2rem rgba(157,25,126,.16)}
+.accordion-button:focus{box-shadow:var(--ring)}
 .list-group-item{border-color:var(--lv-line)}
+.nav-tabs .nav-link{color:var(--lv-muted);font-weight:600}
+.nav-tabs .nav-link.active{color:var(--lv-brand-ink)}
+.nav-pills .nav-link.active{background:var(--lv-brand)}
+.modal-content{border:0;border-radius:var(--r-lg);box-shadow:var(--e-3)}
+.dropdown-menu{border-color:var(--lv-line);border-radius:var(--r-md);box-shadow:var(--e-3);font-size:var(--fs-sm)}
 
-/* ── حالة تحميل الأزرار: تمنع الدبل كليك ── */
+/* ── شرايح الفلاتر السريعة ── */
+.chip{display:inline-flex;align-items:center;min-height:28px;padding:0 12px;border-radius:var(--r-pill);
+  border:1px solid var(--lv-line);background:var(--lv-white);color:var(--lv-ink-2);font-size:var(--fs-xs);font-weight:500;
+  transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.chip:hover{background:var(--lv-tint);border-color:var(--lv-soft);color:var(--lv-brand-dark);text-decoration:none}
+.chip.on{background:var(--lv-brand-ink);border-color:var(--lv-brand-ink);color:#fff}
+.chip-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 16px;border-bottom:1px solid var(--lv-line-soft)}
+
+/* ── حالة تحميل الأزرار ── */
 .btn .spin{display:none;width:13px;height:13px;border:2px solid currentColor;border-top-color:transparent;
-  border-radius:50%;animation:lvspin .6s linear infinite;margin-inline-end:6px;vertical-align:-2px}
+  border-radius:50%;animation:lvspin .6s linear infinite;vertical-align:-2px}
 .btn.is-loading .spin{display:inline-block}
 .btn.is-loading{pointer-events:none;opacity:.75}
 @keyframes lvspin{to{transform:rotate(360deg)}}
 
-/* ── شريط الفلو: إنت فين، واللي قبلك واللي بعدك ── */
+/* ── شريط الفلو ── */
 .flow-bar{background:var(--lv-white);border:1px solid var(--lv-line);border-radius:var(--r-md);
-  box-shadow:var(--e-1);margin-bottom:var(--sp-4);overflow:hidden}
-.flow-bar .steps{display:flex;overflow-x:auto;scrollbar-width:none}
+  margin-bottom:var(--sp-4);overflow:hidden}
+.flow-bar .steps{display:flex;overflow-x:auto;scrollbar-width:none;padding:6px;gap:2px}
 .flow-bar .steps::-webkit-scrollbar{display:none}
-.flow-step{display:flex;align-items:center;gap:7px;padding:9px 14px 9px 12px;font-size:.78rem;
-  color:var(--lv-muted);white-space:nowrap;position:relative;min-height:42px;
-  border-inline-end:1px solid var(--lv-line-soft);flex:0 0 auto}
-.flow-step:last-child{border-inline-end:0}
-.flow-step .n{width:20px;height:20px;min-width:20px;border-radius:50%;background:var(--lv-offwhite);
-  border:1px solid var(--lv-line);display:inline-flex;align-items:center;justify-content:center;
-  font-size:.68rem;font-weight:700;color:var(--lv-muted);font-variant-numeric:tabular-nums}
-a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-decoration:none}
-.flow-step.done{color:var(--lv-ok)}
+.flow-step{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:var(--fs-sm);border-radius:8px;
+  color:var(--lv-muted);white-space:nowrap;position:relative;min-height:38px;flex:0 0 auto}
+.flow-step + .flow-step::before{content:"";position:absolute;inset-inline-start:-2px;top:50%;width:2px;height:14px;
+  transform:translateY(-50%);background:var(--lv-line);border-radius:2px}
+.flow-step > .bi{display:none}
+.flow-step .n{width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--lv-white);
+  border:1px solid var(--lv-field);display:inline-flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:700;color:var(--lv-muted);font-variant-numeric:tabular-nums}
+a.flow-step:hover{background:var(--lv-surface-2);color:var(--lv-ink);text-decoration:none}
+.flow-step.done{color:var(--lv-ink-2)}
 .flow-step.done .n{background:var(--lv-ok-bg);border-color:var(--lv-ok-line);color:var(--lv-ok)}
-.flow-step.now{background:var(--lv-brand);color:#fff;font-weight:700}
-.flow-step.now .n{background:rgba(255,255,255,.24);border-color:rgba(255,255,255,.5);color:#fff}
-.flow-next{display:flex;gap:var(--sp-2);align-items:center;padding:8px 12px;
-  border-top:1px solid var(--lv-line-soft);background:var(--lv-offwhite);font-size:.78rem}
+.flow-step.done > .bi-check2{display:inline;color:var(--lv-ok-dot)}
+.flow-step.now{background:var(--lv-tint);color:var(--lv-brand-ink);font-weight:700}
+.flow-step.now .n{background:var(--lv-brand);border-color:var(--lv-brand);color:#fff}
+.flow-next{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap;padding:8px 12px;
+  border-top:1px solid var(--lv-line-soft);background:var(--lv-surface-2);font-size:var(--fs-xs)}
 
-/* ── موبايل: المنيو بقت درج ── */
+/* ── مراحل الطلب ── */
+.stepper{display:flex;align-items:flex-start}
+.stepper .st{flex:1;text-align:center;position:relative;font-size:var(--fs-xs);color:var(--lv-muted)}
+.stepper .st .c{width:32px;height:32px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;
+  background:var(--lv-white);border:1px solid var(--lv-field);color:#A79BA4;font-size:.9rem;position:relative;z-index:1}
+.stepper .st::after{content:"";position:absolute;top:16px;inset-inline-start:calc(50% + 20px);width:calc(100% - 40px);
+  height:2px;background:var(--lv-line);border-radius:2px}
+.stepper .st:last-child::after{display:none}
+.stepper .st.done .c{background:var(--lv-brand);border-color:var(--lv-brand);color:#fff}
+.stepper .st.done::after{background:var(--lv-brand)}
+.stepper .st.done{color:var(--lv-ink-2)}
+.stepper .st.now .c{background:var(--lv-tint);border:2px solid var(--lv-brand);color:var(--lv-brand)}
+.stepper .st.now{color:var(--lv-brand-ink);font-weight:700}
+
+/* ── رسالة نجاح بالخطوة الجاية ── */
+.flow-toast{display:flex;align-items:flex-start;gap:14px;background:var(--lv-white);border:1px solid var(--lv-ok-line);
+  border-radius:var(--r-md);padding:14px 16px;margin-bottom:var(--sp-4);box-shadow:var(--e-1)}
+.flow-toast .ft-ico{width:34px;height:34px;flex:0 0 34px;border-radius:50%;background:var(--lv-ok-bg);color:var(--lv-ok);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.flow-toast .ft-title{font-weight:700;color:var(--lv-ink);font-size:var(--fs-base)}
+.flow-toast .ft-next{margin-top:6px;font-size:var(--fs-sm);color:var(--lv-ink-2)}
+
+/* ── موبايل: المنيو درج ── */
 @media (max-width:900px){
-  /* الدرج مقفول = مخفي فعلًا، مش بس مزقوق برّه — عشان ما ياخدش دور
-     في الكيبورد ولا يتقري لقارئ الشاشة */
-  .sidebar{width:264px;transform:translateX(100%);visibility:hidden;
+  .sidebar{width:280px;transform:translateX(100%);visibility:hidden;
     transition:transform var(--dur) var(--ease),visibility 0s var(--dur)}
-  body.nav-open .sidebar{transform:translateX(0);visibility:visible;transition-delay:0s}
+  body.nav-open .sidebar{transform:translateX(0);visibility:visible;transition-delay:0s;box-shadow:var(--e-3)}
   .main{margin-inline-start:0 !important}
-  .nav-burger{display:inline-flex;align-items:center;justify-content:center;
-    min-width:42px;min-height:42px;border:1px solid var(--lv-line);border-radius:var(--r-sm);
-    background:var(--lv-white);color:var(--lv-brand-ink);font-size:1.1rem}
-  .content{padding:var(--sp-3) var(--sp-3) var(--sp-6)}
-  .topbar{padding:8px 12px}
-  .topbar h2{font-size:.95rem}
-  /* 16px بيمنع iOS من عمل zoom تلقائي عند التركيز */
+  .nav-burger{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+    width:42px;height:42px;border:1px solid var(--lv-line);border-radius:10px;
+    background:var(--lv-white);color:var(--lv-brand-ink);font-size:1.25rem}
+  .content{padding:var(--sp-4) var(--sp-4) var(--sp-6)}
+  .topbar{padding:0 12px;gap:10px;min-height:58px}
+  .topbar h2{font-size:1.12rem}
+  .topbar .page-purpose{display:none}
+  .tb-who,.tb-logout-label{display:none}
+  .tb-user{border:0;margin:0;padding:0}
   .form-control,.form-select,.form-control-sm,.form-select-sm,
   .line-table input,.line-table select{font-size:16px}
   .btn,.btn-sm{min-height:44px}
   .table .btn-sm{min-height:36px;min-width:36px}
   .card{margin-bottom:var(--sp-3)}
+  .stat{padding:14px}
+  .stat .v{font-size:var(--fs-xl)}
 
-  /* الوضع المطوي مالوش معنى على الموبايل — بنرجّع كل حاجة زي ما هي */
-  body.nav-collapsed .sidebar{width:264px;overflow-y:auto;overflow-x:hidden}
-  body.nav-collapsed .sidebar .brand{padding:16px 14px 14px}
-  body.nav-collapsed .sidebar .brand img{width:140px}
+  body.nav-collapsed .sidebar{width:280px;overflow-y:auto;overflow-x:hidden}
+  body.nav-collapsed .sidebar .brand{padding:22px 18px 16px;text-align:start}
+  body.nav-collapsed .sidebar .brand img{width:116px;margin:0}
   body.nav-collapsed .sidebar .brand small,
   body.nav-collapsed .nav-sep,
   body.nav-collapsed .sidebar .nav-group-btn > span,
   body.nav-collapsed .sidebar .nav-group-btn .caret,
   body.nav-collapsed .sidebar > a.nav-item > span{display:inline}
+  body.nav-collapsed .sidebar .nav-group{padding:0 10px}
   body.nav-collapsed .sidebar .nav-group-btn,
-  body.nav-collapsed .sidebar > a.nav-item{justify-content:flex-start;padding-inline:16px;gap:11px}
+  body.nav-collapsed .sidebar > a.nav-item{justify-content:flex-start;padding-inline:10px;gap:10px}
+  body.nav-collapsed .sidebar > a.nav-item{margin-inline:10px}
   body.nav-collapsed .nav-group-btn .badge-count{position:static;margin-inline-start:auto;
-    margin-inline-end:8px;min-width:20px;padding:2px 6px;font-size:.68rem}
-  body.nav-collapsed .nav-group .nav-sub{position:static;width:auto;box-shadow:none;border-radius:0;
-    max-height:none;overflow:visible;border-inline-start:3px solid var(--lv-soft)}
-  body.nav-collapsed .nav-group .nav-sub a.nav-item{padding-inline-start:30px;justify-content:flex-start}
+    margin-inline-end:6px;min-width:22px;height:20px;line-height:20px;padding:0 7px;font-size:.7rem}
+  body.nav-collapsed .nav-group .nav-sub{position:relative;width:auto;box-shadow:none;border-radius:0;background:none;
+    max-height:none;overflow:visible;margin:2px 0 8px;padding:0;padding-inline-start:20px}
+  body.nav-collapsed .nav-group .nav-sub::before{display:block}
+  body.nav-collapsed .nav-group .nav-sub a.nav-item{padding-inline-start:16px;justify-content:flex-start}
   body.nav-collapsed .nav-group .nav-sub a.nav-item > span{display:inline}
-  /* على الموبايل الفتح بالضغط بس — مش بالوقوف */
   body.nav-collapsed .nav-group:hover > .nav-sub:not(.show),
   body.nav-collapsed .nav-group:focus-within > .nav-sub:not(.show){display:none}
   body.nav-collapsed .nav-sep{display:block}
@@ -430,15 +566,18 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
   body.nav-collapsed .sidebar > a.nav-item::after{content:none}
   .nav-toggle{display:none}
 }
+@media (max-width:480px){
+  .content{padding:var(--sp-3) var(--sp-3) var(--sp-6)}
+  .stepper .st span.lbl{font-size:.68rem}
+}
 @media (min-width:901px){ .nav-scrim{display:none} }
 
-/* ── احترام تقليل الحركة ── */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
     transition-duration:.01ms !important;scroll-behavior:auto !important}
 }
 
-@media print{.sidebar,.topbar,.btn,.card-footer{display:none !important}.main{margin:0}}
+@media print{.sidebar,.topbar,.btn,.card-footer{display:none !important}.main{margin:0}body{background:#fff}}
 </style>
 </head>
 <body>
@@ -569,7 +708,9 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
 <aside class="sidebar" id="sideNav" aria-label="القايمة الرئيسية">
   <div class="brand">
     <a href="{{ route('dashboard') }}" aria-label="لوحة التحكم">
-      <img src="{{ asset('assets/logo-white.png') }}" alt="Le Voile">
+      <img src="{{ asset('assets/logo-white.png') }}" alt="Le Voile" width="128" height="36"
+           onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+      <span class="brand-word" hidden>Le Voile</span>
     </a>
     <small>نظام تخطيط الإنتاج</small>
   </div>
@@ -642,18 +783,29 @@ a.flow-step:hover{background:var(--lv-tint);color:var(--lv-brand-dark);text-deco
     <button class="nav-burger" type="button" id="navBurger" aria-label="فتح القايمة" aria-expanded="false">
       <i class="bi bi-list" aria-hidden="true"></i>
     </button>
-    <h2>{{ $title ?? '' }}</h2>
-    <div class="ms-auto d-flex align-items-center gap-2">
-      <a href="{{ route('notifications.index') }}" class="btn btn-sm btn-light position-relative"
+    <div class="page-title">
+      <h2>{{ $title ?? '' }}</h2>
+      @php $purpose = $purpose ?? null; @endphp
+      @hasSection('purpose')
+        <div class="page-purpose">@yield('purpose')</div>
+      @elseif($purpose)
+        <div class="page-purpose">{{ $purpose }}</div>
+      @endif
+    </div>
+    <div class="tb-actions">
+      <a href="{{ route('notifications.index') }}" class="tb-icon"
          title="الإشعارات" aria-label="الإشعارات{{ ($navUnread ?? 0) > 0 ? ' — ' . $navUnread . ' جديدة' : '' }}">
         <i class="bi bi-bell" aria-hidden="true"></i>
         @if(($navUnread ?? 0) > 0)
-          <span class="position-absolute top-0 start-100 translate-middle badge badge-alert rounded-pill">{{ $navUnread }}</span>
+          <span class="badge badge-alert rounded-pill">{{ $navUnread }}</span>
         @endif
       </a>
-      <span class="hint">{{ $u?->name }} — {{ $u?->roleNames() }}</span>
+      <div class="tb-user" title="{{ $u?->name }} — {{ $u?->roleNames() }}">
+        <span class="tb-avatar" aria-hidden="true">{{ mb_substr($u?->name ?? '؟', 0, 1) }}</span>
+        <span class="tb-who"><b>{{ $u?->name }}</b><span>{{ $u?->roleNames() }}</span></span>
+      </div>
       <form method="post" action="{{ route('logout') }}">@csrf
-        <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-left" aria-hidden="true"></i> خروج</button>
+        <button class="tb-icon" title="خروج" aria-label="تسجيل الخروج"><i class="bi bi-box-arrow-left" aria-hidden="true"></i></button>
       </form>
     </div>
   </div>
@@ -725,6 +877,14 @@ document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootst
       var sub = g.querySelector('.nav-sub'); if (sub) sub.style.top = '';
     });
   });
+})();
+
+/* شريط الفلو على الشاشة الضيقة: الخطوة الحالية تبان في النص من غير سكرول يدوي */
+(function () {
+  var now = document.querySelector('.flow-bar .flow-step.now'), box = now && now.closest('.steps');
+  if (!box || box.scrollWidth <= box.clientWidth) return;
+  var b = box.getBoundingClientRect(), n = now.getBoundingClientRect();
+  box.scrollLeft += (n.left - b.left) - (b.width - n.width) / 2;
 })();
 
 /* أي فورم بيتبعت: الزرار يتقفل ويبان عليه إنه شغال — بيمنع الدبل سبمِت

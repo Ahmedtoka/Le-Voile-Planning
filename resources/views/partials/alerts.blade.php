@@ -1,32 +1,25 @@
 @if(session('flow'))
   @php $f = session('flow'); @endphp
-  <div class="card mb-3" role="status" aria-live="polite"
-       style="border-color:var(--lv-ok-line);background:var(--lv-ok-bg)">
-    <div class="card-body py-3">
-      <div class="d-flex align-items-start gap-3">
-        <div style="width:36px;height:36px;flex:0 0 36px;border-radius:50%;background:var(--lv-ok);color:#fff;
-             text-align:center;line-height:36px;font-size:1.1rem"><i class="bi bi-check-lg" aria-hidden="true"></i></div>
-        <div class="flex-grow-1">
-          <div class="fw-bold" style="color:#14603E">{{ $f['title'] }}</div>
+  <div class="flow-toast" role="status" aria-live="polite">
+    <div class="ft-ico"><i class="bi bi-check-lg" aria-hidden="true"></i></div>
+    <div class="flex-grow-1">
+      <div class="ft-title">{{ $f['title'] }}</div>
 
-          @if($f['next'])
-            <div class="mt-2" style="font-size:.84rem;color:#2F5544">
-              <b>الخطوة الجاية</b>
-              @if($f['who']) — المسؤول: <b>{{ $f['who'] }}</b> @endif
-              <div class="mt-1">{!! $f['next'] !!}</div>
-            </div>
-          @endif
-
-          @if($f['link'])
-            <a href="{{ $f['link'] }}" class="btn btn-sm mt-2"
-               style="background:var(--lv-ok);color:#fff">
-              <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ $f['link_label'] }}
-            </a>
-          @endif
+      @if($f['next'])
+        <div class="ft-next">
+          <b>الخطوة الجاية</b>
+          @if($f['who']) — المسؤول: <b>{{ $f['who'] }}</b> @endif
+          <div class="mt-1">{!! $f['next'] !!}</div>
         </div>
-        <button class="btn-close" aria-label="إغلاق" onclick="this.closest('.card').remove()"></button>
-      </div>
+      @endif
+
+      @if($f['link'])
+        <a href="{{ $f['link'] }}" class="btn btn-sm btn-plum mt-2">
+          {{ $f['link_label'] }} <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        </a>
+      @endif
     </div>
+    <button class="btn-close" aria-label="إغلاق" onclick="this.closest('.flow-toast').remove()"></button>
   </div>
 @endif
 
