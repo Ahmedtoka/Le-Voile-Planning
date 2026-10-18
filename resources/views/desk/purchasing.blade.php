@@ -1,4 +1,5 @@
 @extends('partials.desk')
+@section('purpose', 'تسعير الطلبات وتحديد المورد وتاريخ التوريد')
 @php
   $flow='buy'; $flowStep='sourcing';
   $intro = 'الطلبات بتنزل عندك <b>أول ما التخطيط يحفظها</b>. تحدد المورد والسعر وتاريخ التوريد وتحفظ — الحسابات والمخزن بيشوفوها فورًا.';
@@ -11,6 +12,7 @@
     <span>طلبات اتسعّرت ومستنية التوريد</span>
     <a href="{{ route('purchasing.queue') }}" class="btn btn-sm btn-outline-plum py-0">طابور التسعير</a>
   </div>
+  <div class="table-responsive">
   <table class="table table-sm mb-0">
     <thead><tr><th>الطلب</th><th>المورد</th><th>الإجمالي</th><th>توريد متوقع</th><th>الحالة</th></tr></thead>
     <tbody>
@@ -30,5 +32,6 @@
     @endforelse
     </tbody>
   </table>
+  </div>
 </div>
 @endsection

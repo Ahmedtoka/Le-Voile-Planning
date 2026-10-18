@@ -1,33 +1,39 @@
-{{-- بوكس رقم + شرح تحته + لينك اختياري.
-     اللون مش لوحده اللي بيحمل المعنى — معاه أيقونة ونص. --}}
+{{-- بوكس رقم: نقطة حالة + عنوان قصير ← الرقم كبير ← ملاحظة صغيرة باهتة (سطرين بالكتير) ← لينك.
+     الحالة مش بلون لوحده: النقطة معاها أيقونة للتحذير/الخطر، والنص كامل في الـtitle. --}}
 @php
   $tone = $tone ?? 'ink';
   $link = $link ?? null;
   $note = $note ?? null;
   $sub  = $sub  ?? null;
 
-  // اللون + أيقونة + شريط جانبي — الحالة مش بلون لوحده
+  // [لون الرقم, أيقونة جنب الرقم, كلاس النقطة]
   $tones = [
-    'ink'    => ['var(--lv-brand-ink)', null,                          'var(--lv-line)'],
-    'brand'  => ['var(--lv-brand)',     null,                          'var(--lv-brand)'],
-    'muted'  => ['var(--lv-muted)',     null,                          'var(--lv-line)'],
-    'ok'     => ['var(--lv-ok)',        'bi-check-circle',             'var(--lv-ok)'],
-    'warn'   => ['var(--lv-warn)',      'bi-exclamation-circle',       'var(--lv-warn)'],
-    'danger' => ['var(--lv-danger)',    'bi-exclamation-triangle-fill','var(--lv-danger)'],
+    'ink'    => ['var(--lv-brand-ink)', null,                           'dot-muted'],
+    'brand'  => ['var(--lv-brand)',     null,                           'dot-brand'],
+    'muted'  => ['var(--lv-muted)',     null,                           'dot-muted'],
+    'ok'     => ['var(--lv-ok)',        null,                           'dot-ok'],
+    'warn'   => ['var(--lv-warn)',      null,                           'dot-warn'],
+    'danger' => ['var(--lv-danger)',    'bi-exclamation-triangle-fill', 'dot-danger'],
   ];
-  [$color, $icon, $bar] = $tones[$tone] ?? $tones['ink'];
+  // صفر في كارت تحذير/خطر مش إنذار — بيتعرض هادي من غير مثلث أحمر
+  $raw = is_string($value) ? str_replace([',', ' '], '', strip_tags($value)) : $value;
+  $isZero = is_numeric($raw) && (float) $raw == 0;
+  if ($isZero && in_array($tone, ['danger', 'warn'], true)) $tone = 'muted';
+  [$color, $icon, $dot] = $tones[$tone] ?? $tones['ink'];
 @endphp
-<div class="stat h-100 d-flex flex-column"
-     style="border-inline-start:3px solid {{ $bar }}">
-  <div class="d-flex align-items-baseline gap-2">
-    @if($icon)<i class="bi {{ $icon }}" style="color:{{ $color }};font-size:.95rem" aria-hidden="true"></i>@endif
-    <div class="v num" style="color:{{ $color }}">{{ $value }}</div>
-    @if($sub)<div class="hint">{{ $sub }}</div>@endif
+<div class="stat h-100 d-flex flex-column {{ $link ? 'is-link' : '' }} {{ $isZero ? 'is-zero' : '' }}">
+  <div class="stat-head">
+    <span class="dot {{ $dot }}" aria-hidden="true"></span>
+    <div class="l">{{ $label }}</div>
   </div>
-  <div class="l">{{ $label }}</div>
-  @if($note)<div class="hint mt-1">{{ $note }}</div>@endif
+  <div class="stat-value">
+    <div class="v num" style="color:{{ $color }}">{{ $value }}</div>
+    @if($icon)<i class="bi {{ $icon }}" style="color:{{ $color }};font-size:.9rem" aria-hidden="true"></i>@endif
+    @if($sub)<div class="stat-sub">{{ $sub }}</div>@endif
+  </div>
+  @if($note)<div class="stat-note" title="{{ $note }}">{{ $note }}</div>@endif
   @if($link)
-    <a href="{{ $link[0] }}" class="hint mt-auto pt-2 d-inline-block" style="color:var(--lv-brand)">
+    <a href="{{ $link[0] }}" class="stat-link stretched-link">
       {{ $link[1] }} <i class="bi bi-arrow-left" aria-hidden="true"></i>
     </a>
   @endif

@@ -12,15 +12,13 @@
                           'to'   => now()->subMonthNoOverflow()->endOfMonth()->toDateString()],
   ];
 @endphp
-<div class="d-flex gap-2 flex-wrap align-items-center px-3 py-2"
-     style="border-bottom:1px solid var(--lv-line-soft);background:var(--lv-offwhite)">
-  <span class="hint">مدى سريع:</span>
+<div class="chip-bar">
+  <span class="hint me-1">مدى سريع:</span>
   @foreach($chips as $lbl => $range)
     @php $on = request('from') === $range['from'] && request('to') === $range['to']; @endphp
-    <a href="{{ $qs($range) }}" class="btn btn-sm py-0 {{ $on ? 'btn-plum' : 'btn-outline-secondary' }}"
-       style="font-size:.75rem">{{ $lbl }}</a>
+    <a href="{{ $qs($range) }}" class="chip {{ $on ? 'on' : '' }}" @if($on) aria-current="true" @endif>{{ $lbl }}</a>
   @endforeach
   @if(request('from') || request('to'))
-    <a href="{{ $qs([]) }}" class="btn btn-sm btn-link text-muted py-0 px-1" style="font-size:.75rem">كل التواريخ</a>
+    <a href="{{ $qs([]) }}" class="btn btn-sm btn-link py-0 px-1">كل التواريخ</a>
   @endif
 </div>

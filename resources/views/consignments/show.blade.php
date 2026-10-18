@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'كل حاجة عن الرسالة دي: مصدرها، أتوابها، رصيدها المحجوز والمتاح، وأوامر الشغل اللي اتصرفت منها')
 @section('content')
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'consign'])
@@ -9,15 +10,18 @@
   </div>
 @endforeach
 
-<div class="row g-3 mb-3">
-  <div class="col-6 col-lg-2"><div class="stat"><div class="v num">{{ number_format((float)$row->total_kg,1) }}</div><div class="l">إجمالي الوزن (كجم)</div></div></div>
-  <div class="col-6 col-lg-2"><div class="stat"><div class="v num">{{ $row->rolls_count }}</div><div class="l">عدد الأتواب</div></div></div>
-  <div class="col-6 col-lg-2"><div class="stat"><div class="v num text-danger">{{ $row->min_width_cm ?? '—' }}</div><div class="l">أقل عرض (سم) ★</div></div></div>
-  <div class="col-6 col-lg-2"><div class="stat"><div class="v num text-danger">{{ $row->avg_gsm ?? '—' }}</div><div class="l">متوسط البنشر ★</div></div></div>
-  <div class="col-6 col-lg-2"><div class="stat"><div class="v num {{ $row->hold_kg > 0 ? 'text-warning' : '' }}">{{ number_format((float)$row->hold_kg,1) }}</div><div class="l">محجوز تحت الفحص</div></div></div>
-  <div class="col-6 col-lg-2"><div class="stat"><div class="v num">{{ number_format((float)$row->remaining_kg,1) }}</div><div class="l">متاح للتشغيل (كجم)</div></div></div>
-  <div class="col-6 col-lg-2"><div class="stat"><div class="v num">{{ $row->defect_pct ?? '—' }}</div><div class="l">نسبة العيوب %</div></div></div>
-</div>
+@include('partials.summary', ['summary' => [
+  ['value' => number_format((float)$row->total_kg,1), 'label' => 'إجمالي الوزن', 'sub' => 'كجم',
+   'note' => $row->rolls_count . ' توب'],
+  ['value' => $row->min_width_cm ?? '—', 'label' => 'أقل عرض ★', 'sub' => 'سم', 'tone' => 'brand',
+   'note' => 'ده العرض اللي الماركر بيتعمل عليه'],
+  ['value' => $row->avg_gsm ?? '—', 'label' => 'متوسط البنشر ★', 'tone' => 'brand',
+   'note' => 'العيوب: ' . ($row->defect_pct !== null ? $row->defect_pct . '%' : '—')],
+  ['value' => number_format((float)$row->hold_kg,1), 'label' => 'محجوز تحت الفحص', 'sub' => 'كجم',
+   'tone' => $row->hold_kg > 0 ? 'warn' : 'ink'],
+  ['value' => number_format((float)$row->remaining_kg,1), 'label' => 'متاح للتشغيل', 'sub' => 'كجم',
+   'tone' => $row->remaining_kg > 0 ? 'ok' : 'ink'],
+]])
 
 <div class="row g-3">
   <div class="col-lg-5">

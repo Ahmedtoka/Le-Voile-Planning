@@ -1,4 +1,5 @@
 @extends('partials.desk')
+@section('purpose', 'تطلب الخامة، تحوّل الأحواض المفرج عنها لأوامر شغل، وتتابع التغطية')
 @php
   $flow='buy'; $flowStep='request';
   $intro = 'إنت بتبدأ الدورة: تطلب الخامة، وتحوّل الرسايل المفرَج عنها لأوامر شغل. الطلب بينزل للمشتريات <b>أول ما تحفظه</b> — مفيش اعتماد.';
@@ -13,6 +14,7 @@
         <span>آخر طلبات الشراء</span>
         <a href="{{ route('purchase-orders.index') }}" class="btn btn-sm btn-outline-plum py-0">الكل</a>
       </div>
+      <div class="table-responsive">
       <table class="table table-sm mb-0">
         <thead><tr><th>الطلب</th><th>الحالة</th><th>المورد</th><th>توريد متوقع</th></tr></thead>
         <tbody>
@@ -29,6 +31,7 @@
         @endforelse
         </tbody>
       </table>
+      </div>
     </div>
   </div>
   <div class="col-lg-6">
@@ -37,6 +40,7 @@
         <span>أوامر الشغل المفتوحة</span>
         <a href="{{ route('work-orders.index') }}" class="btn btn-sm btn-outline-plum py-0">الكل</a>
       </div>
+      <div class="table-responsive">
       <table class="table table-sm mb-0">
         <thead><tr><th>الأمر</th><th>المنتج</th><th>المصنع</th><th>متبقي</th></tr></thead>
         <tbody>
@@ -53,6 +57,7 @@
         @endforelse
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 </div>

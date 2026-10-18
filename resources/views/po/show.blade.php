@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'الطلب وأصنافه ومرحلته، والكمية اللي اتستلمت منه لحد دلوقتي')
 @section('content')
 @php $u = auth()->user(); @endphp
 

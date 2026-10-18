@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'المراجعة الأخيرة قبل ما القماش يبقى متاح للتشغيل — السليم للمخزن والمرفوض للمرفوضات')
 @section('content')
 @php
   $lines    = old('lines', ($preset ?? null) ?: ($row->lines?->toArray() ?? []));
@@ -217,13 +218,15 @@
       </div>
     </details>
 
-    <button class="btn btn-plum btn-sm">
+    <div class="form-actions">
+    <button class="btn btn-plum">
       <i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> استلم ونزّل المخزن
     </button>
-    <span class="hint ms-2">
+    <span class="hint">
       <i class="bi bi-info-circle" aria-hidden="true"></i>
       القماش هيبقى متاح لأوامر الشغل على طول، والكمية المستلمة هتتحدّث في طلب الشراء.
     </span>
+    </div>
   @endif
 </form>
 

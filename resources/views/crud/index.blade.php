@@ -3,8 +3,8 @@
 
 <div class="card">
   <div class="card-header d-flex align-items-center gap-2 flex-wrap">
-    <span>{{ $title }} <span class="hint">({{ $rows->total() }})</span></span>
-    <form class="d-flex gap-2 ms-auto" method="get">
+    <span class="d-inline-flex align-items-center gap-2">{{ $title }} <span class="pill pill-muted num">{{ number_format($rows->total()) }}</span></span>
+    <form class="d-flex gap-2 flex-wrap ms-auto align-items-center" method="get">
       <input name="q" value="{{ request('q') }}" class="form-control form-control-sm" style="width:200px" placeholder="بحث…">
       @foreach($fields as $f)
         @if(!empty($f['filter']))
@@ -19,6 +19,9 @@
       @if(request('sort'))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
       @if(request('dir'))<input type="hidden" name="dir" value="{{ request('dir') }}">@endif
       <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
+      @if(collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty())
+        <a href="{{ url()->current() }}" class="btn btn-sm btn-link p-0">مسح</a>
+      @endif
     </form>
     <a href="{{ route($routeName.'.create') }}" class="btn btn-sm btn-plum">
       <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ $singular }} جديد
@@ -45,13 +48,13 @@
       <tbody>
       @forelse($rows as $i => $row)
         <tr>
-          <td class="text-muted">{{ $rows->firstItem() + $i }}</td>
+          <td class="text-muted num">{{ $rows->firstItem() + $i }}</td>
           @foreach($fields as $f)
             @if(!empty($f['list']))
-              <td>
-                @php $val = $row->{$f['name']}; @endphp
+              @php $val = $row->{$f['name']}; @endphp
+              <td @class(['num' => in_array($f['type'] ?? '', ['number', 'date'], true)])>
                 @if(($f['type'] ?? '') === 'checkbox')
-                  <span class="badge bg-{{ $val ? 'success' : 'secondary' }}">{{ $val ? 'نعم' : 'لا' }}</span>
+                  <span class="status {{ $val ? 'is-ok' : '' }}">{{ $val ? 'نعم' : 'لا' }}</span>
                 @elseif(!empty($f['relation']))
                   {{ $row->{$f['relation']}->name ?? '—' }}
                 @elseif(($f['type'] ?? '') === 'select')
@@ -66,7 +69,7 @@
               </td>
             @endif
           @endforeach
-          <td class="text-nowrap">
+          <td class="text-nowrap text-end"><div class="row-actions">
             <a href="{{ route($routeName.'.edit', $row->id) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="تعديل" title="تعديل"><i class="bi bi-pencil" aria-hidden="true"></i></a>
             @if($routeName === 'product-models')
               <a href="{{ route('product-models.sizes', $row->id) }}" class="btn btn-sm btn-outline-secondary py-0" title="المقاسات والإكسسوارات"><i class="bi bi-list-check" aria-hidden="true"></i></a>
@@ -78,7 +81,7 @@
                 <button class="btn btn-sm btn-outline-danger py-0" aria-label="حذف" title="حذف"><i class="bi bi-trash" aria-hidden="true"></i></button>
               </form>
             @endif
-          </td>
+          </div></td>
         </tr>
       @empty
         <tr><td colspan="{{ collect($fields)->filter(fn ($f) => !empty($f['list']))->count() + 2 }}">

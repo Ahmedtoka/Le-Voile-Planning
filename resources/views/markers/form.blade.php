@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('purpose', 'الباترونست: طول الفرشة وعدد القطع والموديلات على عرض القماش')
 @section('content')
 @php $lines = old('lines', $row->lines?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
 
@@ -73,9 +74,13 @@
     </div>
   </div>
 
-  @if($editable)<button class="btn btn-plum btn-sm"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
+  @if($editable || ($mode==='edit' && $row->isEditable()))
+  <div class="form-actions">
+  @if($editable)<button class="btn btn-plum"><i class="bi bi-save" aria-hidden="true"></i> حفظ</button>@endif
   @if($mode==='edit' && $row->isEditable())
-    <button type="button" class="btn btn-success btn-sm" onclick="if(confirm('الماركر هيبقى متاح لأوامر الشغل. متأكد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> اعتمد الماركر للتشغيل</button>
+    <button type="button" class="btn btn-success" onclick="if(confirm('الماركر هيبقى متاح لأوامر الشغل. متأكد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> اعتمد الماركر للتشغيل</button>
+  @endif
+  </div>
   @endif
 </form>
 @if($mode==='edit' && $row->isEditable())
