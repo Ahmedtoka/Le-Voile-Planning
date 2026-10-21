@@ -129,7 +129,7 @@
     <div class="card-header">المنتجات والمقاسات <span class="hint">— ابحث بالكود أو الاسم واختار الموديلات اللي هتتشغل، كل موديل بيبقى سطر</span></div>
     <div class="card-body pb-2">
       @php $pickedModels = collect($prods)->pluck('product_model_id')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(); @endphp
-      @include('partials.model_picker', ['name' => 'picked_models', 'models' => $models, 'picked' => $pickedModels, 'onchange' => 'LVW.sync()'])
+      @include('partials.model_picker', ['name' => 'picked_models', 'models' => $models, 'picked' => $pickedModels, 'onchange' => 'LVW.sync()', 'allowNew' => true])
       <div class="hint mt-2">
         لكل موديل اكتب <b>قطعه في الفرشة</b> (6 تلبيسة + 6 كويتي مثلًا = نفس إجمالي قطع الفرشة اللي فوق) —
         والسيستم هيوزّع الاستهلاك الفعلي على كل موديل بنسبة متوسطه التاريخي، وهيحسب كمية كل موديل من الرِقّات تلقائيًا.

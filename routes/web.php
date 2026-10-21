@@ -68,6 +68,10 @@ Route::middleware('auth.user')->group(function () {
         CrudRoutes::make('accessories',    AccessoryController::class);
         CrudRoutes::make('product-models', ProductModelController::class);
 
+        // إضافة موديل سريعة من شاشات التخطيط (طلب تحضير / ماركر / أمر شغل)
+        Route::post('product-models/quick', [ProductModelController::class, 'quickStore'])
+            ->middleware('can.do:master.manage,prep.request,marker.manage,wo.manage,po.request')->name('product-models.quick');
+
         // مقاسات وإكسسوارات الموديل
         Route::get('product-models/{id}/sizes', [ProductModelController::class, 'sizes'])
             ->middleware('can.do:master.view')->name('product-models.sizes');

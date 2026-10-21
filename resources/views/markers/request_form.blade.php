@@ -21,19 +21,7 @@
       </div>
       <div class="row g-3">
         <div class="col-md-6"><label class="form-label req">الرسالة (الحوض)</label>
-          <input class="form-control form-control-sm mb-1" placeholder="فلتر: كود / خامة / لون" oninput="LVM.filter(this.value)">
-          <select name="consignment_id" id="cn" class="form-select form-select-sm" required onchange="LVM.pick()">
-            <option value="">— اختر رسالة —</option>
-            @foreach($consignments as $c)
-              <option value="{{ $c->id }}" data-w="{{ $c->min_width_cm }}" data-g="{{ $c->avg_gsm }}" data-break="{{ $c->has_color_break ? 1 : 0 }}"
-                      data-note="{{ $c->color_break_note }}"
-                      data-search="{{ strtolower($c->consignment_no . ' ' . ($c->fabricType?->name ?? '') . ' ' . ($c->color?->code ?? '') . ' ' . ($c->color?->name ?? '')) }}"
-                      @selected(old('consignment_id', $row->consignment_id) == $c->id)>
-                {{ $c->consignment_no }} — {{ $c->fabricType?->name }} · {{ $c->color?->code }}
-                (متاح {{ rtrim(rtrim(number_format((float)$c->remaining_kg,1),'0'),'.') }} كجم)
-              </option>
-            @endforeach
-          </select>
+          @include('partials.consignment_picker', ['name' => 'consignment_id', 'consignments' => $consignments, 'value' => old('consignment_id', $row->consignment_id), 'onchange' => 'LVM.pick()'])
           <div id="breakWarn" class="alert alert-danger py-1 mt-1 small" hidden></div>
         </div>
         <div class="col-md-2"><label class="form-label">أقل عرض (سم)</label>
@@ -48,7 +36,7 @@
         <div class="col-12">
           <label class="form-label req">الموديلات المطلوبة في الفرشة <span class="hint">— علّم كل الموديلات اللي عايز الماركر يجمعها</span></label>
           <div id="modelsBox">
-            @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', $picked ?? []), 'onchange' => 'LVM.suggest()'])
+            @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', $picked ?? []), 'onchange' => 'LVM.suggest()', 'allowNew' => true])
           </div>
         </div>
         <div class="col-md-6"><label class="form-label">المقاسات / تفاصيل</label>
@@ -79,10 +67,10 @@
 @push('scripts')
 <script>
 window.LVM = (function () {
-  const sel = document.getElementById('cn');
+  const sel = document.querySelector('[name=consignment_id]');
   let timer = null;
   function pick() {
-    const o = sel.selectedOptions[0];
+    const o = sel.value ? sel : null;
     document.getElementById('fw').textContent = o && o.dataset.w ? o.dataset.w : '—';
     document.getElementById('fg').textContent = o && o.dataset.g ? o.dataset.g : '—';
     const bw = document.getElementById('breakWarn');
@@ -90,10 +78,7 @@ window.LVM = (function () {
     if (!bw.hidden) bw.textContent = 'الرسالة دي فيها فواصل / اختلاف لون: ' + (o.dataset.note || '') + ' — خد بالك في التعشيق.';
     suggest();
   }
-  function filter(v) {
-    v = (v || '').toLowerCase().trim();
-    [...sel.options].forEach(o => { if (!o.value) return; o.hidden = v && !o.dataset.search.includes(v); });
-  }
+  function filter() {}
   function suggest() {
     clearTimeout(timer);
     timer = setTimeout(async () => {

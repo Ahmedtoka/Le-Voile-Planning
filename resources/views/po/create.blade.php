@@ -36,7 +36,7 @@
 
         <div class="col-12">
           <label class="form-label">الخامة دي لأنهي موديلات؟ <span class="hint">(اختياري — علّم كل الموديلات اللي بتستخدمها)</span></label>
-          @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', [])])
+          @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', []), 'allowNew' => true])
           <div class="hint">بيظهر للمشتريات والحسابات وبيتحط على طلب الماركر بعدين</div>
         </div>
       </div>

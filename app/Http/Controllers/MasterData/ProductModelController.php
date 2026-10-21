@@ -43,6 +43,26 @@ class ProductModelController extends BaseCrudController
         ];
     }
 
+    /** إضافة موديل بالاسم من شاشة البحث — الكود يتولّد لو ما اتكتبش */
+    public function quickStore(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:191'],
+            'code' => ['nullable', 'string', 'max:40', 'unique:product_models,code'],
+        ], [], ['name' => 'اسم الموديل', 'code' => 'الكود']);
+
+        $code = trim((string) ($data['code'] ?? ''));
+        if ($code === '') {
+            $n = (int) ProductModel::max('id') + 1;
+            do { $code = 'MDL-' . str_pad((string) $n++, 3, '0', STR_PAD_LEFT); } while (ProductModel::where('code', $code)->exists());
+        }
+
+        $m = ProductModel::create(['code' => $code, 'name' => $data['name'], 'pcs_per_dozen' => 12, 'is_active' => true]);
+        \App\Services\ActivityLogger::log('created', $m, 'موديل جديد من شاشة البحث: ' . $m->label);
+
+        return response()->json(['id' => $m->id, 'label' => $m->label]);
+    }
+
     /** شاشة مقاسات الموديل + قائمة الإكسسوارات (BOM) */
     public function sizes($id)
     {

@@ -8,8 +8,9 @@
   $pkId     = 'mp_' . preg_replace('/[^a-z0-9]/i', '', $pkName);
   $pkPicked = array_map('intval', $picked ?? []);
   $pkChange = $onchange ?? '';
+  $pkNew    = !empty($allowNew) && Route::has('product-models.quick');
 @endphp
-<div class="model-picker" id="{{ $pkId }}" data-name="{{ $pkName }}" data-onchange="{{ $pkChange }}">
+<div class="model-picker" id="{{ $pkId }}" data-name="{{ $pkName }}" data-onchange="{{ $pkChange }}" data-new="{{ $pkNew ? route('product-models.quick') : '' }}">
   <div class="position-relative">
     <input type="text" class="form-control form-control-sm mp-search" autocomplete="off"
            placeholder="اكتب كود الموديل أو اسمه (3 حروف على الأقل)…">
@@ -41,6 +42,21 @@
     var data  = JSON.parse(box.querySelector('.mp-data').textContent);
     var name  = box.dataset.name, onchange = box.dataset.onchange;
     var input = box.querySelector('.mp-search'), res = box.querySelector('.mp-results');
+    var newUrl = box.dataset.new || '';
+    var CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    /* موديل مش موجود؟ يتحفظ في البيانات الأساسية على طول ويتضاف للاختيار */
+    async function createNew(name) {
+      if (!newUrl) return;
+      var code = prompt('كود الموديل الجديد «' + name + '» (سيبه فاضي والسيستم يولّد كود):', '');
+      if (code === null) return;
+      var r = await fetch(newUrl, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json'},
+                                   body: JSON.stringify({name: name, code: code})});
+      var j = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(j.message || 'ما اتضافش'); return; }
+      data.push({id: j.id, label: j.label});
+      add({id: j.id, label: j.label}); input.value = ''; render(''); input.focus();
+    }
     var chips = box.querySelector('.mp-chips'), empty = box.querySelector('.mp-empty');
     var active = -1;
 
@@ -68,7 +84,13 @@
       if (n.length < 3) { res.hidden = true; res.innerHTML = ''; return; }
       var have = picked();
       var hits = data.filter(d => !have.includes(d.id) && norm(d.label).includes(n)).slice(0, 30);
-      if (!hits.length) { res.innerHTML = '<div class="list-group-item small text-muted">مفيش موديل بالاسم أو الكود ده</div>'; res.hidden = false; return; }
+      if (!hits.length) {
+        res.innerHTML = '<div class="list-group-item small text-muted">مفيش موديل بالاسم أو الكود ده</div>'
+          + (newUrl ? '<button type="button" class="list-group-item list-group-item-action py-1 small text-success mp-new"><i class="bi bi-plus-circle"></i> ضيف «' + q.replace(/</g, '&lt;') + '» كموديل جديد</button>' : '');
+        res.hidden = false;
+        var nb = res.querySelector('.mp-new'); if (nb) nb.addEventListener('mousedown', function (e) { e.preventDefault(); createNew(q.trim()); });
+        return;
+      }
       res.innerHTML = hits.map((h, i) => '<button type="button" class="list-group-item list-group-item-action py-1 small" data-i="' + i + '">' + h.label + '</button>').join('');
       res.hidden = false; active = -1;
       res.querySelectorAll('button').forEach((b, i) => b.addEventListener('mousedown', function (e) { e.preventDefault(); add(hits[i]); input.value = ''; render(''); input.focus(); }));
