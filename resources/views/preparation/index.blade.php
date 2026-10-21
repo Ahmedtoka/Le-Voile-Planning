@@ -88,6 +88,22 @@
           </td>
         </tr>
 
+      @empty
+        <tr><td colspan="12">
+            <div class="empty-state">
+              <i class="bi bi-inbox ico" aria-hidden="true"></i>
+              <div class="t">مفيش طلبات تحضير. التخطيط بيطلبها من شاشة الرسالة أو من هنا.</div>
+            </div>
+          </td></tr>
+      @endforelse
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer bg-white">{{ $rows->links() }}</div>
+</div>
+
+{{-- بوب أبات الوزن برّه الجدول — جوه <tbody> المتصفح بيطلّع المحتوى --}}
+@foreach($rows as $r)
         @if($r->status === 'open' && $canWeigh)
         <div class="modal fade" id="w{{ $r->id }}"><div class="modal-dialog"><div class="modal-content">
           <form method="post" action="{{ route('preparation-requests.weigh', $r) }}">@csrf
@@ -134,17 +150,6 @@
           </form>
         </div></div></div>
         @endif
-      @empty
-        <tr><td colspan="12">
-            <div class="empty-state">
-              <i class="bi bi-inbox ico" aria-hidden="true"></i>
-              <div class="t">مفيش طلبات تحضير. التخطيط بيطلبها من شاشة الرسالة أو من هنا.</div>
-            </div>
-          </td></tr>
-      @endforelse
-      </tbody>
-    </table>
-  </div>
-  <div class="card-footer bg-white">{{ $rows->links() }}</div>
-</div>
+@endforeach
+
 @endsection
