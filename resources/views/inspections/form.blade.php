@@ -16,59 +16,43 @@
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'inspection'])
 
-{{-- ① سامري الرسالة — كله Labels وكله لينكات --}}
+{{-- ① سامري الرسالة — نصين: الرسالة نفسها | مصدرها (الورق والطلب). كله Labels وكله لينكات --}}
 @if($c)
-  <div class="card mb-3" style="border-color:var(--lv-soft)">
-    <div class="card-body py-2">
-      <div class="row g-2 align-items-start">
-        <div class="col-md-3 col-6">
-          <div class="hint">الرسالة</div>
-          <a href="{{ route('consignments.show', $c) }}" class="fw-bold num" style="font-size:1.1rem;color:var(--lv-brand-ink)">{{ $c->consignment_no }}</a>
-          <div class="hint">{{ $c->fabricType?->name ?? '—' }} · {{ $c->color?->label ?? $c->color?->code ?? '—' }}</div>
+  @php $over = $st ? (float) $st['received'] - (float) $st['ordered'] : 0; @endphp
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>الرسالة</span>
+          <a href="{{ route('consignments.show', $c) }}" class="fw-bold num" style="font-size:1.05rem">{{ $c->consignment_no }}</a>
         </div>
-        <div class="col-md-3 col-6">
-          <div class="hint">وصل في الرسالة دي</div>
-          <b class="num">{{ lv_kg($c->total_kg) }}</b>
-          <div class="hint num">{{ (int) $c->rolls_count }} توب</div>
-        </div>
-        <div class="col-md-3 col-6">
-          <div class="hint">تاريخ الوصول</div>
-          <b class="num">{{ $c->arrival_date?->format('Y-m-d') }}</b>
-        </div>
-        <div class="col-md-3 col-6">
-          <div class="hint">المورد</div>
-          <b>{{ $c->supplier?->name ?? '—' }}</b>
-        </div>
-
-        <div class="col-md-3 col-6">
-          <div class="hint">إذن الإضافة</div>
-          @if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="fw-bold num">{{ $sa->doc_no }}</a>@else <span class="hint">—</span> @endif
-        </div>
-        <div class="col-md-3 col-6">
-          <div class="hint">مسلسل إذن الإضافة (الورقي)</div>
-          @if($sa)<a href="{{ route('stock-additions.print', $sa) }}" target="_blank" class="fw-bold num" title="يفتح الورقة للطباعة">{{ $sa->paper_serial ?: '—' }}</a>@else <span class="hint">—</span> @endif
-        </div>
-        <div class="col-md-3 col-6">
-          <div class="hint">إذن المورد</div>
-          @if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="fw-bold num" title="يفتح إذن الإضافة">{{ $sa->supplier_doc_no ?: '—' }}</a>@else <span class="hint">—</span> @endif
-        </div>
-        <div class="col-md-3 col-6">
-          <div class="hint">نوع الاستلام</div>
-          <b>{{ $sa?->receipt_type === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</b>
-        </div>
-
-        <div class="col-md-3 col-6">
-          <div class="hint">طلب الشراء</div>
-          @if($c->purchaseOrder)
-            <a href="{{ route('purchase-orders.edit', $c->purchaseOrder) }}" class="fw-bold num">{{ $c->purchaseOrder->po_no }}</a>
-          @else <span class="hint">بدون طلب</span> @endif
-        </div>
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><th style="width:42%">الصنف · اللون</th><td>{{ $c->fabricType?->name ?? '—' }} · {{ $c->color?->label ?? $c->color?->code ?? '—' }}</td></tr>
+            <tr><th>وصل في الرسالة دي</th><td class="num fw-bold">{{ lv_kg($c->total_kg) }} <span class="hint">· {{ (int) $c->rolls_count }} توب</span></td></tr>
+            <tr><th>تاريخ الوصول</th><td class="num">{{ $c->arrival_date?->format('Y-m-d') }}</td></tr>
+            <tr><th>نوع الاستلام</th><td>{{ $sa?->receipt_type === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</td></tr>
+            <tr><th>المخزن</th><td>{{ $c->warehouse?->name ?? '—' }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">مصدر الرسالة</div>
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><th style="width:42%">المورد</th><td>{{ $c->supplier?->name ?? '—' }}</td></tr>
+            <tr><th>إذن المورد</th><td>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="fw-bold num" title="يفتح إذن الإضافة">{{ $sa->supplier_doc_no ?: '—' }}</a>@else — @endif</td></tr>
+            <tr><th>إذن الإضافة</th><td>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="fw-bold num">{{ $sa->doc_no }}</a> <span class="hint">· {{ $sa->doc_date?->format('Y-m-d') }} · {{ $sa->creator?->name }}</span>@else — @endif</td></tr>
+            <tr><th>مسلسل إذن الإضافة (الورقي)</th><td>@if($sa)<a href="{{ route('stock-additions.print', $sa) }}" target="_blank" class="fw-bold num" title="يفتح الورقة للطباعة">{{ $sa->paper_serial ?: '—' }}</a>@else — @endif</td></tr>
+            <tr><th>طلب الشراء</th><td>@if($c->purchaseOrder)<a href="{{ route('purchase-orders.edit', $c->purchaseOrder) }}" class="fw-bold num">{{ $c->purchaseOrder->po_no }}</a> <span class="hint">· {{ $c->purchaseOrder->requester?->name }}</span>@else <span class="hint">بدون طلب</span> @endif</td></tr>
+          </tbody>
+        </table>
         @if($st)
-          <div class="col-md-9 col-12">
-            @php $over = (float) $st['received'] - (float) $st['ordered']; @endphp
-            <div class="p-2 rounded d-flex flex-wrap gap-4 align-items-center"
-                 style="background:{{ $st['left'] > 0.0001 ? 'var(--lv-warn-bg)' : ($over > 0.0001 ? 'var(--lv-danger-bg)' : 'var(--lv-ok-bg)') }};border:1px solid var(--lv-line)">
-              <span class="hint">الصنف ده ({{ $c->fabricType?->name }} · {{ $c->color?->code }}) على الطلب:</span>
+          <div class="card-footer py-2" style="background:{{ $st['left'] > 0.0001 ? 'var(--lv-warn-bg)' : ($over > 0.0001 ? 'var(--lv-danger-bg)' : 'var(--lv-ok-bg)') }}">
+            <div class="hint">الصنف ده على الطلب</div>
+            <div class="d-flex flex-wrap gap-3 align-items-center">
               <span>مطلوب <b class="num">{{ lv_qty($st['ordered'], $st['unit']) }}</b></span>
               @if($st['left'] > 0.0001)
                 <span>وصل لحد دلوقتي <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
@@ -76,7 +60,7 @@
               @elseif($over > 0.0001)
                 <span>وصل <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
                 <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-                  زيادة <b class="num">{{ lv_qty($over, $st['unit']) }}</b> ({{ lv_num($over / max(0.0001, (float) $st['ordered']) * 100, 1) }}%) — جوه نسبة الزيادة المسموحة {{ lv_num($st['line']->tolerance_pct, 2) }}%</span>
+                  زيادة <b class="num">{{ lv_qty($over, $st['unit']) }}</b> ({{ lv_num($over / max(0.0001, (float) $st['ordered']) * 100, 1) }}%) — جوه نسبة الزيادة {{ lv_num($st['line']->tolerance_pct, 2) }}%</span>
               @else
                 <span>وصل <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
                 <span class="text-success fw-bold"><i class="bi bi-check2-circle" aria-hidden="true"></i> الصنف اكتمل على الطلب بالكامل</span>
