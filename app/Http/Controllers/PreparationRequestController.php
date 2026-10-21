@@ -21,7 +21,7 @@ class PreparationRequestController extends Controller
     public function index(Request $request)
     {
         $u = auth()->user();
-        $q = PreparationRequest::with(['consignment.fabricType', 'consignment.color', 'factory', 'requester', 'weigher', 'workOrder', 'models'])
+        $q = PreparationRequest::with(['consignment.fabricType', 'consignment.color', 'factory', 'requester', 'weigher', 'workOrder', 'models', 'markerRequest'])
             ->latest('id');
 
         if ($s = $request->get('status'))            $q->where('status', $s);
@@ -141,17 +141,50 @@ class PreparationRequestController extends Controller
 
         ActivityLogger::log('created', $pr, 'طلب تحضير ' . $pr->doc_no . ' على الرسالة ' . $c->consignment_no);
 
-        // الطلب الموازي للباترونست — من نفس الشاشة (الميتينج)
+        // الطلب الموازي للباترونست — بيتعمل لوحده مع نفس الحفظ (الميتينج: الاتنين في نفس الوقت)
+        $markerMsg = '';
         if ($request->boolean('also_marker')) {
-            return redirect()->route('markers.requests.create', [
-                'consignment_id'         => $c->id,
-                'preparation_request_id' => $pr->id,
-                'models'                 => $modelIds,
-            ])->with('success', 'اتسجل طلب التحضير ' . $pr->doc_no . ' ونزل للمخزن — كمّل طلب الماركر للباترونست.');
+            if (!$c->min_width_cm) {
+                $markerMsg = ' · طلب الماركر ما اتعملش: الرسالة ملهاش أقل عرض من الفحص.';
+            } elseif (!$modelIds) {
+                $markerMsg = ' · طلب الماركر ما اتعملش: اختار الموديلات الأول.';
+            } else {
+                $mr = $this->createMarkerRequest($pr, $c, $modelIds);
+                $markerMsg = ' · واتعمل طلب الماركر ' . $mr->doc_no . ' ونزل للباترونست.';
+            }
         }
 
         return redirect()->route('preparation-requests.index')
-            ->with('success', 'اتسجل طلب التحضير ' . $pr->doc_no . ' واتحجزت الكمية على الرسالة — المخزن هيوزن ويرد.');
+            ->with('success', 'اتسجل طلب التحضير ' . $pr->doc_no . ' واتحجزت الكمية على الرسالة — المخزن هيوزن ويرد.' . $markerMsg);
+    }
+
+    /** طلب الماركر الموازي: نفس الرسالة والموديلات، العرض والبنشر من الجودة */
+    private function createMarkerRequest(PreparationRequest $pr, Consignment $c, array $modelIds): \App\Models\MarkerRequest
+    {
+        $names = ProductModel::whereIn('id', $modelIds)->orderBy('name')->get()->pluck('label')->implode(' + ');
+
+        $mr = \App\Models\MarkerRequest::create([
+            'doc_no'                 => DocNumber::next('marker_request', 'marker_requests'),
+            'doc_date'               => now()->toDateString(),
+            'consignment_id'         => $c->id,
+            'preparation_request_id' => $pr->id,
+            'fabric_width_cm'        => $c->min_width_cm,
+            'avg_gsm'                => $c->avg_gsm,
+            'requested_models'       => $names,
+            'copies'                 => 2,
+            'notes'                  => $pr->notes ? 'من طلب التحضير ' . $pr->doc_no . ' — ' . $pr->notes : 'من طلب التحضير ' . $pr->doc_no,
+            'status'                 => 'open',
+            'created_by'             => auth()->id(),
+        ]);
+        $mr->models()->sync($modelIds);
+        $pr->update(['marker_request_id' => $mr->id]);
+
+        Notifier::broadcastToRole('patternist', 'marker_request', 'طلب ماركر جديد',
+            $mr->doc_no . ' — الرسالة ' . $c->consignment_no . ' · عرض ' . $c->min_width_cm . ' سم · ' . $names,
+            route('markers.requests'), 'info');
+        ActivityLogger::log('created', $mr, 'طلب ماركر ' . $mr->doc_no . ' اتعمل مع طلب التحضير ' . $pr->doc_no);
+
+        return $mr;
     }
 
     /** المخزن يرد بالوزن الفعلي */

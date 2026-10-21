@@ -126,17 +126,13 @@
 
   {{-- ③ المنتجات والمقاسات --}}
   <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between">
-      <span>المنتجات والمقاسات</span>
-      <button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('prodTpl','products')">
-        <i class="bi bi-plus-lg" aria-hidden="true"></i> موديل
-      </button>
-    </div>
-    <div class="card-body pb-0">
-      <div class="hint mb-2">
-        <b>لازم سطر واحد على الأقل.</b> اكتب <b>قطع الموديل في الفرشة</b> (6 تلبيسة + 6 كويتي مثلًا =
-        نفس إجمالي قطع الفرشة اللي فوق) — والسيستم هيوزّع الاستهلاك الفعلي على كل موديل بنسبة
-        متوسطه التاريخي بدل ما يعمّم رقم واحد، وهيحسب كمية كل موديل من الرِقّات تلقائيًا.
+    <div class="card-header">المنتجات والمقاسات <span class="hint">— ابحث بالكود أو الاسم واختار الموديلات اللي هتتشغل، كل موديل بيبقى سطر</span></div>
+    <div class="card-body pb-2">
+      @php $pickedModels = collect($prods)->pluck('product_model_id')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(); @endphp
+      @include('partials.model_picker', ['name' => 'picked_models', 'models' => $models, 'picked' => $pickedModels, 'onchange' => 'LVW.sync()'])
+      <div class="hint mt-2">
+        لكل موديل اكتب <b>قطعه في الفرشة</b> (6 تلبيسة + 6 كويتي مثلًا = نفس إجمالي قطع الفرشة اللي فوق) —
+        والسيستم هيوزّع الاستهلاك الفعلي على كل موديل بنسبة متوسطه التاريخي، وهيحسب كمية كل موديل من الرِقّات تلقائيًا.
         سيب الكمية فاضية والسيستم هيحسبها.
       </div>
     </div>
@@ -150,7 +146,6 @@
         </tr></thead>
         <tbody id="products">
           @foreach($prods as $i => $l) @include('workorders.product_row', ['i'=>$i,'l'=>$l]) @endforeach
-          @if(!count($prods)) @include('workorders.product_row', ['i'=>0,'l'=>[]]) @endif
         </tbody>
       </table>
     </div>
@@ -206,6 +201,47 @@
 
 @push('scripts')
 <script>
+/* الموديلات: اختيار من البحث ⇒ سطر لكل موديل (وشيل الـ chip بيشيل السطر) */
+window.LVW = (function () {
+  function picked() {
+    return [...document.querySelectorAll('#mp_pickedmodels .mp-chip')].map(c => ({id: c.dataset.id, label: c.childNodes[0].textContent.trim()}));
+  }
+  function sync() {
+    var body = document.getElementById('products');
+    var have = [...body.querySelectorAll('tr.prod-row')];
+    var want = picked();
+    // شيل السطور اللي اتشالت من الاختيار
+    have.forEach(tr => { if (!want.find(w => w.id === tr.dataset.model)) tr.remove(); });
+    // ضيف السطور الجديدة
+    want.forEach(w => {
+      if (body.querySelector('tr.prod-row[data-model="' + w.id + '"]')) return;
+      var tr = LV.add('prodTpl', 'products');
+      tr.classList.add('prod-row'); tr.dataset.model = w.id;
+      tr.querySelector('.p-model').value = w.id;
+      tr.querySelector('.p-label').textContent = w.label;
+    });
+    LV.renumber('products');
+    // اسم المنتج تلقائي من الموديلات لو فاضي
+    var t = document.querySelector('[name=product_title]');
+    if (t && (!t.value || t.dataset.auto === '1')) {
+      t.value = want.map(w => w.label.replace(/^[^—]+—\s*/, '')).join(' + '); t.dataset.auto = '1';
+    }
+  }
+  function removeRow(btn) {
+    var tr = btn.closest('tr'), id = tr.dataset.model;
+    var chip = document.querySelector('#mp_pickedmodels .mp-chip[data-id="' + id + '"]');
+    if (chip) chip.remove();
+    tr.remove(); LV.renumber('products');
+    var empty = document.querySelector('#mp_pickedmodels .mp-empty'); if (empty) empty.hidden = picked().length > 0;
+    var t = document.querySelector('[name=product_title]');
+    if (t && t.dataset.auto === '1') t.value = picked().map(w => w.label.replace(/^[^—]+—\s*/, '')).join(' + ');
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    var t = document.querySelector('[name=product_title]'); if (t) t.addEventListener('input', () => t.dataset.auto = '0');
+  });
+  return {sync, removeRow};
+})();
+
 const LVF = (function () {
   const CSRF = document.querySelector('meta[name="csrf-token"]').content;
   const nf = n => n === null || n === undefined ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 4});

@@ -29,100 +29,118 @@
   بص عليها، ولو تمام دوس «استلم» والقماش يبقى متاح لأوامر الشغل على طول.
 </div>
 
-{{-- ① رأس الرسالة --}}
+{{-- ① السامري — جدول عريض في النص: الرسالة | إذن الإضافة | طلب الشراء | الفحص | المعمل. كله Labels وكله لينكات --}}
+@php
+  $st  = $c->orderLineStatus();
+  $over = $st ? (float) $st['received'] - (float) $st['ordered'] : 0;
+  $est = $insp?->weightEstimate();
+@endphp
+<style>
+  .sum-sec{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start;padding:10px 0;border-bottom:1px dashed var(--lv-line)}
+  .sum-sec:last-child{border-bottom:0}
+  .sum-sec .t{font-weight:700;color:var(--lv-brand-ink);padding-top:4px;font-size:var(--fs-sm)}
+  .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;text-align:center;font-size:var(--fs-sm)}
+  .sum-grid .k{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.2}
+  .sum-grid .v{font-weight:600;font-size:var(--fs-sm)}
+  .sum-grid a.v{font-size:var(--fs-sm)}
+  @media (max-width:768px){.sum-sec{grid-template-columns:1fr}}
+</style>
+
+{{-- الأرقام اللي هتدخل المخزن — كبيرة في الأول --}}
 <div class="card mb-3">
-  <div class="card-body py-3 d-flex gap-4 flex-wrap align-items-center">
-    <div>
-      <div class="fw-bold num" style="font-size:1.35rem;color:var(--lv-brand-ink)">{{ $c->consignment_no }}</div>
-      <div class="hint">{{ $c->fabricType?->name ?? '—' }} · {{ $c->color?->label ?? $c->color?->code ?? '—' }}</div>
-    </div>
-    <div class="ms-auto d-flex gap-4 flex-wrap text-center">
-      <div><div class="hint">الكمية</div><b class="num">{{ lv_kg($c->total_kg) }}</b></div>
-      <div><div class="hint">الأتواب</div><b class="num">{{ (int) $c->rolls_count }} توب</b></div>
-      <div><div class="hint">أقل عرض</div><b class="num text-danger">{{ $c->min_width_cm ? lv_num($c->min_width_cm, 2) . ' سم' : '—' }}</b></div>
-      <div><div class="hint">البنشر</div><b class="num">{{ $c->avg_gsm ? lv_num($c->avg_gsm, 2) . ' جم/م²' : '—' }}</b></div>
+  <div class="card-body py-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <div class="hint">الرسالة</div>
+        <a href="{{ route('consignments.show', $c) }}" class="fw-bold num" style="font-size:1.35rem;color:var(--lv-brand-ink)">{{ $c->consignment_no }}</a>
+        <div class="hint">{{ $c->fabricType?->name ?? '—' }} · {{ $c->color?->label ?? $c->color?->code ?? '—' }}</div>
+      </div>
+      <div class="d-flex gap-4 flex-wrap text-center">
+        <div><div class="hint">الكمية اللي هتدخل</div><b class="num" style="font-size:1.25rem">{{ lv_kg($c->total_kg) }}</b></div>
+        <div><div class="hint">الأتواب</div><b class="num" style="font-size:1.25rem">{{ (int) $c->rolls_count }}</b></div>
+        <div><div class="hint">أقل عرض</div><b class="num text-danger" style="font-size:1.25rem">{{ $c->min_width_cm ? lv_num($c->min_width_cm, 2) . ' سم' : '—' }}</b></div>
+        <div><div class="hint">البنشر</div><b class="num" style="font-size:1.25rem">{{ $c->avg_gsm ? lv_num($c->avg_gsm, 2) : '—' }} <span class="hint">جم/م²</span></b></div>
+      </div>
     </div>
   </div>
 </div>
 
-{{-- ② كل اللي حصل على الرسالة دي — Labels --}}
-<div class="row g-3 mb-3">
-  <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header">مصدر الرسالة</div>
-      <table class="table table-sm mb-0">
-        <tbody>
-          <tr><th style="width:45%">المورد</th><td>{{ $c->supplier?->name ?? '—' }}</td></tr>
-          <tr><th>طلب الشراء</th>
-            <td>
-              @if($po)
-                <a href="{{ route('purchase-orders.edit',$po) }}" class="num">{{ $po->po_no }}</a>
-                <span class="hint">· توريد {{ $po->delivery_date?->format('Y-m-d') ?? '—' }}</span>
-              @else — @endif
-            </td></tr>
-          <tr><th>إذن الإضافة</th>
-            <td>
-              @if($sa)
-                <a href="{{ route('stock-additions.edit',$sa) }}" class="num">{{ $sa->doc_no }}</a>
-                <span class="hint">· {{ $sa->doc_date?->format('Y-m-d') }}{{ $sa->paper_serial ? ' · مسلسل ورقي ' . $sa->paper_serial : '' }}</span>
-              @else — @endif
-            </td></tr>
-          <tr><th>رقم إذن المورد</th>
-            <td>@include('partials.supplier_doc', ['sa' => $sa ?: $c?->sourceAddition()])</td></tr>
-          <tr><th>المخزن</th><td>{{ $c->warehouse?->name ?? '—' }}</td></tr>
-          <tr><th>تاريخ الوصول</th><td class="num">{{ $c->arrival_date?->format('Y-m-d') ?? '—' }}</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+<div class="card mb-3" style="border-color:var(--lv-soft)">
+  <div class="card-body py-1">
 
-  <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header">اللي الجودة عملته</div>
-      <table class="table table-sm mb-0">
-        <tbody>
-          <tr><th style="width:45%">تقرير الفحص</th>
-            <td>
-              @if($insp)
-                <a href="{{ route('inspections.edit',$insp) }}" class="num">{{ $insp->doc_no }}</a>
-                <span class="badge bg-{{ $insp->result === 'accepted' ? 'success' : 'warning' }}">{{ $insp->result_name }}</span>
-                @if($insp->paper_serial)<div class="hint">مسلسل ورقي <a href="{{ route('inspections.print',$insp) }}" target="_blank" class="num">{{ $insp->paper_serial }}</a> · {{ $insp->doc_date?->format('Y-m-d') }} · {{ $insp->inspector?->name }}</div>@endif
-              @else <span class="text-danger">ناقص</span> @endif
-            </td></tr>
-          <tr><th>الجرد</th>
-            <td class="num {{ $insp && $insp->rolls_variance != 0 ? 'text-danger fw-bold' : '' }}">
-              {{ $insp ? $insp->counted_rolls . '/' . $insp->declared_rolls . ' — ' . $insp->rolls_variance_label : '—' }}
-            </td></tr>
-          @php $est = $insp?->weightEstimate(); @endphp
-          @if($est)
-            <tr><th>الوزن المتوقع من العيّنة</th>
-              <td class="num {{ $est['level'] === 'danger' ? 'text-danger fw-bold' : ($est['level'] === 'warn' ? 'text-warning fw-bold' : '') }}">
-                {{ lv_kg($est['expected'], false) }} <span class="hint">({{ $est['diff_pct'] >= 0 ? '+' : '' }}{{ lv_num($est['diff_pct'], 1) }}% عن الإذن)</span>
-                @if($est['level'] === 'danger')<div class="hint">راجع الوزن مع المخزن قبل الإفراج</div>@endif</td></tr>
-          @endif
-          <tr><th>العيّنة ونسبة العيوب</th>
-            <td class="num">{{ $insp ? $insp->sample_pct . '% · عيوب ' . $insp->defect_pct . '%' : '—' }}</td></tr>
-          <tr><th>تقرير المعمل</th>
-            <td>
-              @if($lab)
-                <a href="{{ route('lab-reports.edit',$lab) }}" class="num">{{ $lab->doc_no }}</a>
-                <span class="hint">· بنشر {{ lv_num($lab->avg_gsm, 2) }}</span>
-                @if($lab->paper_serial)<div class="hint">مسلسل ورقي <a href="{{ route('lab-reports.print',$lab) }}" target="_blank" class="num">{{ $lab->paper_serial }}</a> · {{ $lab->doc_date?->format('Y-m-d') }} · {{ $lab->technician?->name }}</div>@endif
-              @else <span class="text-danger">ناقص</span> @endif
-            </td></tr>
-          <tr><th>الانكماش ومطابقة اللون</th>
-            <td class="num">
-              {{ $lab ? 'طول ' . lv_num($lab->avg_shrink_len_pct, 2) . '% · عرض ' . lv_num($lab->avg_shrink_width_pct, 2) . '%' : '—' }}
-              @if($lab?->has_color_break)<span class="badge bg-danger">فواصل / اختلاف لون</span>@endif
-              @if($lab)
-                <span class="badge bg-{{ $lab->color_match_ok ? 'success' : 'danger' }}">
-                  {{ $lab->color_match_ok ? 'اللون مطابق' : 'اللون مش مطابق' }}
-                </span>
-              @endif
-            </td></tr>
-        </tbody>
-      </table>
+    <div class="sum-sec">
+      <div class="t"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> إذن الإضافة</div>
+      <div class="sum-grid">
+        <div><div class="k">رقم الإذن</div>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="v num">{{ $sa->doc_no }}</a>@else <div class="v">—</div> @endif</div>
+        <div><div class="k">تاريخ إذن الإضافة</div><div class="v num">{{ $sa?->doc_date?->format('Y-m-d') ?? '—' }}</div></div>
+        <div><div class="k">مسلسل إذن الإضافة (الورقي)</div>@if($sa)<a href="{{ route('stock-additions.print', $sa) }}" target="_blank" class="v num">{{ $sa->paper_serial ?: '—' }}</a>@else <div class="v">—</div> @endif</div>
+        <div><div class="k">إذن المورد</div>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="v num">{{ $sa->supplier_doc_no ?: '—' }}</a>@else <div class="v">—</div> @endif</div>
+        <div><div class="k">المورد</div><div class="v">{{ $c->supplier?->name ?? '—' }}</div></div>
+        <div><div class="k">المخزن</div><div class="v">{{ $sa?->warehouse?->name ?? $c->warehouse?->name ?? '—' }}</div></div>
+        <div><div class="k">تاريخ الوصول</div><div class="v num">{{ $c->arrival_date?->format('Y-m-d') ?? '—' }}</div></div>
+      </div>
     </div>
+
+    <div class="sum-sec">
+      <div class="t"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> طلب الشراء</div>
+      <div>
+        <div class="sum-grid">
+          <div><div class="k">رقم الطلب</div>@if($po)<a href="{{ route('purchase-orders.edit', $po) }}" class="v num">{{ $po->po_no }}</a>@else <div class="v">بدون طلب</div> @endif</div>
+          <div><div class="k">تاريخ الطلب</div><div class="v num">{{ $po?->po_date?->format('Y-m-d') ?? '—' }}</div></div>
+          <div><div class="k">توريد متوقع</div><div class="v num">{{ $po?->delivery_date?->format('Y-m-d') ?? '—' }}</div></div>
+          <div><div class="k">طلبه</div><div class="v">{{ $po?->requester?->name ?? '—' }}</div><div class="k num">{{ $po?->requested_at?->format('Y-m-d') }}</div></div>
+          <div><div class="k">سعّره</div><div class="v">{{ $po?->sourcer?->name ?? '—' }}</div><div class="k num">{{ $po?->sourced_at?->format('Y-m-d') }}</div></div>
+          <div><div class="k">استلمه (إذن الإضافة)</div><div class="v">{{ $sa?->creator?->name ?? '—' }}</div><div class="k num">{{ $sa?->doc_date?->format('Y-m-d') }}</div></div>
+        </div>
+        @if($st)
+          <div class="mt-2 p-1 rounded text-center d-flex flex-wrap justify-content-center gap-3 align-items-center small"
+               style="background:{{ $st['left'] > 0.0001 ? 'var(--lv-warn-bg)' : ($over > 0.0001 ? 'var(--lv-danger-bg)' : 'var(--lv-ok-bg)') }}">
+            <span class="hint">الصنف ده على الطلب:</span>
+            <span>مطلوب <b class="num">{{ lv_qty($st['ordered'], $st['unit']) }}</b></span>
+            @if($st['left'] > 0.0001)
+              <span>وصل لحد دلوقتي <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
+              <span class="text-danger">باقي <b class="num">{{ lv_qty($st['left'], $st['unit']) }}</b> — {{ $st['eta'] ? 'متوقع ' . $st['eta'] : 'الموعد مش محدد' }}</span>
+            @elseif($over > 0.0001)
+              <span>وصل <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
+              <span class="text-danger fw-bold">زيادة <b class="num">{{ lv_qty($over, $st['unit']) }}</b> — جوه نسبة الزيادة {{ lv_num($st['line']->tolerance_pct, 2) }}%</span>
+            @else
+              <span>وصل <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
+              <span class="text-success fw-bold"><i class="bi bi-check2-circle" aria-hidden="true"></i> الصنف اكتمل على الطلب بالكامل</span>
+            @endif
+          </div>
+        @endif
+      </div>
+    </div>
+
+    <div class="sum-sec">
+      <div class="t"><i class="bi bi-search" aria-hidden="true"></i> الفحص</div>
+      <div class="sum-grid">
+        <div><div class="k">تقرير الفحص</div>@if($insp)<a href="{{ route('inspections.edit', $insp) }}" class="v num">{{ $insp->doc_no }}</a>@else <div class="v text-danger">ناقص</div> @endif</div>
+        <div><div class="k">المسلسل الورقي</div>@if($insp?->paper_serial)<a href="{{ route('inspections.print', $insp) }}" target="_blank" class="v num">{{ $insp->paper_serial }}</a>@else <div class="v">—</div> @endif</div>
+        <div><div class="k">النتيجة</div><div class="v">@if($insp)<span class="badge bg-{{ $insp->result === 'accepted' ? 'success' : 'warning' }}">{{ $insp->result_name }}</span>@else — @endif</div></div>
+        <div><div class="k">الجرد</div><div class="v num {{ $insp && $insp->rolls_variance != 0 ? 'text-danger' : '' }}">{{ $insp ? $insp->counted_rolls . '/' . $insp->declared_rolls : '—' }}</div><div class="k">{{ $insp?->rolls_variance_label }}</div></div>
+        <div><div class="k">العيّنة · العيوب</div><div class="v num">{{ $insp ? lv_num($insp->sample_pct, 1) . '% · ' . lv_num($insp->defect_pct, 2) . '%' : '—' }}</div></div>
+        <div><div class="k">الوزن المتوقع من العيّنة</div>
+          @if($est)<div class="v num {{ $est['level'] === 'danger' ? 'text-danger' : ($est['level'] === 'warn' ? 'text-warning' : '') }}">{{ lv_kg($est['expected'], false) }}</div>
+            <div class="k">{{ $est['diff_pct'] >= 0 ? '+' : '' }}{{ lv_num($est['diff_pct'], 1) }}% عن الإذن{{ $est['level'] === 'danger' ? ' — راجع الوزن' : '' }}</div>
+          @else <div class="v">—</div> @endif</div>
+        <div><div class="k">فحصه</div><div class="v">{{ $insp?->inspector?->name ?? '—' }}</div><div class="k num">{{ $insp?->doc_date?->format('Y-m-d') }}</div></div>
+      </div>
+    </div>
+
+    <div class="sum-sec">
+      <div class="t"><i class="bi bi-thermometer-half" aria-hidden="true"></i> المعمل</div>
+      <div class="sum-grid">
+        <div><div class="k">تقرير المعمل</div>@if($lab)<a href="{{ route('lab-reports.edit', $lab) }}" class="v num">{{ $lab->doc_no }}</a>@else <div class="v text-danger">ناقص</div> @endif</div>
+        <div><div class="k">المسلسل الورقي</div>@if($lab?->paper_serial)<a href="{{ route('lab-reports.print', $lab) }}" target="_blank" class="v num">{{ $lab->paper_serial }}</a>@else <div class="v">—</div> @endif</div>
+        <div><div class="k">متوسط البنشر</div><div class="v num {{ $lab?->gsm_out_of_spec ? 'text-danger' : '' }}">{{ $lab ? lv_num($lab->avg_gsm, 2) . ' جم/م²' : '—' }}</div>@if($lab?->gsm_out_of_spec)<div class="k text-danger">خارج المواصفة</div>@endif</div>
+        <div><div class="k">الانكماش طول · عرض</div><div class="v num">{{ $lab ? lv_num($lab->avg_shrink_len_pct, 2) . '% · ' . lv_num($lab->avg_shrink_width_pct, 2) . '%' : '—' }}</div></div>
+        <div><div class="k">مطابقة اللون</div><div class="v">@if($lab)<span class="badge bg-{{ $lab->color_match_ok ? 'success' : 'danger' }}">{{ $lab->color_match_ok ? 'مطابق' : 'مش مطابق' }}</span>@else — @endif</div></div>
+        <div><div class="k">فواصل / اختلاف لون</div><div class="v">@if($lab?->has_color_break)<span class="badge bg-danger">نعم</span><div class="k">{{ $lab->color_break_roll_no ? 'أتواب ' . $lab->color_break_roll_no : '' }} {{ $lab->color_break_note }}</div>@elseif($lab)<span class="text-success">لا</span>@else — @endif</div></div>
+        <div><div class="k">سجّله</div><div class="v">{{ $lab?->technician?->name ?? '—' }}</div><div class="k num">{{ $lab?->doc_date?->format('Y-m-d') }}</div></div>
+      </div>
+    </div>
+
   </div>
 </div>
 

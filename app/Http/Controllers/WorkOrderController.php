@@ -504,7 +504,8 @@ class WorkOrderController extends Controller
 
             // ── المنتجات ──
             'products'                    => ['nullable', 'array'],
-            'products.*.product_model_id' => ['required_with:products', 'exists:product_models,id'],
+            'products.*.product_model_id' => ['required', 'exists:product_models,id'],
+            'picked_models'               => ['nullable', 'array'],
             'products.*.size_id'          => ['nullable', 'exists:sizes,id'],
             'products.*.qty_per_spread'   => ['nullable', 'integer', 'min:0'],
             'products.*.planned_qty'      => ['nullable', 'integer', 'min:0'],

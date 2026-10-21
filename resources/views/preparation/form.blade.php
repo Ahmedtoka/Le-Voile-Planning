@@ -69,7 +69,7 @@
           <div class="form-check">
             <input type="hidden" name="also_marker" value="0">
             <input class="form-check-input" type="checkbox" name="also_marker" value="1" id="am" checked>
-            <label class="form-check-label" for="am"><b>واطلب الماركر من الباترونست في نفس الوقت</b> — بعد الحفظ هتتفتح شاشة طلب الماركر جاهزة بنفس الرسالة والموديلات</label>
+            <label class="form-check-label" for="am"><b>واطلب الماركر من الباترونست في نفس الوقت</b> — طلب الماركر بيتعمل لوحده مع الحفظ بنفس الرسالة والموديلات (العرض والبنشر من الجودة)</label>
           </div>
         </div>
       </div>

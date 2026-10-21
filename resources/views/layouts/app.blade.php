@@ -699,12 +699,12 @@ a.flow-step:hover{background:var(--lv-surface-2);color:var(--lv-ink);text-decora
     ]],
 
     ['prod', '③ التشغيل', 'bi-hammer', [
+      ['preparation-requests.index', 'طلبات التحضير (تقسيم)', 'bi-speedometer2', 'prep.request|prep.weigh',
+       'أول خطوة: التخطيط يطلب كمية تقريبية من رسالة والمخزن يوزن ويرد بالفعلي — وطلب الماركر بيتعمل معاه'],
       ['markers.requests', '8 · طلبات الماركر', 'bi-envelope-paper', 'marker.view',
        'المخطط بيطلب تعشيقة على أقل عرض'],
       ['markers.index', '9 · الماركرات', 'bi-grid-3x3', 'marker.view',
        'الباترونست: طول الفرشة وعدد القطع والموديلات'],
-      ['preparation-requests.index', 'طلبات التحضير (تقسيم)', 'bi-speedometer2', 'prep.request|prep.weigh',
-       'التخطيط يطلب كمية تقريبية من رسالة والمخزن يوزن ويرد بالفعلي'],
       ['work-orders.index', '10 · أوامر الشغل', 'bi-hammer', 'wo.view',
        'ورقة المصنع: الرسالة + الماركر + الحسبة، والخامة الحاكمة بتحدد الإنتاج'],
       ['material-issues.index', '11 · إذن صرف خام', 'bi-box-arrow-up', 'receipt.view|wo.view',
