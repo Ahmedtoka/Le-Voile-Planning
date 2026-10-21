@@ -201,9 +201,9 @@
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
         <thead><tr>
-          <th style="width:35px">م</th><th style="width:80px">رقم التوب</th><th style="width:95px">الطول (م)</th>
-          <th style="width:95px">العرض (سم)</th><th style="width:90px">الحالة</th><th style="width:95px">وزن التوب (كجم)</th>
-          <th style="width:95px">البنشر (جم/م²)</th><th style="width:130px">العيب</th><th style="width:260px">تفاصيل العيب</th>
+          <th style="width:35px">م</th><th style="width:90px">رقم التوب</th><th style="width:120px">الطول (م)</th>
+          <th style="width:120px">العرض (سم)</th><th style="width:95px">الحالة</th><th style="width:125px">وزن التوب (كجم)</th>
+          <th style="width:125px">البنشر (جم/م²)</th><th style="width:130px">العيب</th><th style="width:240px">تفاصيل العيب</th>
           <th>ملاحظات</th><th style="width:40px"></th>
         </tr></thead>
         <tbody id="lines">
@@ -351,6 +351,11 @@
 <template id="lineTpl">@include('inspections.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
 @include('partials.lines_js',['startIndex'=>count($rolls) ? max(array_keys($rolls)) + 1 : 1])
 
+<style>
+  /* خانات جدول الأتواب عريضة ومقروءة */
+  #lines td input[type=number], #lines td select { min-width: 100%; font-size: var(--fs-sm); }
+  #lines td input[name$="[roll_no]"] { width: 80px; }
+</style>
 @push('scripts')
 <script>
 window.LVI = {
@@ -370,6 +375,19 @@ window.LVI = {
     var kg  = parseFloat(tr.querySelector('.roll-kg')?.value) || 0;
     if (len > 0 && w > 0 && kg > 0) { g.value = (kg * 1000 / (len * w / 100)).toFixed(1); g.dataset.auto = '1'; }
     else if (g.dataset.auto === '1') { g.value = ''; }
+  },
+  /* تنبيه الوحدات: العرض بالسنتيمتر (175 مش 1.75) والطول بالمتر */
+  units: function (el) {
+    var n = el.name || '', v = parseFloat(el.value);
+    var bad = false, msg = '';
+    if (/\[width_cm\]$/.test(n) && v > 0 && v < 50)  { bad = true; msg = 'العرض بالسنتيمتر — يعني 175 مش 1.75'; }
+    if (/\[length_m\]$/.test(n) && v > 0 && v < 1)   { bad = true; msg = 'الطول بالمتر — توب 50 متر يتكتب 50'; }
+    el.classList.toggle('is-invalid', bad);
+    el.title = msg;
+    var tr = el.closest('tr'), w = tr.querySelector('.unit-warn');
+    if (!w) { w = document.createElement('div'); w.className = 'unit-warn text-danger'; w.style.cssText = 'font-size:.7rem;white-space:nowrap'; el.parentElement.appendChild(w); }
+    w.textContent = bad ? msg : '';
+    if (!bad && el.parentElement.contains(w) && !tr.querySelector('.is-invalid')) w.textContent = '';
   },
   /* تفاصيل العيب تظهر بس لما تختار عيب */
   defect: function (sel) {
@@ -406,6 +424,7 @@ window.LVI = {
   // البنشر التلقائي من الطول والعرض والوزن + الوزن المتوقع من العيّنة
   document.getElementById('lines').addEventListener('input', function (e) {
     var n = e.target.name || '';
+    if (/\[(length_m|width_cm)\]$/.test(n)) LVI.units(e.target);
     if (/\[(length_m|width_cm|net_kg)\]$/.test(n)) LVI.autoGsm(e.target);
     if (e.target.classList.contains('roll-gsm')) e.target.dataset.auto = '0';
     estimate();

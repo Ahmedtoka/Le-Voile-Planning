@@ -13,14 +13,14 @@
 @if(!$tpl)<tr class="{{ $st === 'rejected' ? 'table-danger' : '' }}">@endif
   <td class="text-center row-no">{{ is_numeric($i)?$i+1:1 }}</td>
   <td><input name="rolls[{{ $i }}][roll_no]" value="{{ $l['roll_no'] ?? '' }}"></td>
-  <td><input type="number" step="0.01" name="rolls[{{ $i }}][length_m]" value="{{ $l['length_m'] ?? '' }}" placeholder="مثال 50"></td>
-  <td><input type="number" step="0.01" name="rolls[{{ $i }}][width_cm]" value="{{ $l['width_cm'] ?? '' }}" placeholder="مثال 175"></td>
+  <td><input type="number" step="0.01" name="rolls[{{ $i }}][length_m]" value="{{ $l['length_m'] ?? '' }}" placeholder="بالمتر — 50"></td>
+  <td><input type="number" step="0.01" name="rolls[{{ $i }}][width_cm]" value="{{ $l['width_cm'] ?? '' }}" placeholder="بالسم — 175"></td>
   <td><select name="rolls[{{ $i }}][status]" class="roll-status" onchange="LVI.rollStatus(this)">
       <option value="ok" @selected($st==='ok')>سليم</option>
       <option value="rejected" @selected($st==='rejected')>مرفوض</option>
     </select></td>
   <td><input type="number" step="0.001" name="rolls[{{ $i }}][net_kg]" class="roll-kg" value="{{ $l['net_kg'] ?? '' }}"
-             placeholder="{{ $st==='rejected' ? 'إجباري' : 'كجم' }}" @required($st==='rejected')></td>
+             placeholder="{{ $st==='rejected' ? 'إجباري' : 'بالكيلو — 190' }}" @required($st==='rejected')></td>
   <td><input type="number" step="0.01" name="rolls[{{ $i }}][gsm]" class="roll-gsm" value="{{ $l['gsm'] ?? '' }}" placeholder="جم/م²"></td>
   <td><select name="rolls[{{ $i }}][defect_type]" class="roll-dtype" onchange="LVI.defect(this)">
       <option value="">— سليم —</option>
