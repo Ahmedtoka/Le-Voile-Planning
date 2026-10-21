@@ -20,37 +20,53 @@
 @if($c)
   <div class="card mb-3" style="border-color:var(--lv-soft)">
     <div class="card-body py-2">
-      <div class="row g-2 align-items-center">
-        <div class="col-md-3">
+      <div class="row g-2 align-items-start">
+        <div class="col-md-3 col-6">
           <div class="hint">الرسالة</div>
-          <a href="{{ route('consignments.show', $c) }}" class="fw-bold num" style="font-size:1.15rem;color:var(--lv-brand-ink)">{{ $c->consignment_no }}</a>
+          <a href="{{ route('consignments.show', $c) }}" class="fw-bold num" style="font-size:1.1rem;color:var(--lv-brand-ink)">{{ $c->consignment_no }}</a>
           <div class="hint">{{ $c->fabricType?->name ?? '—' }} · {{ $c->color?->label ?? $c->color?->code ?? '—' }}</div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3 col-6">
           <div class="hint">وصل في الرسالة دي</div>
           <b class="num">{{ lv_kg($c->total_kg) }}</b>
           <div class="hint num">{{ (int) $c->rolls_count }} توب · {{ $c->arrival_date?->format('Y-m-d') }}</div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3 col-6">
           <div class="hint">المورد</div>
           <b>{{ $c->supplier?->name ?? '—' }}</b>
-          <div>@include('partials.supplier_doc', ['sa' => $sa])</div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3 col-6">
+          <div class="hint">إذن المورد</div>
+          @if($sa)
+            <a href="{{ route('stock-additions.edit', $sa) }}" class="fw-bold num" title="يفتح إذن الإضافة">{{ $sa->supplier_doc_no ?: '—' }}</a>
+          @else <span class="hint">—</span> @endif
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="hint">إذن الإضافة</div>
+          @if($sa)
+            <a href="{{ route('stock-additions.edit', $sa) }}" class="fw-bold num">{{ $sa->doc_no }}</a>
+            <div class="hint num">{{ $sa->paper_serial ? 'مسلسل ورقي ' . $sa->paper_serial . ' · ' : '' }}{{ $sa->doc_date?->format('Y-m-d') }}</div>
+          @else <span class="hint">—</span> @endif
+        </div>
+        <div class="col-md-3 col-6">
           <div class="hint">طلب الشراء</div>
           @if($c->purchaseOrder)
             <a href="{{ route('purchase-orders.edit', $c->purchaseOrder) }}" class="fw-bold num">{{ $c->purchaseOrder->po_no }}</a>
             @if($st)<div class="hint num">مطلوب {{ lv_qty($st['ordered'], $st['unit']) }} · وصل {{ lv_num($st['received']) }}</div>@endif
           @else <span class="hint">بدون طلب</span> @endif
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 col-6">
           @if($st && $st['left'] > 0.0001)
             <div class="hint">الباقي على الصنف ده</div>
             <b class="text-danger num">{{ lv_qty($st['left'], $st['unit']) }}</b>
-            <div class="hint">{{ $st['eta'] ? 'متوقع ' . $st['eta'] : 'الموعد مش محدد' }} — افحص اللي وصل دلوقتي</div>
+            <div class="hint">{{ $st['eta'] ? 'متوقع ' . $st['eta'] : 'الموعد مش محدد' }}</div>
           @elseif($st)
             <div class="hint">الصنف على الطلب</div><b class="text-success">اكتمل</b>
           @endif
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="hint">نوع الاستلام</div>
+          <b>{{ $sa?->receipt_type === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</b>
         </div>
       </div>
     </div>
@@ -61,48 +77,9 @@
       action="{{ $mode==='create' ? route('inspections.store') : route('inspections.update',$row) }}">
   @csrf @if($mode==='edit') @method('PUT') @endif
 
-  {{-- ② النتيجة --}}
-  <div class="card mb-3" id="resultCard">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <span>① نتيجة الفحص <span class="hint">— ابدأ من هنا</span></span>
-      <div class="d-flex gap-2">
-        @if($mode==='edit')
-          <span class="badge bg-{{ $row->status_color }} align-self-center">{{ $row->status_label }}</span>
-          <a href="{{ route('inspections.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0"
-             aria-label="طباعة" title="طباعة"><i class="bi bi-printer" aria-hidden="true"></i></a>
-        @endif
-        <a href="{{ route('inspections.index') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
-      </div>
-    </div>
-    <div class="card-body"><fieldset @disabled(!$editable)>
-      <input type="hidden" name="result" id="resultInput" value="{{ $result }}">
-      <div class="d-flex gap-2 flex-wrap" role="group" aria-label="نتيجة الفحص">
-        @foreach([
-          ['accepted',            'مقبول',          'bi-check-circle',       'ok',     'القماش سليم — يكمّل'],
-          ['accepted_with_notes', 'مقبول بملاحظات', 'bi-exclamation-circle', 'warn',   'يكمّل بس لازم تكتب الملاحظة'],
-          ['rejected',            'مرفوض',          'bi-x-circle',           'danger', 'ينزل شاشة المرفوضات ويرجع للمورد'],
-        ] as [$key, $label, $icon, $tone, $note])
-          <button type="button" class="btn btn-sm result-btn" data-result="{{ $key }}"
-                  aria-pressed="{{ $result === $key ? 'true' : 'false' }}"
-                  style="min-width:190px;text-align:start;
-                         border:2px solid {{ $result === $key ? 'var(--lv-'.$tone.')' : 'var(--lv-line)' }};
-                         background:{{ $result === $key ? 'var(--lv-'.$tone.'-bg)' : '#fff' }}">
-            <span class="d-block fw-bold"><i class="bi {{ $icon }}" aria-hidden="true" style="color:var(--lv-{{ $tone }})"></i> {{ $label }}</span>
-            <span class="hint d-block">{{ $note }}</span>
-          </button>
-        @endforeach
-      </div>
-      <div class="mt-3" id="notesWrap">
-        <label class="form-label" id="notesLabel">ملاحظات</label>
-        <input name="notes" id="notesInput" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}" placeholder="اكتب اللي شفته على القماش">
-        <div class="hint" id="notesHint">اختياري — إلا لو النتيجة «مقبول بملاحظات» أو «مرفوض».</div>
-      </div>
-    </fieldset></div>
-  </div>
-
   {{-- ③ الجرد: Labels في ناحية، واللي هتكتبه في ناحية --}}
   <div class="card mb-3">
-    <div class="card-header">② الجرد <span class="hint">— كام توب موجود فعلًا مقابل اللي إذن الإضافة قال عليه</span></div>
+    <div class="card-header">① الجرد <span class="hint">— كام توب موجود فعلًا مقابل اللي إذن الإضافة قال عليه</span></div>
     <div class="card-body"><fieldset @disabled(!$editable)>
       @if($c)
         <input type="hidden" name="doc_date"       value="{{ old('doc_date', $row->doc_date?->format('Y-m-d') ?? now()->toDateString()) }}">
@@ -133,8 +110,12 @@
             <table class="table table-sm mb-0" style="background:transparent">
               <tr><th style="width:45%">أتواب حسب الإذن</th><td class="num fw-bold">{{ (int) ($row->declared_rolls ?? $c?->rolls_count) }} توب</td></tr>
               <tr><th>الوزن حسب الإذن</th><td class="num fw-bold">{{ $c ? lv_kg($c->total_kg) : '—' }}</td></tr>
-              <tr><th>الفاحص</th><td>{{ $row->inspector?->name ?? auth()->user()?->name }}</td></tr>
-              <tr><th>التاريخ</th><td class="num">{{ old('doc_date', $row->doc_date?->format('Y-m-d') ?? now()->toDateString()) }}</td></tr>
+              @php $po = $c?->purchaseOrder; @endphp
+              <tr><th>طلبه</th><td>{{ $po?->requester?->name ?? '—' }} <span class="hint num">{{ $po?->requested_at?->format('Y-m-d') }}</span></td></tr>
+              <tr><th>سعّره</th><td>{{ $po?->sourcer?->name ?? '—' }} <span class="hint num">{{ $po?->sourced_at?->format('Y-m-d') }}</span></td></tr>
+              <tr><th>استلمه</th><td>{{ $sa?->creator?->name ?? '—' }} <span class="hint num">{{ $sa?->doc_date?->format('Y-m-d') }}</span></td></tr>
+              <tr><th>فحصه</th><td>{{ $mode === 'edit' && $row->status === 'approved' ? ($row->inspector?->name ?? '—') : '— لسه (' . auth()->user()?->name . ')' }}
+                <span class="hint num">{{ $mode === 'edit' && $row->status === 'approved' ? $row->doc_date?->format('Y-m-d') : '' }}</span></td></tr>
             </table>
           </div>
         </div>
@@ -191,7 +172,7 @@
   {{-- ④ قياس الأتواب + بنشر كل توب --}}
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <span>③ قياس الأتواب
+      <span>② قياس الأتواب
         <span class="hint">— طول وعرض كل توب (أقل عرض هو اللي الماركر هيتبني عليه) + وزن البنشر لكل توب للمعمل. التوب البايظ علّمه <b>مرفوض</b> واكتب وزنه.</span>
       </span>
       @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> توب</button>@endif
@@ -214,7 +195,7 @@
 
   {{-- ⑤ المعمل — مدمج في نفس الورقة --}}
   <div class="card mb-3">
-    <div class="card-header">④ المعمل <span class="hint">— الانكماش ومطابقة اللون. البنشر اتكتب فوق لكل توب. لو ما كتبتش حاجة هنا، المعمل يتسجل بعدين من شاشته.</span></div>
+    <div class="card-header">③ المعمل <span class="hint">— الانكماش ومطابقة اللون. البنشر اتكتب فوق لكل توب. لو ما كتبتش حاجة هنا، المعمل يتسجل بعدين من شاشته.</span></div>
     <div class="card-body"><fieldset @disabled(!$editable)>
       @if($ft)
         <div class="d-flex flex-wrap gap-3 small mb-3 p-2 rounded" style="background:var(--lv-offwhite);border:1px solid var(--lv-line)">
@@ -291,6 +272,45 @@
     @endif
   </div>
 
+  {{-- ⑤ النتيجة — آخر حاجة بعد ما تشوف كل حاجة --}}
+  <div class="card mb-3" id="resultCard">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>⑤ نتيجة الفحص <span class="hint">— بعد ما قست الأتواب وسجلت المعمل، قرر</span></span>
+      <div class="d-flex gap-2">
+        @if($mode==='edit')
+          <span class="badge bg-{{ $row->status_color }} align-self-center">{{ $row->status_label }}</span>
+          <a href="{{ route('inspections.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0"
+             aria-label="طباعة" title="طباعة"><i class="bi bi-printer" aria-hidden="true"></i></a>
+        @endif
+        <a href="{{ route('inspections.index') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
+      </div>
+    </div>
+    <div class="card-body"><fieldset @disabled(!$editable)>
+      <input type="hidden" name="result" id="resultInput" value="{{ $result }}">
+      <div class="d-flex gap-2 flex-wrap" role="group" aria-label="نتيجة الفحص">
+        @foreach([
+          ['accepted',            'مقبول',          'bi-check-circle',       'ok',     'القماش سليم — يكمّل'],
+          ['accepted_with_notes', 'مقبول بملاحظات', 'bi-exclamation-circle', 'warn',   'يكمّل بس لازم تكتب الملاحظة'],
+          ['rejected',            'مرفوض',          'bi-x-circle',           'danger', 'ينزل شاشة المرفوضات ويرجع للمورد'],
+        ] as [$key, $label, $icon, $tone, $note])
+          <button type="button" class="btn btn-sm result-btn" data-result="{{ $key }}"
+                  aria-pressed="{{ $result === $key ? 'true' : 'false' }}"
+                  style="min-width:190px;text-align:start;
+                         border:2px solid {{ $result === $key ? 'var(--lv-'.$tone.')' : 'var(--lv-line)' }};
+                         background:{{ $result === $key ? 'var(--lv-'.$tone.'-bg)' : '#fff' }}">
+            <span class="d-block fw-bold"><i class="bi {{ $icon }}" aria-hidden="true" style="color:var(--lv-{{ $tone }})"></i> {{ $label }}</span>
+            <span class="hint d-block">{{ $note }}</span>
+          </button>
+        @endforeach
+      </div>
+      <div class="mt-3" id="notesWrap" hidden>
+        <label class="form-label" id="notesLabel">ملاحظات</label>
+        <input name="notes" id="notesInput" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}" placeholder="اكتب اللي شفته على القماش">
+        <div class="hint" id="notesHint">اختياري — إلا لو النتيجة «مقبول بملاحظات» أو «مرفوض».</div>
+      </div>
+    </fieldset></div>
+  </div>
+
   @if($editable)
   <div class="form-actions">
     <button class="btn btn-plum"><i class="bi bi-save" aria-hidden="true"></i> حفظ الفحص والمعمل</button>
@@ -336,7 +356,8 @@ window.LVI = {
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
     var must = input.value === 'accepted_with_notes' || input.value === 'rejected';
-    if (notesInput) notesInput.required = must;
+    var wrap = document.getElementById('notesWrap'); if (wrap) wrap.hidden = !input.value;
+    if (notesInput) { notesInput.required = must; if (must) notesInput.focus(); }
     if (notesLabel) notesLabel.className = must ? 'form-label req' : 'form-label';
     if (notesHint) notesHint.textContent = input.value === 'rejected'
       ? 'إجباري — اكتب سبب الرفض، هيظهر في شاشة المرفوضات وللمورد.'

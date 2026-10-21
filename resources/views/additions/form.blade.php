@@ -90,7 +90,7 @@
               {{ $row->consignment_no ?: ($consignmentPreview ?? 'بيتولّد تلقائيًا عند الاعتماد') }}
             </div>
             <div class="hint">بيتكتب أوتوماتيك — {{ $row->consignment_no ? 'اتولّد' : 'بيتأكد عند الاعتماد' }}</div></div>
-          <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
+          <div class="col-md-2"><label class="form-label">مسلسل إذن الإضافة (الورقي)</label>
             <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="41456"></div>
           <div class="col-md-2"><label class="form-label req">رقم إذن المورد</label>
             <input name="supplier_doc_no" class="form-control form-control-sm" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
@@ -109,7 +109,7 @@
         <div class="row g-3">
           <div class="col-md-2"><label class="form-label req">التاريخ</label>
             <input type="date" name="doc_date" class="form-control form-control-sm" value="{{ old('doc_date',$row->doc_date?->format('Y-m-d') ?? $row->doc_date) }}" required></div>
-          <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
+          <div class="col-md-2"><label class="form-label">مسلسل إذن الإضافة (الورقي)</label>
             <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="41456"></div>
           <div class="col-md-3"><label class="form-label req">اسم المورد</label>
             <select name="supplier_id" class="form-select form-select-sm" required><option value="">—</option>
@@ -306,20 +306,20 @@
     return Number(n.toFixed(3)).toLocaleString('en-US', {maximumFractionDigits: 3});
   };
 
-  /* ── المستلم/الباقي لايف: طالب 50 طن وكتبت 30 ⇒ «باقي 20 طن» ──
-     العرض بالكمية الاسمية، لكن قرار «اكتمل/محتاج تاريخ» بنفس مسطرة
-     الإقفال بتاعة السيستم: الحد الأدنى المقبول (الكمية − نسبة الزيادة). */
+  /* ── المستلم/الباقي لايف: طالب 50 طن وكتبت 30 ⇒ «المستلم 10 توب · 30 طن — باقي 20 طن» ──
+     نسبة الزيادة للزيادة بس: الأقل من المطلوب بيفضل باقي، والأكتر منها بيترفض. */
   function calcRow(tr) {
     var out = tr.querySelector('.q-left');
     if (!out) return 0;
+    var unit     = tr.dataset.unit || '';
     var ordered  = parseFloat(tr.dataset.ordered)  || 0;
     var minQty   = parseFloat(tr.dataset.min)      || ordered;
     var received = parseFloat(tr.dataset.received) || 0;
     var now      = parseFloat(tr.querySelector('.q-recv')?.value) || 0;
+    var rolls    = parseInt(tr.querySelector('[name$="[rolls_count]"]')?.value || '0', 10) || 0;
+    var recvLine = '<div class="hint">المستلم دلوقتي: <b class="num">' + (rolls ? rolls + ' توب · ' : '') + nf(now) + ' ' + unit + '</b></div>';
     var left     = ordered - received - now;          // للعرض
     var leftMin  = Math.max(0, minQty - received - now);  // للإقفال
-    var unit     = tr.dataset.unit || '';
-
     // خانة «هيوصل إمتى» بتظهر بس لما يبقى فيه باقي على السطر ده
     var eta = tr.querySelector('.r-eta');
     var showEta = function (on) {
@@ -330,15 +330,13 @@
 
     if (!now) { out.innerHTML = '<span class="hint">—</span>'; showEta(false); return Math.max(0, minQty - received); }
     if (leftMin > 0.0005) {
-      out.innerHTML = '<span class="pill pill-warn">باقي ' + nf(left) + ' ' + unit + '</span>';
+      out.innerHTML = recvLine + '<span class="pill pill-warn">باقي ' + nf(left) + ' ' + unit + '</span>';
       showEta(true);
     } else if (left < -0.0005) {
-      out.innerHTML = '<span class="pill pill-danger">زيادة ' + nf(-left) + ' ' + unit + '</span>';
+      out.innerHTML = recvLine + '<span class="pill pill-danger">زيادة ' + nf(-left) + ' ' + unit + '</span>';
       showEta(false);
     } else {
-      out.innerHTML = '<span class="pill pill-ok">اكتمل ✓'
-        + (left > 0.0005 ? ' <span class="hint">(الفرق ' + nf(left) + ' جوه نسبة الزيادة)</span>' : '')
-        + '</span>';
+      out.innerHTML = recvLine + '<span class="pill pill-ok">اكتمل ✓</span>';
       showEta(false);
     }
     return leftMin;
@@ -352,7 +350,7 @@
      على الطلب فعلًا، فلو حسبناه تاني هيتخصم مرتين */
   if (EDITABLE) {
     body.addEventListener('input', function (e) {
-      if (e.target.classList.contains('q-recv')) calcAll();
+      if (e.target.classList.contains('q-recv') || /\[rolls_count\]$/.test(e.target.name || '')) calcAll();
     });
     calcAll();
   }

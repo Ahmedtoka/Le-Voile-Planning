@@ -18,9 +18,13 @@ class PurchaseOrderLine extends Model
         return (float) $this->qty * (1 + ((float) $this->tolerance_pct / 100));
     }
 
+    /**
+     * الحد الأدنى للإقفال = الكمية المطلوبة نفسها.
+     * نسبة الزيادة اسمها زيادة: بتسمح بالزيادة بس — لو وصل أقل من المطلوب يفضل باقي مفتوح.
+     */
     public function getMinAllowedQtyAttribute(): float
     {
-        return (float) $this->qty * (1 - ((float) $this->tolerance_pct / 100));
+        return (float) $this->qty;
     }
 
     public function getOutstandingQtyAttribute(): float
