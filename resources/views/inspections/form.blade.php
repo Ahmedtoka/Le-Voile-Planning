@@ -22,10 +22,11 @@
   <style>
     .sum-sec{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start;padding:10px 0;border-bottom:1px dashed var(--lv-line)}
     .sum-sec:last-child{border-bottom:0}
-    .sum-sec .t{font-weight:700;color:var(--lv-brand-ink);padding-top:6px}
-    .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;text-align:center}
-    .sum-grid .k{font-size:var(--fs-xs);color:var(--lv-muted)}
-    .sum-grid .v{font-weight:700}
+    .sum-sec .t{font-weight:700;color:var(--lv-brand-ink);padding-top:4px;font-size:var(--fs-sm)}
+    .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;text-align:center;font-size:var(--fs-sm)}
+    .sum-grid .k{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.2}
+    .sum-grid .v{font-weight:600;font-size:var(--fs-sm)}
+    .sum-grid a.v{font-size:var(--fs-sm)}
     @media (max-width:768px){.sum-sec{grid-template-columns:1fr}}
   </style>
   <div class="card mb-3" style="border-color:var(--lv-soft)">
@@ -52,7 +53,6 @@
           <div><div class="k">إذن المورد</div>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="v num">{{ $sa->supplier_doc_no ?: '—' }}</a>@else <div class="v">—</div> @endif</div>
           <div><div class="k">المورد</div><div class="v">{{ $c->supplier?->name ?? '—' }}</div></div>
           <div><div class="k">المخزن</div><div class="v">{{ $sa?->warehouse?->name ?? $c->warehouse?->name ?? '—' }}</div></div>
-          <div><div class="k">استلمه</div><div class="v">{{ $sa?->creator?->name ?? '—' }}</div></div>
         </div>
       </div>
 
@@ -62,12 +62,13 @@
           <div class="sum-grid">
             <div><div class="k">رقم الطلب</div>@if($po)<a href="{{ route('purchase-orders.edit', $po) }}" class="v num">{{ $po->po_no }}</a>@else <div class="v">بدون طلب</div> @endif</div>
             <div><div class="k">تاريخ الطلب</div><div class="v num">{{ $po?->po_date?->format('Y-m-d') ?? '—' }}</div></div>
-            <div><div class="k">طلبه</div><div class="v">{{ $po?->requester?->name ?? '—' }}</div></div>
-            <div><div class="k">سعّره</div><div class="v">{{ $po?->sourcer?->name ?? '—' }}</div><div class="k">{{ $po?->sourced_at?->format('Y-m-d') }}</div></div>
             <div><div class="k">توريد متوقع</div><div class="v num">{{ $po?->delivery_date?->format('Y-m-d') ?? '—' }}</div></div>
+            <div><div class="k">طلبه</div><div class="v">{{ $po?->requester?->name ?? '—' }}</div><div class="k num">{{ $po?->requested_at?->format('Y-m-d') }}</div></div>
+            <div><div class="k">سعّره</div><div class="v">{{ $po?->sourcer?->name ?? '—' }}</div><div class="k num">{{ $po?->sourced_at?->format('Y-m-d') }}</div></div>
+            <div><div class="k">استلمه (إذن الإضافة)</div><div class="v">{{ $sa?->creator?->name ?? '—' }}</div><div class="k num">{{ $sa?->doc_date?->format('Y-m-d') }}</div></div>
           </div>
           @if($st)
-            <div class="mt-2 p-2 rounded text-center d-flex flex-wrap justify-content-center gap-3 align-items-center"
+            <div class="mt-2 p-1 rounded text-center d-flex flex-wrap justify-content-center gap-3 align-items-center small"
                  style="background:{{ $st['left'] > 0.0001 ? 'var(--lv-warn-bg)' : ($over > 0.0001 ? 'var(--lv-danger-bg)' : 'var(--lv-ok-bg)') }}">
               <span class="hint">الصنف ده على الطلب:</span>
               <span>مطلوب <b class="num">{{ lv_qty($st['ordered'], $st['unit']) }}</b></span>
