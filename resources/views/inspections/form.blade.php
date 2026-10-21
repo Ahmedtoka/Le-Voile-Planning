@@ -272,10 +272,10 @@
     @endif
   </div>
 
-  {{-- ⑤ النتيجة — آخر حاجة بعد ما تشوف كل حاجة --}}
+  {{-- ④ النتيجة — آخر حاجة بعد ما تشوف كل حاجة --}}
   <div class="card mb-3" id="resultCard">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <span>⑤ نتيجة الفحص <span class="hint">— بعد ما قست الأتواب وسجلت المعمل، قرر</span></span>
+      <span>④ نتيجة الفحص <span class="hint">— بعد ما قست الأتواب وسجلت المعمل، قرر</span></span>
       <div class="d-flex gap-2">
         @if($mode==='edit')
           <span class="badge bg-{{ $row->status_color }} align-self-center">{{ $row->status_label }}</span>
