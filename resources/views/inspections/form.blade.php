@@ -65,15 +65,21 @@
         </div>
         @if($st)
           <div class="col-md-9 col-12">
+            @php $over = (float) $st['received'] - (float) $st['ordered']; @endphp
             <div class="p-2 rounded d-flex flex-wrap gap-4 align-items-center"
-                 style="background:{{ $st['left'] > 0.0001 ? 'var(--lv-warn-bg)' : 'var(--lv-ok-bg)' }};border:1px solid var(--lv-line)">
+                 style="background:{{ $st['left'] > 0.0001 ? 'var(--lv-warn-bg)' : ($over > 0.0001 ? 'var(--lv-danger-bg)' : 'var(--lv-ok-bg)') }};border:1px solid var(--lv-line)">
               <span class="hint">الصنف ده ({{ $c->fabricType?->name }} · {{ $c->color?->code }}) على الطلب:</span>
               <span>مطلوب <b class="num">{{ lv_qty($st['ordered'], $st['unit']) }}</b></span>
-              <span>وصل لحد دلوقتي <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
               @if($st['left'] > 0.0001)
+                <span>وصل لحد دلوقتي <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
                 <span class="text-danger">باقي <b class="num">{{ lv_qty($st['left'], $st['unit']) }}</b> — {{ $st['eta'] ? 'متوقع ' . $st['eta'] : 'الموعد مش محدد' }}</span>
+              @elseif($over > 0.0001)
+                <span>وصل <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
+                <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                  زيادة <b class="num">{{ lv_qty($over, $st['unit']) }}</b> ({{ lv_num($over / max(0.0001, (float) $st['ordered']) * 100, 1) }}%) — جوه نسبة الزيادة المسموحة {{ lv_num($st['line']->tolerance_pct, 2) }}%</span>
               @else
-                <span class="text-success fw-bold"><i class="bi bi-check2-circle" aria-hidden="true"></i> الصنف اكتمل على الطلب</span>
+                <span>وصل <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
+                <span class="text-success fw-bold"><i class="bi bi-check2-circle" aria-hidden="true"></i> الصنف اكتمل على الطلب بالكامل</span>
               @endif
             </div>
           </div>
