@@ -316,6 +316,7 @@ Route::middleware('auth.user')->group(function () {
             Route::post('data/generate', [DemoDataController::class, 'generate'])->name('data.generate');
             Route::post('data/master',   [DemoDataController::class, 'generateMaster'])->name('data.master');
             Route::post('data/reset',    [DemoDataController::class, 'reset'])->name('data.reset');
+            Route::post('data/reset-transactions', [DemoDataController::class, 'resetTransactions'])->name('data.reset-transactions');
         });
 
         Route::get('activity', [SettingsController::class, 'activity'])

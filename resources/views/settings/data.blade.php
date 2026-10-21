@@ -94,6 +94,21 @@
       </form>
     </div>
 
+    <div class="card mb-3">
+      <div class="card-header text-warning"><i class="bi bi-eraser" aria-hidden="true"></i> مسح الترانزاكشنات بس</div>
+      <form method="post" action="{{ route('data.reset-transactions') }}" class="card-body">@csrf
+        <div class="alert alert-warning py-2 small mb-3">
+          الطلبات والأذون والرسايل والفحص والمعمل والماركرات وأوامر الشغل وحركات المخزون والإشعارات هتتمسح.
+          <b>البيانات الأساسية</b> (موردين، خامات، ألوان، موديلات، مصانع) والمستخدمين هيفضلوا — عشان تمشي على السيستم من الأول.
+        </div>
+        <label class="form-label req" for="c4">اكتب «مسح» للتأكيد</label>
+        <input id="c4" name="confirm" class="form-control form-control-sm mb-2" placeholder="مسح" required autocomplete="off">
+        <button class="btn btn-warning btn-sm w-100" onclick="return confirm('هتتمسح كل الترانزاكشنات. متأكد؟')">
+          <i class="bi bi-eraser" aria-hidden="true"></i> امسح الترانزاكشنات
+        </button>
+      </form>
+    </div>
+
     <div class="card">
       <div class="card-header text-danger"><i class="bi bi-trash3" aria-hidden="true"></i> مسح كل بيانات الشغل</div>
       <form method="post" action="{{ route('data.reset') }}" class="card-body">@csrf

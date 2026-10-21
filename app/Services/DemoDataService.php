@@ -50,6 +50,25 @@ use Illuminate\Support\Facades\DB;
 class DemoDataService
 {
     /** الجداول اللي بتتمسح — المستخدمين والأدوار والصلاحيات بيفضلوا */
+    /** الترانزاكشنات بس — البيانات الأساسية (موردين/خامات/ألوان/موديلات/مصانع) بتفضل */
+    public const TRANSACTION_TABLES = [
+        'production_receipt_lines', 'production_receipts',
+        'cut_declaration_lines', 'cut_declarations',
+        'material_issue_lines', 'material_issues',
+        'goods_receipt_rejections', 'work_order_fabrics',
+        'accessory_requirements', 'work_order_lines', 'work_orders',
+        'preparation_request_models', 'preparation_requests',
+        'marker_lines', 'markers', 'marker_request_models', 'marker_requests',
+        'lab_gsm_readings', 'lab_reports',
+        'inspection_rolls', 'fabric_inspections',
+        'goods_receipt_lines', 'goods_receipts',
+        'stock_addition_lines', 'stock_additions',
+        'stock_movements', 'fabric_rolls', 'consignments',
+        'purchase_order_models', 'purchase_order_lines', 'purchase_orders',
+        'forecasts', 'sales_snapshots', 'stock_snapshots', 'factory_loads',
+        'document_comments', 'activity_logs', 'app_notifications',
+    ];
+
     public const BUSINESS_TABLES = [
         'document_comments',
         'production_receipt_lines', 'production_receipts',
@@ -57,13 +76,15 @@ class DemoDataService
         'material_issue_lines', 'material_issues',
         'goods_receipt_rejections', 'work_order_fabrics',
         'accessory_requirements', 'work_order_lines', 'work_orders',
-        'marker_lines', 'markers', 'marker_requests',
+        'preparation_request_models', 'preparation_requests',
+        'marker_lines', 'markers', 'marker_request_models', 'marker_requests',
         'lab_gsm_readings', 'lab_reports',
         'inspection_rolls', 'fabric_inspections',
         'goods_receipt_lines', 'goods_receipts',
         'stock_addition_lines', 'stock_additions',
         'stock_movements', 'fabric_rolls', 'consignments',
-        'purchase_order_lines', 'purchase_orders',
+        'purchase_order_models', 'purchase_order_lines', 'purchase_orders',
+        'document_comments',
         'forecasts', 'color_ratios', 'safety_stocks',
         'sales_snapshots', 'stock_snapshots', 'factory_loads',
         'model_boms', 'model_sizes', 'product_models', 'accessories',
@@ -84,6 +105,27 @@ class DemoDataService
     // ════════════════════════════════════════════════════════════
     //  المسح
     // ════════════════════════════════════════════════════════════
+
+    /** مسح الترانزاكشنات بس — عشان تمشي على السيستم من الأول والبيانات الأساسية زي ما هي */
+    public function resetTransactions(): void
+    {
+        $this->say('بمسح الترانزاكشنات…');
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        foreach (self::TRANSACTION_TABLES as $t) {
+            if (DB::getSchemaBuilder()->hasTable($t)) {
+                DB::table($t)->truncate();
+            }
+        }
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        // أرصدة الإكسسوارات بتيجي من الأذون — ترجع صفر
+        if (DB::getSchemaBuilder()->hasTable('accessories')) {
+            DB::table('accessories')->update(['stock_qty' => 0]);
+        }
+
+        $this->say('اتمسحت الترانزاكشنات. البيانات الأساسية والمستخدمين زي ما هم.');
+    }
 
     public function reset(): void
     {

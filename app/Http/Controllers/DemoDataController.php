@@ -75,6 +75,17 @@ class DemoDataController extends Controller
             . '<br><span class="hint">' . e(collect($stats)->map(fn ($v, $k) => "{$k}: {$v}")->implode(' · ')) . '</span>');
     }
 
+    /** مسح الترانزاكشنات بس — البيانات الأساسية بتفضل */
+    public function resetTransactions(Request $request)
+    {
+        $request->validate(['confirm' => ['required', 'in:مسح']], [], ['confirm' => 'التأكيد']);
+
+        (new DemoDataService())->resetTransactions();
+        ActivityLogger::log('data_reset', null, 'مسح الترانزاكشنات (البيانات الأساسية فضلت)');
+
+        return back()->with('success', 'اتمسحت كل الترانزاكشنات. البيانات الأساسية والمستخدمين زي ما هم.');
+    }
+
     public function reset(Request $request)
     {
         $request->validate(['confirm' => ['required', 'in:مسح']], [], ['confirm' => 'التأكيد']);
