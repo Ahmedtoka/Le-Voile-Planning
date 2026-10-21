@@ -64,6 +64,16 @@ class Consignment extends Model
     public function goodsReceipts() { return $this->hasMany(GoodsReceipt::class); }
     public function preparationRequests() { return $this->hasMany(PreparationRequest::class); }
 
+    /** إذن الإضافة اللي الرسالة دي اتولّدت منه — عشان رقم إذن المورد يبقى لينك في كل الشاشات */
+    public function sourceAddition(): ?StockAddition
+    {
+        if ($this->relationLoaded('stockAdditions') && $this->stockAdditions->first()) return $this->stockAdditions->first();
+        $sa = $this->stockAdditions()->latest('id')->first();
+        if ($sa) return $sa;
+        $id = StockAdditionLine::where('consignment_id', $this->id)->value('stock_addition_id');
+        return $id ? StockAddition::find($id) : null;
+    }
+
     public function getStatusNameAttribute(): string
     {
         return self::STATUSES[$this->status] ?? $this->status;

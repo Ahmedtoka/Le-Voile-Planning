@@ -92,9 +92,10 @@
             <div class="hint">بيتكتب أوتوماتيك — {{ $row->consignment_no ? 'اتولّد' : 'بيتأكد عند الاعتماد' }}</div></div>
           <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
             <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="41456"></div>
-          <div class="col-md-2"><label class="form-label">رقم إذن المورد</label>
+          <div class="col-md-2"><label class="form-label req">رقم إذن المورد</label>
             <input name="supplier_doc_no" class="form-control form-control-sm" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
-                   placeholder="اختياري"></div>
+                   required placeholder="الرقم اللي على ورقة المورد">
+            <div class="hint">بيتربط بالفحص والمعمل والاستلام</div></div>
           <div class="col-md-2"><label class="form-label">نوع الاستلام</label>
             @php $rt = $po->inspection_exempt ? 'container' : 'normal'; @endphp
             <input type="hidden" name="receipt_type" value="{{ $rt }}">
@@ -132,9 +133,10 @@
             <input name="consignment_no" class="form-control form-control-sm" value="{{ old('consignment_no',$row->consignment_no) }}"
                    placeholder="سيبه فاضي والسيستم هيولّده">
             <div class="hint">النمط: BUPL-090826-043-00</div></div>
-          <div class="col-md-3"><label class="form-label">رقم إذن المورد</label>
+          <div class="col-md-3"><label class="form-label req">رقم إذن المورد</label>
             <input name="supplier_doc_no" class="form-control form-control-sm" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
-                   placeholder="اختياري"></div>
+                   required placeholder="الرقم اللي على ورقة المورد">
+            <div class="hint">بيتربط بالفحص والمعمل والاستلام</div></div>
           <div class="col-md-3"><label class="form-label">نوع الاستلام</label>
             <select name="receipt_type" class="form-select form-select-sm"
                     @if($mode==='create')

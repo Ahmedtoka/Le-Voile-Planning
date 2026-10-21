@@ -40,6 +40,7 @@
         @endif
         <tr><th>المورد</th><td>{{ $row->supplier?->name ?? '—' }}</td></tr>
         <tr><th>أمر الشراء</th><td class="num">{{ $row->purchaseOrder?->po_no ?? '—' }}</td></tr>
+        <tr><th>إذن المورد</th><td>@include('partials.supplier_doc', ['sa' => $row->sourceAddition()])</td></tr>
         <tr><th>الخامة</th><td>{{ $row->fabricType?->name ?? '—' }}</td></tr>
         <tr><th>اللون</th><td>{{ $row->color?->label ?? '—' }}</td></tr>
         <tr><th>المخزن</th><td>{{ $row->warehouse?->name ?? '—' }}</td></tr>

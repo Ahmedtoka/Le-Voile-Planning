@@ -34,7 +34,7 @@
   ];
   $intro = 'أول مستند في دورة القماش. اعتماده بيولّد <b>الحوض (الرسالة)</b> ويدخّل الكمية المخزن '
          . '<b>محجوزة تحت الفحص</b> — ممنوع تشغيلها. الإفراج بيحصل بإذن الاستلام الخام بعد الفحص والمعمل.';
-  $searchHint = 'رقم الإذن أو المسلسل أو الرسالة…';
+  $searchHint = 'رقم الإذن أو إذن المورد أو المسلسل أو الرسالة…';
   $emptyText  = 'مفيش أذون إضافة. ابدأ بواحد لما يوصل قماش.';
   $footNote   = 'حالة الحوض بتوريك الحوض واقف فين في الدورة.';
   $createRoute='stock-additions.create'; $createLabel='إذن إضافة';
@@ -42,9 +42,10 @@
   $extraActions = '<a href="'.route('stock-additions.create', ['type' => 'container']).'"'
                 .' class="btn btn-sm btn-outline-plum"><i class="bi bi-box-seam" aria-hidden="true"></i> استلام حاويات</a>';
   $editRoute='stock-additions.edit'; $printRoute='stock-additions.print';
-  $cols=['رقم الإذن','المسلسل الورقي','التاريخ','المورد','المخزن','رقم الرسالة','الأتواب','الكمية','حالة الحوض','الحالة'];
+  $cols=['رقم الإذن','إذن المورد','المسلسل الورقي','التاريخ','المورد','المخزن','رقم الرسالة','الأتواب','الكمية','حالة الحوض','الحالة'];
   $rowRenderer=function($r){
     return '<td class="num fw-bold">'.e($r->doc_no).'</td>'
+         . '<td class="num"><a href="'.route('stock-additions.edit',$r).'" title="فتح تفاصيل الإذن">'.e($r->supplier_doc_no ?: '—').'</a></td>'
          . '<td class="num">'.e($r->paper_serial ?: '—').'</td>'
          . '<td class="num">'.e($r->doc_date?->format('Y-m-d')).'</td>'
          . '<td>'.e($r->supplier?->name ?? '—').'</td>'

@@ -67,6 +67,8 @@
                 <span class="hint">· {{ $sa->doc_date?->format('Y-m-d') }}</span>
               @else — @endif
             </td></tr>
+          <tr><th>رقم إذن المورد</th>
+            <td>@include('partials.supplier_doc', ['sa' => $sa ?: $c?->sourceAddition()])</td></tr>
           <tr><th>المخزن</th><td>{{ $c->warehouse?->name ?? '—' }}</td></tr>
           <tr><th>تاريخ الوصول</th><td class="num">{{ $c->arrival_date?->format('Y-m-d') ?? '—' }}</td></tr>
         </tbody>

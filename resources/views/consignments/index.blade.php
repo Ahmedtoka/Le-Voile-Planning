@@ -45,13 +45,15 @@
   <div class="table-responsive">
     <table class="table table-sm">
       <thead><tr>
-        <th>رقم الرسالة</th><th>الوصول</th><th>الإفراج</th><th>المورد</th><th>الخامة</th><th>اللون</th>
+        <th>رقم الرسالة</th><th>إذن المورد</th><th>الوصول</th><th>الإفراج</th><th>المورد</th><th>الخامة</th><th>اللون</th>
         <th>الوزن</th><th>الأتواب</th><th>أقل عرض</th><th>البنشر</th><th>محجوز</th><th>متاح</th><th>الحالة</th><th></th>
       </tr></thead>
       <tbody>
       @forelse($rows as $r)
         <tr>
           <td class="num fw-bold"><a href="{{ route('consignments.show',$r) }}">{{ $r->consignment_no }}</a></td>
+          <td class="num">@php $sdx = $r->sourceAddition(); @endphp
+            @if($sdx)<a href="{{ route('stock-additions.edit',$sdx) }}" title="إذن الإضافة {{ $sdx->doc_no }}">{{ $sdx->supplier_doc_no ?: '—' }}</a>@else — @endif</td>
           <td class="num">{{ $r->arrival_date?->format('Y-m-d') }}</td>
           <td class="num">{{ $r->released_at?->format('Y-m-d') ?? '—' }}</td>
           <td>{{ $r->supplier?->name ?? '—' }}</td>
@@ -80,7 +82,7 @@
           </td>
         </tr>
       @empty
-        <tr><td colspan="14">
+        <tr><td colspan="15">
             <div class="empty-state">
               <i class="bi bi-inbox ico" aria-hidden="true"></i>
               <div class="t">مفيش أحواض. الحوض بيتولّد لوحده من إذن الإضافة.</div>

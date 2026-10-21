@@ -23,6 +23,7 @@
         <span><b>أقل عرض من الفحص:</b> <span class="num fw-bold">{{ $arrived->min_width_cm }} سم</span></span>
       @endif
       <span><b>المورد:</b> {{ $arrived->supplier?->name ?? '—' }}</span>
+      @include('partials.supplier_doc', ['sa' => $arrived->sourceAddition()])
       <span class="hint ms-auto">بيانات الرسالة ثابتة — سجّل القراءات بس</span>
     </div>
   </div>

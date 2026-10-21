@@ -13,6 +13,7 @@
       <td class="k">كود اللون</td><td>{{ $insp->color?->code }} — {{ $insp->color?->name }}</td></tr>
   <tr><td class="k">رقم الرسالة</td><td>{{ $insp->consignment?->consignment_no }}</td>
       <td class="k">اسم المورد</td><td>{{ $insp->supplier?->name }}</td></tr>
+  <tr><td class="k">رقم إذن المورد</td><td colspan="3">{{ $insp->consignment?->sourceAddition()?->supplier_doc_no ?: '—' }}</td></tr>
 </table>
 
 <table class="grid">

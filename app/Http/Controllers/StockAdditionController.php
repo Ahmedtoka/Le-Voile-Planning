@@ -33,7 +33,7 @@ class StockAdditionController extends Controller
     {
         $q = StockAddition::with(['supplier', 'warehouse', 'consignment']);
         $this->applyFilters($q, $request,
-            ['doc_no', 'paper_serial', 'consignment_no', 'supplier.name'],
+            ['doc_no', 'supplier_doc_no', 'paper_serial', 'consignment_no', 'supplier.name'],
             'doc_date',
             ['status' => 'status', 'supplier_id' => 'supplier_id', 'warehouse_id' => 'warehouse_id']
         );
@@ -420,7 +420,8 @@ class StockAdditionController extends Controller
             'warehouse_id'      => ['required', 'exists:warehouses,id'],
             'purchase_order_id' => ['nullable', 'exists:purchase_orders,id'],
             'consignment_no'    => ['nullable', 'string', 'max:60'],
-            'supplier_doc_no'   => ['nullable', 'string', 'max:60'],
+            // إجباري: بيتربط بالفحص والمعمل والاستلام وبيظهر كلينك في كل الشاشات
+            'supplier_doc_no'   => ['required', 'string', 'max:60'],
             'receipt_type'      => ['nullable', 'in:normal,container'],
             'remainder_eta'     => ['nullable', 'date'],
             'remainder_note'    => ['nullable', 'string', 'max:191'],
@@ -448,6 +449,7 @@ class StockAdditionController extends Controller
         ], [], [
             'warehouse_id'        => 'المخزن',
             'supplier_id'         => 'المورد',
+            'supplier_doc_no'     => 'رقم إذن المورد',
             'lines.*.qty'         => 'الكمية',
             'lines.*.rolls_count' => 'عدد الأتواب',
         ]);

@@ -29,6 +29,7 @@
       <span><b>وصل في الرسالة دي:</b> <span class="num fw-bold">{{ rtrim(rtrim(number_format((float)$arrived->total_kg,2),'0'),'.') }} كجم</span>
         · <span class="num">{{ (int) $arrived->rolls_count }} توب</span></span>
       <span><b>المورد:</b> {{ $arrived->supplier?->name ?? '—' }}</span>
+      @include('partials.supplier_doc', ['sa' => $arrived->sourceAddition()])
       @if($arrivedPo)
         <span><b>الطلب:</b> <span class="num">{{ $arrivedPo->po_no }}</span></span>
         @if($rem > 0)
