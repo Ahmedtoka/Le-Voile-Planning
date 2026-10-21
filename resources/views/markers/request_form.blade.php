@@ -47,14 +47,8 @@
 
         <div class="col-12">
           <label class="form-label req">الموديلات المطلوبة في الفرشة <span class="hint">— علّم كل الموديلات اللي عايز الماركر يجمعها</span></label>
-          @php $pk = array_map('intval', old('product_model_ids', $picked ?? [])); @endphp
-          <div class="d-flex flex-wrap gap-2" style="max-height:190px;overflow:auto;padding:6px;border:1px solid var(--lv-line);border-radius:6px" id="modelsBox">
-            @foreach($models as $k=>$v)
-              <label class="form-check form-check-inline m-0 small" style="min-width:220px">
-                <input class="form-check-input" type="checkbox" name="product_model_ids[]" value="{{ $k }}" @checked(in_array((int)$k, $pk, true)) onchange="LVM.suggest()">
-                <span class="form-check-label">{{ $v }}</span>
-              </label>
-            @endforeach
+          <div id="modelsBox">
+            @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', $picked ?? []), 'onchange' => 'LVM.suggest()'])
           </div>
         </div>
         <div class="col-md-6"><label class="form-label">المقاسات / تفاصيل</label>
@@ -104,7 +98,7 @@ window.LVM = (function () {
     clearTimeout(timer);
     timer = setTimeout(async () => {
       const cid = sel.value;
-      const models = [...document.querySelectorAll('#modelsBox input:checked')].map(i => i.value);
+      const models = [...document.querySelectorAll('#modelsBox input[type=hidden]')].map(i => i.value);
       const box = document.getElementById('suggestBox'), list = document.getElementById('suggestList');
       if (!cid) { box.hidden = true; return; }
       const qs = new URLSearchParams({consignment_id: cid}); models.forEach(m => qs.append('models[]', m));

@@ -61,15 +61,7 @@
 
         <div class="col-12">
           <label class="form-label">الموديلات اللي هتتشغل من الكمية دي <span class="hint">(للمخزن على سبيل العلم، وبتتنقل لطلب الماركر وأمر الشغل)</span></label>
-          @php $picked = array_map('intval', old('product_model_ids', [])); @endphp
-          <div class="d-flex flex-wrap gap-2" style="max-height:150px;overflow:auto;padding:6px;border:1px solid var(--lv-line);border-radius:6px">
-            @foreach($models as $k=>$v)
-              <label class="form-check form-check-inline m-0 small" style="min-width:220px">
-                <input class="form-check-input" type="checkbox" name="product_model_ids[]" value="{{ $k }}" @checked(in_array((int)$k, $picked, true))>
-                <span class="form-check-label">{{ $v }}</span>
-              </label>
-            @endforeach
-          </div>
+          @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', [])])
           <input name="models_note" class="form-control form-control-sm mt-1" value="{{ old('models_note') }}" placeholder="أو اكتب الموديلات نصًا">
         </div>
 
