@@ -84,33 +84,34 @@
         <input type="hidden" name="warehouse_id"      value="{{ old('warehouse_id', $row->warehouse_id) }}">
         <input type="hidden" name="purchase_order_id" value="{{ old('purchase_order_id', $row->purchase_order_id ?? $po->id) }}">
 
+        @php $rt = $po->inspection_exempt ? 'container' : 'normal'; @endphp
+        <input type="hidden" name="receipt_type" value="{{ $rt }}">
+        {{-- Labels فوق — للقراءة --}}
+        <div class="row g-3 p-2 mb-2 rounded" style="background:var(--lv-offwhite);border:1px solid var(--lv-line)">
+          <div class="col-md-6"><div class="hint">رقم الرسالة</div>
+            <b class="num">{{ $row->consignment_no ?: ($consignmentPreview ?? 'بيتولّد تلقائيًا عند الاعتماد') }}</b>
+            <div class="hint">بيتكتب أوتوماتيك — {{ $row->consignment_no ? 'اتولّد' : 'بيتأكد عند الاعتماد' }} · رسالة لكل لون</div></div>
+          <div class="col-md-6"><div class="hint">نوع الاستلام</div>
+            <b>{{ $rt === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</b>
+            <div class="hint">متحدد من طلب الشراء (قرار التخطيط)</div></div>
+        </div>
+        {{-- اللي بتكتبه --}}
         <div class="row g-3">
-          <div class="col-md-3"><label class="form-label">رقم الرسالة</label>
-            <div class="form-control form-control-sm num" style="background:var(--lv-offwhite)">
-              {{ $row->consignment_no ?: ($consignmentPreview ?? 'بيتولّد تلقائيًا عند الاعتماد') }}
-            </div>
-            <div class="hint">بيتكتب أوتوماتيك — {{ $row->consignment_no ? 'اتولّد' : 'بيتأكد عند الاعتماد' }}</div></div>
-          <div class="col-md-2"><label class="form-label">مسلسل إذن الإضافة (الورقي)</label>
-            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="41456"></div>
-          <div class="col-md-2"><label class="form-label req">رقم إذن المورد</label>
+          <div class="col-md-6"><label class="form-label req">مسلسل إذن الإضافة (الورقي)</label>
+            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" required placeholder="41456"></div>
+          <div class="col-md-6"><label class="form-label req">رقم إذن المورد</label>
             <input name="supplier_doc_no" class="form-control form-control-sm" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
                    required placeholder="الرقم اللي على ورقة المورد">
             <div class="hint">بيتربط بالفحص والمعمل والاستلام</div></div>
-          <div class="col-md-2"><label class="form-label">نوع الاستلام</label>
-            @php $rt = $po->inspection_exempt ? 'container' : 'normal'; @endphp
-            <input type="hidden" name="receipt_type" value="{{ $rt }}">
-            <div class="form-control form-control-sm" style="background:var(--lv-offwhite)">
-              {{ $rt === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</div>
-            <div class="hint">متحدد من طلب الشراء (قرار التخطيط)</div></div>
-          <div class="col-md-3"><label class="form-label">ملاحظات</label>
-            <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
+          <div class="col-12"><label class="form-label">ملاحظات</label>
+            <textarea name="notes" rows="2" class="form-control form-control-sm">{{ old('notes',$row->notes) }}</textarea></div>
         </div>
       @else
         <div class="row g-3">
           <div class="col-md-2"><label class="form-label req">التاريخ</label>
             <input type="date" name="doc_date" class="form-control form-control-sm" value="{{ old('doc_date',$row->doc_date?->format('Y-m-d') ?? $row->doc_date) }}" required></div>
-          <div class="col-md-2"><label class="form-label">مسلسل إذن الإضافة (الورقي)</label>
-            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="41456"></div>
+          <div class="col-md-2"><label class="form-label req">مسلسل إذن الإضافة (الورقي)</label>
+            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" required placeholder="41456"></div>
           <div class="col-md-3"><label class="form-label req">اسم المورد</label>
             <select name="supplier_id" class="form-select form-select-sm" required><option value="">—</option>
               @foreach($suppliers as $k=>$v)<option value="{{ $k }}" @selected(old('supplier_id',$row->supplier_id)==$k)>{{ $v }}</option>@endforeach

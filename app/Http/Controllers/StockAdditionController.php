@@ -415,7 +415,7 @@ class StockAdditionController extends Controller
     {
         $v = $request->validate([
             'doc_date'         => ['required', 'date'],
-            'paper_serial'     => ['nullable', 'string', 'max:40'],
+            'paper_serial'     => ['required', 'string', 'max:40'],   // مسلسل إذن الإضافة الورقي — إجباري
             'supplier_id'       => ['required', 'exists:suppliers,id'],
             'warehouse_id'      => ['required', 'exists:warehouses,id'],
             'purchase_order_id' => ['nullable', 'exists:purchase_orders,id'],
@@ -450,6 +450,7 @@ class StockAdditionController extends Controller
             'warehouse_id'        => 'المخزن',
             'supplier_id'         => 'المورد',
             'supplier_doc_no'     => 'رقم إذن المورد',
+            'paper_serial'        => 'مسلسل إذن الإضافة',
             'lines.*.qty'         => 'الكمية',
             'lines.*.rolls_count' => 'عدد الأتواب',
         ]);
