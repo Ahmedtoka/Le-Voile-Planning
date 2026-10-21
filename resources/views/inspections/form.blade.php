@@ -173,7 +173,7 @@
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
       <span>② قياس الأتواب
-        <span class="hint">— طول وعرض كل توب (أقل عرض هو اللي الماركر هيتبني عليه) + وزن البنشر لكل توب للمعمل. التوب البايظ علّمه <b>مرفوض</b> واكتب وزنه.</span>
+        <span class="hint">— طول وعرض كل توب (أقل عرض هو اللي الماركر هيتبني عليه) + وزن البنشر لكل توب للمعمل — <b>بيتحسب لوحده</b> من وزن التوب ÷ (الطول × العرض)، ولو المعمل قاسه بالبانشر اكتب رقمه مكانه. التوب البايظ علّمه <b>مرفوض</b> واكتب وزنه.</span>
       </span>
       @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> توب</button>@endif
     </div>
@@ -333,6 +333,16 @@ window.LVI = {
     tr.classList.toggle('table-danger', rej);
     if (kg) { kg.required = rej; kg.placeholder = rej ? 'إجباري' : 'كجم'; if (rej) kg.focus(); }
   },
+  /* البنشر تلقائي = وزن التوب ÷ (الطول × العرض) = جم/م² — لو المعمل قاسه بالبانشر يكتبه مكانه */
+  autoGsm: function (el) {
+    var tr = el.closest('tr'), g = tr.querySelector('.roll-gsm');
+    if (!g || (g.value && g.dataset.auto !== '1')) return;
+    var len = parseFloat(tr.querySelector('[name$="[length_m]"]')?.value) || 0;
+    var w   = parseFloat(tr.querySelector('[name$="[width_cm]"]')?.value) || 0;
+    var kg  = parseFloat(tr.querySelector('.roll-kg')?.value) || 0;
+    if (len > 0 && w > 0 && kg > 0) { g.value = (kg * 1000 / (len * w / 100)).toFixed(1); g.dataset.auto = '1'; }
+    else if (g.dataset.auto === '1') { g.value = ''; }
+  },
   /* تفاصيل العيب تظهر بس لما تختار عيب */
   defect: function (sel) {
     var tr = sel.closest('tr'), w = tr.querySelector('.roll-dwrap');
@@ -364,6 +374,13 @@ window.LVI = {
       : (must ? 'إجباري — اكتب الملاحظة اللي القماش عدّى بيها.' : 'اختياري — إلا لو النتيجة «مقبول بملاحظات» أو «مرفوض».');
   }
   document.querySelectorAll('.result-btn').forEach(function (b) { b.addEventListener('click', function () { input.value = b.dataset.result; paint(); }); });
+
+  // البنشر التلقائي من الطول والعرض والوزن
+  document.getElementById('lines').addEventListener('input', function (e) {
+    var n = e.target.name || '';
+    if (/\[(length_m|width_cm|net_kg)\]$/.test(n)) LVI.autoGsm(e.target);
+    if (e.target.classList.contains('roll-gsm')) e.target.dataset.auto = '0';
+  });
 
   // «تم» جنب الأتواب المجرودة ⇒ سطر لكل توب
   var btn = document.getElementById('buildRows'), cnt = document.getElementById('countedRolls');
