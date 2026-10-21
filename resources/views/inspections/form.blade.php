@@ -353,8 +353,12 @@
 
 <style>
   /* خانات جدول الأتواب عريضة ومقروءة */
-  #lines td input[type=number], #lines td select { min-width: 100%; font-size: var(--fs-sm); }
-  #lines td input[name$="[roll_no]"] { width: 80px; }
+  #lines td input[type=number] { min-width: 110px; width: 100%; font-size: var(--fs-sm); }
+  #lines td select { min-width: 90px; width: 100%; font-size: var(--fs-sm); }
+  #lines td input[name$="[roll_no]"] { width: 80px; min-width: 80px; }
+  #lines td input[name$="[defects_count]"] { min-width: 64px; width: 64px; }
+  #lines td input[name$="[defect_desc]"], #lines td input[name$="[notes]"] { width: 100%; min-width: 160px; }
+  .table-responsive:has(#lines) { overflow-x: auto; }
 </style>
 @push('scripts')
 <script>
