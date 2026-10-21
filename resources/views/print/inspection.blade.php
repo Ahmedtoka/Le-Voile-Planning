@@ -19,7 +19,7 @@
 <table class="grid">
   <thead><tr>
     <th style="width:60px">التوب</th><th style="width:80px">الطــول</th><th style="width:70px">العرض</th>
-    <th style="width:60px">الحالة</th><th style="width:70px">الوزن</th><th style="width:65px">العيوب</th><th>العيــــب</th><th style="width:150px">ملاحظــات</th>
+    <th style="width:60px">الحالة</th><th style="width:70px">الوزن</th><th style="width:60px">البنشر</th><th style="width:65px">العيوب</th><th>العيــــب</th><th style="width:150px">ملاحظــات</th>
   </tr></thead>
   <tbody>
     @foreach($insp->rolls as $r)
@@ -28,14 +28,15 @@
         <td>{{ rtrim(rtrim(number_format((float)$r->length_m, 2), '0'), '.') }}</td>
         <td>{{ rtrim(rtrim(number_format((float)$r->width_cm, 2), '0'), '.') }}</td>
         <td>{{ $r->status === 'rejected' ? 'مرفوض' : 'سليم' }}</td>
-        <td>{{ $r->net_kg ? rtrim(rtrim(number_format((float)$r->net_kg,3),'0'),'.') : '' }}</td>
+        <td>{{ $r->net_kg ? lv_num($r->net_kg) : '' }}</td>
+        <td>{{ $r->gsm ? lv_num($r->gsm, 2) : '' }}</td>
         <td>{{ $r->defects_count }}</td>
         <td class="r">{{ $r->defect_desc }}</td>
         <td class="r">{{ $r->notes }}</td>
       </tr>
     @endforeach
     @for($i = $insp->rolls->count(); $i < 10; $i++)
-      <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
     @endfor
   </tbody>
 </table>

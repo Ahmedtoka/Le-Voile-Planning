@@ -7,6 +7,8 @@ use App\Models\Consignment;
 use App\Models\FabricInspection;
 use App\Models\FabricType;
 use App\Models\InspectionRoll;
+use App\Models\LabGsmReading;
+use App\Models\LabReport;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Services\DocNumber;
@@ -112,6 +114,7 @@ class FabricInspectionController extends Controller
             'preset'    => $preset,
             'arrivedPo' => isset($c) ? $c->purchaseOrder?->load('lines') : null,
             'arrived'   => isset($c) ? $c->load('fabricType', 'color', 'supplier') : null,
+            'lab'       => isset($c) ? $c->labReports()->latest('id')->first() : null,
         ]));
     }
 
@@ -119,7 +122,7 @@ class FabricInspectionController extends Controller
     {
         $data = $this->validated($request);
 
-        $insp = DB::transaction(function () use ($data) {
+        $insp = DB::transaction(function () use ($data, $request) {
             $insp = FabricInspection::create($data['header'] + [
                 'doc_no'     => DocNumber::next('fabric_inspection', 'fabric_inspections'),
                 'status'     => 'draft',
@@ -127,6 +130,7 @@ class FabricInspectionController extends Controller
             ]);
             $this->syncRolls($insp, $data['rolls']);
             $insp->refresh()->recalc();
+            $this->syncLab($insp, $data['lab'], $request);
             return $insp;
         });
 
@@ -135,7 +139,7 @@ class FabricInspectionController extends Controller
 
     public function edit(FabricInspection $inspection)
     {
-        $inspection->load(['rolls', 'consignment.purchaseOrder.lines',
+        $inspection->load(['rolls', 'inspector', 'consignment.purchaseOrder.lines',
             'consignment.fabricType', 'consignment.color', 'consignment.supplier', ]);
 
         return view('inspections.form', $this->formData([
@@ -143,6 +147,7 @@ class FabricInspectionController extends Controller
             'mode'      => 'edit',
             'arrived'   => $inspection->consignment,
             'arrivedPo' => $inspection->consignment?->purchaseOrder,
+            'lab'       => $inspection->consignment?->labReports()->latest('id')->first(),
         ]));
     }
 
@@ -151,10 +156,11 @@ class FabricInspectionController extends Controller
         abort_unless($inspection->isEditable(), 403);
         $data = $this->validated($request);
 
-        DB::transaction(function () use ($inspection, $data) {
+        DB::transaction(function () use ($inspection, $data, $request) {
             $inspection->update($data['header']);
             $this->syncRolls($inspection, $data['rolls'], true);
             $inspection->refresh()->recalc();
+            $this->syncLab($inspection, $data['lab'], $request);
         });
 
         return $this->finish($inspection->refresh());
@@ -179,7 +185,8 @@ class FabricInspectionController extends Controller
                 : 'اخترت «مقبول بملاحظات» — لازم تكتب الملاحظة.';
         }
 
-        $noWidth = $inspection->rolls()
+        // المرفوض مش لازم يتقاس — وزنه هو المهم
+        $noWidth = $inspection->rolls()->where('status', '!=', 'rejected')
             ->where(fn ($q) => $q->whereNull('width_cm')->orWhere('width_cm', '<=', 0))
             ->count();
 
@@ -203,8 +210,78 @@ class FabricInspectionController extends Controller
 
         FlowEngine::complete($inspection, 'تقرير الفحص ' . $inspection->doc_no . ' اتحفظ وخلص');
 
+        /* المعمل المدمج: لو الفاحص كتب بنشر للأتواب، تقرير المعمل بيتقفل مع الفحص
+           والرسالة تنزل استلام الخام على طول. الرسالة المرفوضة ما بيتعملهاش معمل. */
+        $lab = $inspection->result !== 'rejected' && $inspection->consignment
+            ? $inspection->consignment->labReports()->where('status', 'draft')->latest('id')->first()
+            : null;
+        if ($lab && $lab->readings()->count()) {
+            $lab->refresh()->recalc();
+            FlowEngine::complete($lab, 'تقرير المعمل ' . $lab->doc_no . ' اتحفظ مع الفحص ' . $inspection->doc_no);
+            return redirect()->route('inspections.edit', $inspection)
+                ->with(FlowMessage::flash('lab.done', $lab));
+        }
+
         return redirect()->route('inspections.edit', $inspection)
             ->with(FlowMessage::flash('inspection.done', $inspection));
+    }
+
+    /**
+     * تقرير المعمل المدمج في ورقة الفحص (الميتينج: نفس الأتواب ⇒ نفس الورقة).
+     * بيتعمل/بيتحدث كمسودة على نفس الرسالة، والقراءات = بنشر الأتواب السليمة.
+     */
+    private function syncLab(FabricInspection $insp, array $lab, Request $request): void
+    {
+        $readings = $insp->rolls()->where('status', '!=', 'rejected')->where('gsm', '>', 0)->orderBy('id')->get();
+        $hasData  = $readings->count() > 0
+            || collect(['s1_shrink_len_pct', 's1_shrink_width_pct', 's2_shrink_len_pct', 's2_shrink_width_pct',
+                        's3_shrink_len_pct', 's3_shrink_width_pct', 's4_shrink_len_pct', 's4_shrink_width_pct'])
+                ->contains(fn ($k) => ($lab[$k] ?? null) !== null && $lab[$k] !== '')
+            || !empty($lab['has_color_break']) || !empty($lab['color_match_ok']) || $request->hasFile('color_swatch');
+
+        $c = $insp->consignment;
+        if (!$c) return;
+
+        $report = $c->labReports()->where('status', 'draft')->latest('id')->first();
+        if (!$hasData && !$report) return;
+
+        $payload = [
+            'doc_date'            => $insp->doc_date,
+            'consignment_id'      => $c->id,
+            'fabric_type_id'      => $c->fabric_type_id,
+            'color_id'            => $c->color_id,
+            'supplier_id'         => $c->supplier_id,
+            'technician_id'       => auth()->id(),
+            'paper_serial'        => $lab['paper_serial'] ?? null,
+            'color_match_ok'      => (bool) ($lab['color_match_ok'] ?? false),
+            'has_color_break'     => (bool) ($lab['has_color_break'] ?? false),
+            'color_break_roll_no' => !empty($lab['has_color_break']) ? ($lab['color_break_roll_no'] ?? null) : null,
+            'color_break_note'    => !empty($lab['has_color_break']) ? ($lab['color_break_note'] ?? null) : null,
+            'notes'               => $lab['notes'] ?? null,
+        ];
+        foreach (['s1', 's2', 's3', 's4'] as $s) {
+            $payload["{$s}_shrink_len_pct"]   = ($lab["{$s}_shrink_len_pct"] ?? '') !== '' ? $lab["{$s}_shrink_len_pct"] : null;
+            $payload["{$s}_shrink_width_pct"] = ($lab["{$s}_shrink_width_pct"] ?? '') !== '' ? $lab["{$s}_shrink_width_pct"] : null;
+        }
+
+        if ($report) {
+            $report->update($payload);
+        } else {
+            $report = LabReport::create($payload + [
+                'doc_no'     => DocNumber::next('lab_report', 'lab_reports'),
+                'status'     => 'draft',
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        $report->readings()->delete();
+        foreach ($readings as $r) {
+            LabGsmReading::create(['lab_report_id' => $report->id, 'roll_no' => $r->roll_no, 'gsm' => $r->gsm]);
+        }
+        if ($request->hasFile('color_swatch')) {
+            $report->forceFill(['color_swatch_path' => $request->file('color_swatch')->store('swatches', 'public')])->saveQuietly();
+        }
+        $report->refresh()->recalc();
     }
 
     /** الراوت القديم — بيوصّل لنفس التخليص */
@@ -242,6 +319,7 @@ class FabricInspectionController extends Controller
             'preset'       => [],
             'arrivedPo'    => null,
             'arrived'      => null,
+            'lab'          => null,
         ], $extra);
     }
 
@@ -268,6 +346,22 @@ class FabricInspectionController extends Controller
             'rolls.*.width_cm'        => ['nullable', 'numeric', 'min:0'],
             'rolls.*.status'          => ['nullable', 'in:ok,rejected'],
             'rolls.*.net_kg'          => ['nullable', 'numeric', 'min:0'],
+            'rolls.*.gsm'             => ['nullable', 'numeric', 'min:0'],
+            'rolls.*.defect_type'     => ['nullable', 'string', 'max:40'],
+
+            // المعمل المدمج — كله اختياري
+            'lab'                        => ['nullable', 'array'],
+            'lab.paper_serial'           => ['nullable', 'string', 'max:40'],
+            'lab.s1_shrink_len_pct'      => ['nullable', 'numeric'], 'lab.s1_shrink_width_pct' => ['nullable', 'numeric'],
+            'lab.s2_shrink_len_pct'      => ['nullable', 'numeric'], 'lab.s2_shrink_width_pct' => ['nullable', 'numeric'],
+            'lab.s3_shrink_len_pct'      => ['nullable', 'numeric'], 'lab.s3_shrink_width_pct' => ['nullable', 'numeric'],
+            'lab.s4_shrink_len_pct'      => ['nullable', 'numeric'], 'lab.s4_shrink_width_pct' => ['nullable', 'numeric'],
+            'lab.color_match_ok'         => ['nullable', 'boolean'],
+            'lab.has_color_break'        => ['nullable', 'boolean'],
+            'lab.color_break_roll_no'    => ['nullable', 'string', 'max:120'],
+            'lab.color_break_note'       => ['nullable', 'string', 'max:191'],
+            'lab.notes'                  => ['nullable', 'string'],
+            'color_swatch'               => ['nullable', 'image', 'max:4096'],
             'rolls.*.defects_count'   => ['nullable', 'integer', 'min:0'],
             'rolls.*.defect_desc'     => ['nullable', 'string'],
             'rolls.*.notes'           => ['nullable', 'string'],
@@ -282,7 +376,8 @@ class FabricInspectionController extends Controller
         ]);
 
         $rolls = $v['rolls'];
-        unset($v['rolls']);
+        $lab   = $v['lab'] ?? [];
+        unset($v['rolls'], $v['lab'], $v['color_swatch']);
 
         // التوب المرفوض لازم يتوزن — وزنه هو اللي بيتخصم من الرسالة والطلب
         foreach ($rolls as $r) {
@@ -304,7 +399,7 @@ class FabricInspectionController extends Controller
 
         $v['total_rolls'] = $v['counted_rolls'];   // المرجع هو المجرود مش المصرّح
 
-        return ['header' => $v, 'rolls' => $rolls];
+        return ['header' => $v, 'rolls' => $rolls, 'lab' => $lab];
     }
 
     private function syncRolls(FabricInspection $insp, array $rolls, bool $replace = false): void
@@ -315,10 +410,14 @@ class FabricInspectionController extends Controller
             $len = (float) ($r['length_m'] ?? 0);
             $def = (int) ($r['defects_count'] ?? 0);
             $rej = ($r['status'] ?? 'ok') === 'rejected';
+            $dtype = trim((string) ($r['defect_type'] ?? ''));
+            $ddesc = trim((string) ($r['defect_desc'] ?? ''));
+            $defectDesc = $dtype !== '' ? ($dtype . ($ddesc !== '' ? ': ' . $ddesc : '')) : ($ddesc !== '' ? $ddesc : null);
+            if ($dtype !== '' && $def === 0) $def = 1;   // اختار عيب من غير عدد = عيب واحد
 
             /* السطور الجاهزة اللي الفاحص ما قاسهاش بتتساب — العيّنة =
                الأتواب اللي اتقاست فعلًا، مش كل أتواب الرسالة. المرفوض بيتسجل حتى لو ما اتقاسش. */
-            if (!$rej && $len <= 0 && (float) ($r['width_cm'] ?? 0) <= 0 && $def === 0) continue;
+            if (!$rej && $len <= 0 && (float) ($r['width_cm'] ?? 0) <= 0 && $def === 0 && (float) ($r['gsm'] ?? 0) <= 0) continue;
 
             InspectionRoll::create([
                 'fabric_inspection_id' => $insp->id,
@@ -327,9 +426,10 @@ class FabricInspectionController extends Controller
                 'width_cm'      => $r['width_cm'] ?? null,
                 'status'        => $rej ? 'rejected' : 'ok',
                 'net_kg'        => $r['net_kg'] ?? null,
+                'gsm'           => ($r['gsm'] ?? '') !== '' ? $r['gsm'] : null,
                 'defects_count' => $def,
                 'defect_pct'    => $len > 0 ? round(($def / $len) * 100, 3) : null,
-                'defect_desc'   => $r['defect_desc'] ?? null,
+                'defect_desc'   => $defectDesc,
                 'notes'         => $r['notes'] ?? null,
             ]);
         }
