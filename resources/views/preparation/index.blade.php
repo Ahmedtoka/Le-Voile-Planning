@@ -119,7 +119,7 @@
                   {{ $r->is_remainder ? 'الباقي كله' : lv_kg($r->requested_qty, false) }}</div>
                 <div class="hint">{{ $r->is_remainder ? 'آخر تقسيمة — من غير وزن' : 'تقريبي — اوزن أتواب قريبة من الرقم ده واكتب الفعلي' }}</div>
               </div>
-              <table class="table table-sm mb-3">
+              <table class="table table-sm mb-3 text-center" style="--bs-table-bg:transparent">
                 <tbody>
                   <tr><th style="width:38%">الرسالة</th><td class="num fw-bold">{{ $cc?->consignment_no }}</td></tr>
                   <tr><th>الصنف · اللون</th><td>{{ $cc?->fabricType?->name }} · {{ $cc?->color?->label ?? $cc?->color?->code }}</td></tr>
