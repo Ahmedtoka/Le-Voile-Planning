@@ -16,43 +16,60 @@
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'inspection'])
 
-{{-- ① سامري الرسالة — نصين: الرسالة نفسها | مصدرها (الورق والطلب). كله Labels وكله لينكات --}}
+{{-- ① سامري الرسالة — جدول عريض في النص، تلات مجموعات: الرسالة | إذن الإضافة | طلب الشراء --}}
 @if($c)
-  @php $over = $st ? (float) $st['received'] - (float) $st['ordered'] : 0; @endphp
-  <div class="row g-3 mb-3">
-    <div class="col-lg-6">
-      <div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span>الرسالة</span>
-          <a href="{{ route('consignments.show', $c) }}" class="fw-bold num" style="font-size:1.05rem">{{ $c->consignment_no }}</a>
+  @php $over = $st ? (float) $st['received'] - (float) $st['ordered'] : 0; $po = $c->purchaseOrder; @endphp
+  <style>
+    .sum-sec{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start;padding:10px 0;border-bottom:1px dashed var(--lv-line)}
+    .sum-sec:last-child{border-bottom:0}
+    .sum-sec .t{font-weight:700;color:var(--lv-brand-ink);padding-top:6px}
+    .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;text-align:center}
+    .sum-grid .k{font-size:var(--fs-xs);color:var(--lv-muted)}
+    .sum-grid .v{font-weight:700}
+    @media (max-width:768px){.sum-sec{grid-template-columns:1fr}}
+  </style>
+  <div class="card mb-3" style="border-color:var(--lv-soft)">
+    <div class="card-body py-1">
+
+      <div class="sum-sec">
+        <div class="t"><i class="bi bi-box-seam" aria-hidden="true"></i> الرسالة</div>
+        <div class="sum-grid">
+          <div><div class="k">رقم الرسالة</div><a href="{{ route('consignments.show', $c) }}" class="v num">{{ $c->consignment_no }}</a></div>
+          <div><div class="k">تاريخ الوصول</div><div class="v num">{{ $c->arrival_date?->format('Y-m-d') }}</div></div>
+          <div><div class="k">الصنف</div><div class="v">{{ $c->fabricType?->name ?? '—' }}</div></div>
+          <div><div class="k">اللون</div><div class="v">{{ $c->color?->label ?? $c->color?->code ?? '—' }}</div></div>
+          <div><div class="k">وصل في الرسالة دي</div><div class="v num">{{ lv_kg($c->total_kg) }}</div><div class="k">{{ (int) $c->rolls_count }} توب</div></div>
+          <div><div class="k">نوع الاستلام</div><div class="v">{{ $sa?->receipt_type === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</div></div>
         </div>
-        <table class="table table-sm mb-0">
-          <tbody>
-            <tr><th style="width:42%">الصنف · اللون</th><td>{{ $c->fabricType?->name ?? '—' }} · {{ $c->color?->label ?? $c->color?->code ?? '—' }}</td></tr>
-            <tr><th>وصل في الرسالة دي</th><td class="num fw-bold">{{ lv_kg($c->total_kg) }} <span class="hint">· {{ (int) $c->rolls_count }} توب</span></td></tr>
-            <tr><th>تاريخ الوصول</th><td class="num">{{ $c->arrival_date?->format('Y-m-d') }}</td></tr>
-            <tr><th>نوع الاستلام</th><td>{{ $sa?->receipt_type === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</td></tr>
-            <tr><th>المخزن</th><td>{{ $c->warehouse?->name ?? '—' }}</td></tr>
-          </tbody>
-        </table>
       </div>
-    </div>
-    <div class="col-lg-6">
-      <div class="card h-100">
-        <div class="card-header">مصدر الرسالة</div>
-        <table class="table table-sm mb-0">
-          <tbody>
-            <tr><th style="width:42%">المورد</th><td>{{ $c->supplier?->name ?? '—' }}</td></tr>
-            <tr><th>إذن المورد</th><td>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="fw-bold num" title="يفتح إذن الإضافة">{{ $sa->supplier_doc_no ?: '—' }}</a>@else — @endif</td></tr>
-            <tr><th>إذن الإضافة</th><td>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="fw-bold num">{{ $sa->doc_no }}</a> <span class="hint">· {{ $sa->doc_date?->format('Y-m-d') }} · {{ $sa->creator?->name }}</span>@else — @endif</td></tr>
-            <tr><th>مسلسل إذن الإضافة (الورقي)</th><td>@if($sa)<a href="{{ route('stock-additions.print', $sa) }}" target="_blank" class="fw-bold num" title="يفتح الورقة للطباعة">{{ $sa->paper_serial ?: '—' }}</a>@else — @endif</td></tr>
-            <tr><th>طلب الشراء</th><td>@if($c->purchaseOrder)<a href="{{ route('purchase-orders.edit', $c->purchaseOrder) }}" class="fw-bold num">{{ $c->purchaseOrder->po_no }}</a> <span class="hint">· {{ $c->purchaseOrder->requester?->name }}</span>@else <span class="hint">بدون طلب</span> @endif</td></tr>
-          </tbody>
-        </table>
-        @if($st)
-          <div class="card-footer py-2" style="background:{{ $st['left'] > 0.0001 ? 'var(--lv-warn-bg)' : ($over > 0.0001 ? 'var(--lv-danger-bg)' : 'var(--lv-ok-bg)') }}">
-            <div class="hint">الصنف ده على الطلب</div>
-            <div class="d-flex flex-wrap gap-3 align-items-center">
+
+      <div class="sum-sec">
+        <div class="t"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> إذن الإضافة</div>
+        <div class="sum-grid">
+          <div><div class="k">رقم الإذن</div>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="v num">{{ $sa->doc_no }}</a>@else <div class="v">—</div> @endif</div>
+          <div><div class="k">تاريخ إذن الإضافة</div><div class="v num">{{ $sa?->doc_date?->format('Y-m-d') ?? '—' }}</div></div>
+          <div><div class="k">مسلسل إذن الإضافة (الورقي)</div>@if($sa)<a href="{{ route('stock-additions.print', $sa) }}" target="_blank" class="v num" title="يفتح الورقة للطباعة">{{ $sa->paper_serial ?: '—' }}</a>@else <div class="v">—</div> @endif</div>
+          <div><div class="k">إذن المورد</div>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="v num">{{ $sa->supplier_doc_no ?: '—' }}</a>@else <div class="v">—</div> @endif</div>
+          <div><div class="k">المورد</div><div class="v">{{ $c->supplier?->name ?? '—' }}</div></div>
+          <div><div class="k">المخزن</div><div class="v">{{ $sa?->warehouse?->name ?? $c->warehouse?->name ?? '—' }}</div></div>
+          <div><div class="k">استلمه</div><div class="v">{{ $sa?->creator?->name ?? '—' }}</div></div>
+        </div>
+      </div>
+
+      <div class="sum-sec">
+        <div class="t"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> طلب الشراء</div>
+        <div>
+          <div class="sum-grid">
+            <div><div class="k">رقم الطلب</div>@if($po)<a href="{{ route('purchase-orders.edit', $po) }}" class="v num">{{ $po->po_no }}</a>@else <div class="v">بدون طلب</div> @endif</div>
+            <div><div class="k">تاريخ الطلب</div><div class="v num">{{ $po?->po_date?->format('Y-m-d') ?? '—' }}</div></div>
+            <div><div class="k">طلبه</div><div class="v">{{ $po?->requester?->name ?? '—' }}</div></div>
+            <div><div class="k">سعّره</div><div class="v">{{ $po?->sourcer?->name ?? '—' }}</div><div class="k">{{ $po?->sourced_at?->format('Y-m-d') }}</div></div>
+            <div><div class="k">توريد متوقع</div><div class="v num">{{ $po?->delivery_date?->format('Y-m-d') ?? '—' }}</div></div>
+          </div>
+          @if($st)
+            <div class="mt-2 p-2 rounded text-center d-flex flex-wrap justify-content-center gap-3 align-items-center"
+                 style="background:{{ $st['left'] > 0.0001 ? 'var(--lv-warn-bg)' : ($over > 0.0001 ? 'var(--lv-danger-bg)' : 'var(--lv-ok-bg)') }}">
+              <span class="hint">الصنف ده على الطلب:</span>
               <span>مطلوب <b class="num">{{ lv_qty($st['ordered'], $st['unit']) }}</b></span>
               @if($st['left'] > 0.0001)
                 <span>وصل لحد دلوقتي <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
@@ -66,9 +83,10 @@
                 <span class="text-success fw-bold"><i class="bi bi-check2-circle" aria-hidden="true"></i> الصنف اكتمل على الطلب بالكامل</span>
               @endif
             </div>
-          </div>
-        @endif
+          @endif
+        </div>
       </div>
+
     </div>
   </div>
 @endif
@@ -110,10 +128,6 @@
             <table class="table table-sm mb-0" style="background:transparent">
               <tr><th style="width:45%">أتواب حسب الإذن</th><td class="num fw-bold">{{ (int) ($row->declared_rolls ?? $c?->rolls_count) }} توب</td></tr>
               <tr><th>الوزن حسب الإذن</th><td class="num fw-bold">{{ $c ? lv_kg($c->total_kg) : '—' }}</td></tr>
-              @php $po = $c?->purchaseOrder; @endphp
-              <tr><th>طلبه</th><td>{{ $po?->requester?->name ?? '—' }} <span class="hint num">{{ $po?->requested_at?->format('Y-m-d') }}</span></td></tr>
-              <tr><th>سعّره</th><td>{{ $po?->sourcer?->name ?? '—' }} <span class="hint num">{{ $po?->sourced_at?->format('Y-m-d') }}</span></td></tr>
-              <tr><th>استلمه</th><td>{{ $sa?->creator?->name ?? '—' }} <span class="hint num">{{ $sa?->doc_date?->format('Y-m-d') }}</span></td></tr>
               <tr><th>فحصه</th><td>{{ $mode === 'edit' && $row->status === 'approved' ? ($row->inspector?->name ?? '—') : '— لسه (' . auth()->user()?->name . ')' }}
                 <span class="hint num">{{ $mode === 'edit' && $row->status === 'approved' ? $row->doc_date?->format('Y-m-d') : '' }}</span></td></tr>
             </table>
