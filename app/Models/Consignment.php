@@ -64,6 +64,37 @@ class Consignment extends Model
     public function goodsReceipts() { return $this->hasMany(GoodsReceipt::class); }
     public function preparationRequests() { return $this->hasMany(PreparationRequest::class); }
 
+    /** سطر طلب الشراء اللي الرسالة دي جاية منه (نفس الصنف واللون) */
+    public function poLine(): ?PurchaseOrderLine
+    {
+        $po = $this->purchaseOrder;
+        if (!$po) return null;
+        $po->loadMissing('lines');
+        return $po->lines->first(fn ($l) => $l->fabric_type_id == $this->fabric_type_id && $l->color_id == $this->color_id);
+    }
+
+    /**
+     * الرسالة دي من صنف كان مطلوب منه كام، وصل منه كام، وباقي كام —
+     * عشان دفعة الباقي لما توصل تتربط بنفس السطر صح.
+     * @return array{ordered:float,received:float,left:float,unit:string,eta:?string,closed:bool,line:PurchaseOrderLine}|null
+     */
+    public function orderLineStatus(): ?array
+    {
+        $l = $this->poLine();
+        if (!$l) return null;
+        $eta = StockAdditionLine::where('po_line_id', $l->id)->whereNotNull('remainder_eta')
+            ->orderByDesc('id')->value('remainder_eta');
+        return [
+            'ordered'  => (float) $l->qty,
+            'received' => (float) $l->received_qty,
+            'left'     => max(0, (float) $l->min_allowed_qty - (float) $l->received_qty),
+            'unit'     => $l->unit,
+            'eta'      => $eta ? \Illuminate\Support\Carbon::parse($eta)->format('Y-m-d') : $this->purchaseOrder?->remainder_eta?->format('Y-m-d'),
+            'closed'   => (bool) $l->is_closed,
+            'line'     => $l,
+        ];
+    }
+
     /** إذن الإضافة اللي الرسالة دي اتولّدت منه — عشان رقم إذن المورد يبقى لينك في كل الشاشات */
     public function sourceAddition(): ?StockAddition
     {

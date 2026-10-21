@@ -39,7 +39,20 @@
           <tr><th class="text-danger">فواصل / اختلاف لون</th><td class="text-danger fw-bold">{{ $row->color_break_note ?: 'نعم — راجع تقرير المعمل' }}</td></tr>
         @endif
         <tr><th>المورد</th><td>{{ $row->supplier?->name ?? '—' }}</td></tr>
-        <tr><th>أمر الشراء</th><td class="num">{{ $row->purchaseOrder?->po_no ?? '—' }}</td></tr>
+        <tr><th>أمر الشراء</th><td class="num">
+          @if($row->purchaseOrder)
+            <a href="{{ route('purchase-orders.edit', $row->purchaseOrder) }}">{{ $row->purchaseOrder->po_no }}</a>
+            @php $st = $row->orderLineStatus(); $nn = fn ($v) => rtrim(rtrim(number_format((float) $v, 3), '0'), '.'); @endphp
+            @if($st)
+              <div class="hint">مطلوب من الصنف ده <b>{{ $nn($st['ordered']) }} {{ $st['unit'] }}</b> · وصل <b>{{ $nn($st['received']) }}</b>
+                @if($st['left'] > 0.0001)
+                  · <span class="text-danger fw-bold">باقي {{ $nn($st['left']) }} {{ $st['unit'] }}</span>
+                  {{ $st['eta'] ? '· متوقع ' . $st['eta'] : '' }}
+                @else · <span class="text-success">اكتمل</span> @endif
+              </div>
+            @endif
+          @else — @endif
+        </td></tr>
         <tr><th>إذن المورد</th><td>@include('partials.supplier_doc', ['sa' => $row->sourceAddition()])</td></tr>
         <tr><th>الخامة</th><td>{{ $row->fabricType?->name ?? '—' }}</td></tr>
         <tr><th>اللون</th><td>{{ $row->color?->label ?? '—' }}</td></tr>

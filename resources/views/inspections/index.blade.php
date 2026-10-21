@@ -8,19 +8,19 @@
     'cols'  => ['رقم الرسالة','الصنف','اللون','المورد','وصل','الأتواب','الباقي على الطلب','وصل إمتى',''],
     'empty' => 'مفيش قماش مستني فحص دلوقتي.',
     'rows'  => ($awaiting ?? collect())->map(function ($c) {
-        $po   = $c->purchaseOrder;
-        $rem  = 0; $unit = '';
-        if ($po) {
-          foreach ($po->lines as $l) {
-            $left = max(0, (float) $l->min_allowed_qty - (float) $l->received_qty);
-            if ($left > 0.0001) { $rem += $left; $unit = $unit ?: $l->unit; }
-          }
+        // صنف الرسالة دي بس: مطلوب كام، وصل كام، باقي كام — مش الطلب كله
+        $st = $c->orderLineStatus();
+        $n  = fn ($v) => rtrim(rtrim(number_format((float) $v, 3), '0'), '.');
+        if (!$st) {
+          $remCell = '<span class="hint">بدون طلب شراء</span>';
+        } elseif ($st['left'] > 0.0001) {
+          $remCell = '<div class="hint">مطلوب '.$n($st['ordered']).' · وصل '.$n($st['received']).' '.e($st['unit']).'</div>'
+                   . '<span class="text-danger fw-bold">باقي '.$n($st['left']).' '.e($st['unit']).'</span>'
+                   . '<div class="hint">'.($st['eta'] ? 'متوقع '.$st['eta'] : 'الموعد مش محدد').'</div>';
+        } else {
+          $remCell = '<div class="hint">مطلوب '.$n($st['ordered']).' · وصل '.$n($st['received']).' '.e($st['unit']).'</div>'
+                   . '<span class="text-success">الصنف اكتمل</span>';
         }
-        $eta = $po?->remainder_eta;
-        $remCell = $rem > 0
-            ? '<span class="text-danger fw-bold">باقي '.rtrim(rtrim(number_format($rem,3),'0'),'.').' '.e($unit).'</span>'
-              .'<div class="hint">'.($eta ? 'متوقع '.$eta->format('Y-m-d') : 'الموعد مش محدد').'</div>'
-            : '<span class="text-success">الطلب اكتمل</span>';
 
         return '<td class="num fw-bold">'.e($c->consignment_no).'</td>'
              . '<td>'.e($c->fabricType?->name ?? '—').'</td>'

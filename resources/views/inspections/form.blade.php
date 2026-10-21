@@ -13,13 +13,7 @@
 
 {{-- ① بيانات الرسالة — كلها Labels جاية من إذن الإضافة --}}
 @if(($arrived ?? null))
-  @php
-    $rem = 0; $unit = '';
-    foreach (($arrivedPo?->lines ?? collect()) as $l) {
-      $left = max(0, (float) $l->min_allowed_qty - (float) $l->received_qty);
-      if ($left > 0.0001) { $rem += $left; $unit = $unit ?: $l->unit; }
-    }
-  @endphp
+  @php $st = $arrived->orderLineStatus(); $nn = fn ($v) => rtrim(rtrim(number_format((float) $v, 3), '0'), '.'); @endphp
   <div class="card mb-3" style="border-color:var(--lv-soft)">
     <div class="card-body py-2 d-flex gap-4 flex-wrap align-items-center">
       <div>
@@ -30,16 +24,19 @@
         · <span class="num">{{ (int) $arrived->rolls_count }} توب</span></span>
       <span><b>المورد:</b> {{ $arrived->supplier?->name ?? '—' }}</span>
       @include('partials.supplier_doc', ['sa' => $arrived->sourceAddition()])
-      @if($arrivedPo)
-        <span><b>الطلب:</b> <span class="num">{{ $arrivedPo->po_no }}</span></span>
-        @if($rem > 0)
+      @if($arrivedPo && $st)
+        <span><b>الطلب:</b> <span class="num">{{ $arrivedPo->po_no }}</span>
+          <span class="hint">· مطلوب من الصنف ده {{ $nn($st['ordered']) }} {{ $st['unit'] }} · وصل {{ $nn($st['received']) }}</span></span>
+        @if($st['left'] > 0.0001)
           <span class="text-danger fw-bold">
-            وصول جزئي — باقي {{ rtrim(rtrim(number_format($rem,3),'0'),'.') }} {{ $unit }}
-            {{ $arrivedPo->remainder_eta ? '· متوقع ' . $arrivedPo->remainder_eta->format('Y-m-d') : '· الموعد مش محدد' }}
+            وصول جزئي — باقي {{ $nn($st['left']) }} {{ $st['unit'] }}
+            {{ $st['eta'] ? '· متوقع ' . $st['eta'] : '· الموعد مش محدد' }}
           </span>
         @else
-          <span class="text-success fw-bold">الطلب اكتمل</span>
+          <span class="text-success fw-bold">الصنف اكتمل</span>
         @endif
+      @elseif($arrivedPo)
+        <span><b>الطلب:</b> <span class="num">{{ $arrivedPo->po_no }}</span></span>
       @endif
       <span class="hint ms-auto">افحص اللي وصل دلوقتي — الباقي هيتفحص برسالته لما يوصل</span>
     </div>

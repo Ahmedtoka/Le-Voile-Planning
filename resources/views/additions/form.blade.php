@@ -257,6 +257,10 @@
   </div>
 @endif
 
+@if($mode === 'edit' && $row->purchaseOrder)
+  @include('partials.po_deliveries', ['po' => $row->purchaseOrder->load('lines.fabricType', 'lines.color')])
+@endif
+
 <template id="lineTpl">@include('additions.line',['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
 {{-- بوب أب قرار انحراف اللون --}}
 <div class="modal fade" id="colorModal" data-bs-backdrop="static" data-bs-keyboard="false">

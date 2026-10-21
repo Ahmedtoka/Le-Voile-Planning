@@ -123,6 +123,45 @@ class PurchaseOrder extends Model
     public function receipts()  { return $this->hasMany(GoodsReceipt::class); }
     public function consignments() { return $this->hasMany(Consignment::class); }
 
+    /**
+     * تاريخ الاستلام لكل سطر: كل دفعة وصلت (التاريخ، الكمية، رقم الإذن، إذن المورد).
+     * من سطور أذون الإضافة المعتمدة — بالربط بسطر الطلب، أو بالصنف واللون للأذون القديمة.
+     *
+     * @return array<int, array<int, array{date:string,qty:float,unit:string,doc_no:string,sa_id:int,supplier_doc_no:?string,rolls:int,eta:?string}>>
+     */
+    public function deliveryHistory(): array
+    {
+        $this->loadMissing('lines');
+        $lines = StockAdditionLine::with('stockAddition')
+            ->whereHas('stockAddition', fn ($q) => $q->where('purchase_order_id', $this->id)->where('status', 'approved'))
+            ->whereNotNull('fabric_type_id')
+            ->where(fn ($q) => $q->whereNull('color_action')->orWhere('color_action', '!=', 'new_po'))
+            ->get()
+            ->sortBy(fn ($l) => [$l->stockAddition->doc_date?->format('Y-m-d'), $l->stock_addition_id]);
+
+        $out = [];
+        foreach ($lines as $l) {
+            $sa = $l->stockAddition;
+            $matchColor = $l->color_action === 'substitute' && $l->po_color_id ? $l->po_color_id : $l->color_id;
+            $poLine = $l->po_line_id
+                ? $this->lines->firstWhere('id', $l->po_line_id)
+                : $this->lines->first(fn ($x) => $x->fabric_type_id == $l->fabric_type_id && $x->color_id == $matchColor);
+            if (!$poLine) continue;
+
+            $out[$poLine->id][] = [
+                'date'            => $sa->doc_date?->format('Y-m-d') ?? '',
+                'qty'             => \App\Services\DocumentEffects::toUnit($l->qty, $l->unit, $poLine->unit),
+                'unit'            => $poLine->unit,
+                'doc_no'          => $sa->doc_no,
+                'sa_id'           => $sa->id,
+                'supplier_doc_no' => $sa->supplier_doc_no,
+                'rolls'           => (int) $l->rolls_count,
+                'eta'             => $l->remainder_eta?->format('Y-m-d'),
+            ];
+        }
+        return $out;
+    }
+
     public function recalcTotals(): void
     {
         $this->loadMissing('lines');

@@ -69,7 +69,7 @@
           @endforeach
           </tbody>
         </table>
-        @if($row->remainder_eta)
+        @if($row->remainder_eta && false)
           <div class="card-footer bg-white hint">
             <i class="bi bi-hourglass-split" aria-hidden="true"></i>
             الباقي متوقع يوصل <b class="num">{{ $row->remainder_eta->format('Y-m-d') }}</b>
@@ -106,5 +106,9 @@
     </div>
   </div>
 </div>
+
+@if($row->stage !== 'planning' && $row->stage !== 'purchasing')
+  @include('partials.po_deliveries', ['po' => $row])
+@endif
 
 @endsection
