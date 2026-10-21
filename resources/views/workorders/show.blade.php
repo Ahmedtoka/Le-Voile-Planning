@@ -33,9 +33,27 @@
   </div>
 @endforeach
 
+@if($row->status === 'draft')
+  @php $gaps = $row->readinessGaps(); @endphp
+  @if($row->is_ready_to_run)
+    <div class="alert alert-success py-2"><i class="bi bi-check2-circle" aria-hidden="true"></i>
+      <b>جاهز للتشغيل</b> — المخزن وزن الخامة والباترونست سلّم الماركر. اعتمده عشان يتحجز الخام ويتصرف.</div>
+  @elseif($gaps)
+    <div class="alert alert-warning py-2"><i class="bi bi-hourglass-split" aria-hidden="true"></i>
+      <b>لسه مش جاهز للتشغيل:</b> {{ implode(' · ', $gaps) }}</div>
+  @endif
+@endif
+@php $breaks = $row->fabrics->filter(fn ($f) => $f->consignment?->has_color_break); @endphp
+@if($breaks->count())
+  <div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+    <b>فواصل / اختلاف لون:</b> {{ $breaks->map(fn ($f) => $f->consignment->consignment_no . ' — ' . ($f->consignment->color_break_note ?: 'راجع تقرير المعمل'))->implode(' · ') }}
+    — خد بالك في الماركر والقص.</div>
+@endif
+
 <div class="doc-actions" role="toolbar" aria-label="إجراءات أمر الشغل">
   <span class="da-label">إجراءات</span>
   <span class="badge bg-{{ $row->status_color }}">{{ $row->status_name }}</span>
+  @if($row->is_ready_to_run)<span class="badge bg-success">جاهز للتشغيل</span>@endif
 
         @if($row->isEditable())
           <a href="{{ route('work-orders.edit',$row) }}" class="btn btn-sm btn-outline-plum">
@@ -114,7 +132,8 @@
               </td>
               <td class="num">{{ $f->consignment?->consignment_no ?? '—' }}</td>
               <td>{{ $f->color?->code ?? '—' }}</td>
-              <td class="num">{{ rtrim(rtrim(number_format((float)$f->planned_qty,3),'0'),'.') }} {{ $f->unit }}</td>
+              <td class="num">{{ rtrim(rtrim(number_format((float)$f->planned_qty,3),'0'),'.') }} {{ $f->unit }}
+                @if($f->preparationRequest)<div class="hint text-success" title="وزن فعلي من المخزن">{{ $f->preparationRequest->doc_no }} · {{ $f->preparationRequest->status_name }}</div>@endif</td>
               <td class="num">
                 {{ $f->spread_length_m }}
                 @if($f->spread_length_safe_m)<div class="hint">بالأمان {{ $f->spread_length_safe_m }}</div>@endif

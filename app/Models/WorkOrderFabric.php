@@ -27,6 +27,7 @@ class WorkOrderFabric extends Model
     public function color()       { return $this->belongsTo(Color::class); }
     public function marker()      { return $this->belongsTo(Marker::class); }
     public function issueLines()  { return $this->hasMany(MaterialIssueLine::class); }
+    public function preparationRequest() { return $this->belongsTo(PreparationRequest::class); }
 
     public function getModeNameAttribute(): string
     {

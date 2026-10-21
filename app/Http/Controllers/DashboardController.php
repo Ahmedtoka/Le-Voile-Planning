@@ -35,6 +35,11 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
+        // مستخدم المصنع: شاشته هي بوابة المصنع
+        if ($user && $user->factory_id && !$user->isAdmin() && $user->can2('factory.portal')) {
+            return redirect()->route('factory.portal');
+        }
+
         return view('dashboard', [
             'title'     => 'لوحة التحكم',
             'counters'  => MenuCounters::for($user),

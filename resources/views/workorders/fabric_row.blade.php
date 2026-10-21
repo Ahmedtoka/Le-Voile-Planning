@@ -2,18 +2,27 @@
 @if(!$tpl)<tr class="fab-row">@endif
   <td class="text-center row-no">{{ is_numeric($i) ? $i+1 : 1 }}</td>
 
-  <td><select name="fabrics[{{ $i }}][consignment_id]" class="f-cn" required onchange="LVF.pick(this)">
+  <td>
+    @if(!empty($l['preparation_request_id']))
+      <input type="hidden" name="fabrics[{{ $i }}][preparation_request_id]" value="{{ $l['preparation_request_id'] }}">
+      <div class="hint text-success"><i class="bi bi-speedometer2" aria-hidden="true"></i> الكمية = الوزن الفعلي من المخزن (طلب تحضير)</div>
+    @endif
+    <select name="fabrics[{{ $i }}][consignment_id]" class="f-cn" required onchange="LVF.pick(this)">
       <option value="">— اختر رسالة —</option>
       @foreach($consignments as $c)
         <option value="{{ $c->id }}"
                 data-w="{{ $c->min_width_cm }}" data-g="{{ $c->avg_gsm }}"
                 data-rem="{{ $c->remaining_kg }}" data-name="{{ $c->fabricType?->name }}"
+                data-break="{{ $c->has_color_break ? 1 : 0 }}" data-breaknote="{{ $c->color_break_note }}"
+                data-search="{{ strtolower($c->consignment_no . ' ' . ($c->fabricType?->name ?? '') . ' ' . ($c->color?->code ?? '') . ' ' . ($c->color?->name ?? '')) }}"
                 @selected(($l['consignment_id'] ?? null)==$c->id)>
           {{ $c->consignment_no }} — {{ $c->fabricType?->name }} · {{ $c->color?->code }}
-          (متاح {{ rtrim(rtrim(number_format((float)$c->remaining_kg,1),'0'),'.') }})
+          (متاح {{ rtrim(rtrim(number_format((float)$c->remaining_kg,1),'0'),'.') }} · {{ $c->arrival_date?->format('y-m-d') }})
         </option>
       @endforeach
-    </select></td>
+    </select>
+    <div class="f-break text-danger hint" hidden><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> فواصل / اختلاف لون في الرسالة دي</div>
+  </td>
 
   <td><select name="fabrics[{{ $i }}][calc_mode]" class="f-mode" onchange="LVF.calc()">
       <option value="weight" @selected(($l['calc_mode'] ?? 'weight')==='weight')>بالوزن</option>
@@ -34,10 +43,10 @@
   </td>
 
   <td><input type="number" step="0.001" name="fabrics[{{ $i }}][spread_length_m]" class="f-sp"
-             value="{{ $l['spread_length_m'] ?? '' }}" required oninput="LVF.calc()"></td>
+             value="{{ $l['spread_length_m'] ?? '' }}" required oninput="LVF.safety(this)"></td>
 
   <td><input type="number" step="0.001" name="fabrics[{{ $i }}][spread_length_safe_m]" class="f-sps"
-             value="{{ $l['spread_length_safe_m'] ?? '' }}" oninput="LVF.calc()" placeholder="اختياري"></td>
+             value="{{ $l['spread_length_safe_m'] ?? '' }}" oninput="this.dataset.auto='0'; LVF.calc()" placeholder="+{{ $safetyCm }} سم تلقائي"></td>
 
   <td><input type="number" step="0.001" name="fabrics[{{ $i }}][fabric_width_m]" class="f-wd"
              value="{{ $l['fabric_width_m'] ?? '' }}" oninput="LVF.calc()"></td>

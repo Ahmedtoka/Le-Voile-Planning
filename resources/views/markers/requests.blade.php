@@ -13,17 +13,19 @@
   </div>
   <div class="table-responsive">
     <table class="table table-sm">
-      <thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>الحوض</th><th>المصنع</th><th>عرض القماش</th>
-        <th>المطلوب</th><th>الباترونست</th><th>مطلوب في</th><th>الماركر</th><th>الحالة</th></tr></thead>
+      <thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>الحوض</th><th>عرض / بنشر</th>
+        <th>المطلوب</th><th>نسخ</th><th>الباترونست</th><th>مطلوب في</th><th>الماركر</th><th>الحالة</th></tr></thead>
       <tbody>
       @forelse($rows as $r)
         <tr>
           <td class="num fw-bold">{{ $r->doc_no }}</td>
           <td class="num">{{ $r->doc_date?->format('Y-m-d') }}</td>
-          <td class="num">{{ $r->consignment?->consignment_no ?? '—' }}</td>
-          <td>{{ $r->factory?->name ?? '—' }}</td>
-          <td class="num fw-bold">{{ $r->fabric_width_cm }}</td>
-          <td class="hint">{{ Str::limit($r->requested_models, 60) }}</td>
+          <td class="num">{{ $r->consignment?->consignment_no ?? '—' }}
+            @if($r->consignment?->has_color_break)<i class="bi bi-exclamation-triangle-fill text-danger" title="فواصل / اختلاف لون"></i>@endif</td>
+          <td class="num fw-bold">{{ $r->fabric_width_cm }} <span class="hint">/ {{ $r->avg_gsm ?? '—' }}</span></td>
+          <td class="hint">{{ Str::limit($r->models_label, 70) }}
+            @if($r->suggestedMarker)<div class="text-success">اتقفل على ماركر قديم {{ $r->suggestedMarker->code }}</div>@endif</td>
+          <td class="num">{{ $r->copies }}</td>
           <td>{{ $r->patternist?->name ?? '—' }}</td>
           <td class="num">{{ $r->needed_by?->format('Y-m-d') ?? '—' }}</td>
           <td class="num">

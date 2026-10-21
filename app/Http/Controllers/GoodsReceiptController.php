@@ -94,8 +94,9 @@ class GoodsReceiptController extends Controller
                     'color_id'       => $c->color_id,
                     'unit'           => 'كجم',
                     'width_cm'       => $c->min_width_cm,
-                    'rolls_count'    => (int) ($insp?->counted_rolls ?: $c->rolls_count),
-                    'qty'            => (float) ($insp?->counted_kg ?: $c->total_kg),
+                    // أرقام الرسالة بعد الفحص (المرفوض على مستوى التوب اتخصم منها)
+                    'rolls_count'    => (int) $c->rolls_count,
+                    'qty'            => (float) $c->total_kg,
                     'consignment_no' => $c->consignment_no,
                 ];
             }
@@ -291,6 +292,7 @@ class GoodsReceiptController extends Controller
             'rejects.*.rolls_count'  => ['nullable', 'integer', 'min:0'],
             'rejects.*.qty'          => ['nullable', 'numeric', 'min:0'],
             'rejects.*.party'        => ['nullable', 'in:quality,planning,purchasing'],
+            'rejects.*.reason_category' => ['nullable', 'in:' . implode(',', array_keys(\App\Models\GoodsReceiptRejection::CATEGORIES))],
             'rejects.*.reason'       => ['nullable', 'string', 'required_with:rejects.*.qty'],
         ], [], [
             'rejects.*.reason'    => 'سبب الرفض',
@@ -350,6 +352,7 @@ class GoodsReceiptController extends Controller
                 'qty'                  => (float) $r['qty'],
                 'unit'                 => 'كجم',
                 'party'                => $r['party'] ?? 'quality',
+                'reason_category'      => $r['reason_category'] ?? 'other',
                 'reason'               => $r['reason'],
                 'resolution'           => 'open',
                 'created_by'           => auth()->id(),

@@ -44,6 +44,12 @@
   <tr><td>عينة 2</td>
       <td>طول {{ $lab->s2_shrink_len_pct ?? '' }} %</td>
       <td>عرض {{ $lab->s2_shrink_width_pct ?? '' }} %</td></tr>
+  <tr><td>عينة 3</td>
+      <td>طول {{ $lab->s3_shrink_len_pct ?? '' }} %</td>
+      <td>عرض {{ $lab->s3_shrink_width_pct ?? '' }} %</td></tr>
+  <tr><td>عينة 4</td>
+      <td>طول {{ $lab->s4_shrink_len_pct ?? '' }} %</td>
+      <td>عرض {{ $lab->s4_shrink_width_pct ?? '' }} %</td></tr>
   <tr><td><b>المتوسط</b></td>
       <td><b>طول {{ $lab->avg_shrink_len_pct ?? '' }} %</b></td>
       <td><b>عرض {{ $lab->avg_shrink_width_pct ?? '' }} %</b></td></tr>
@@ -53,6 +59,12 @@
   <tr><td class="k">مطابقة اللون</td>
       <td>{{ $lab->color_match_ok === null ? '—' : ($lab->color_match_ok ? 'مطابق' : 'غير مطابق') }}</td>
       <td class="k">ملاحظات</td><td>{{ $lab->notes }}</td></tr>
+  <tr><td class="k">فواصل / اختلاف لون</td>
+      <td colspan="3">{{ $lab->has_color_break ? 'نعم — ' . ($lab->color_break_roll_no ? 'أتواب ' . $lab->color_break_roll_no . ' · ' : '') . $lab->color_break_note : 'لا' }}</td></tr>
+  @foreach($lab->specChecks() as $c)
+    <tr><td class="k">{{ $c['label'] }}</td><td>المواصفة {{ $c['spec'] }}</td><td class="k">الفعلي</td>
+        <td>{{ $c['actual'] }} {{ $c['ok'] === null ? '' : ($c['ok'] ? '✓' : '✗ خارج المواصفة') }}</td></tr>
+  @endforeach
 </table>
 
 <div class="sigs">

@@ -155,6 +155,7 @@ class PurchaseOrderController extends Controller
                 'requested_at' => now(),
             ]);
             $this->syncLines($po, $data['lines']);
+            $po->models()->sync($data['model_ids']);
             $po->recalcTotals();
             return $po;
         });
@@ -176,7 +177,7 @@ class PurchaseOrderController extends Controller
     public function edit(PurchaseOrder $purchase_order)
     {
         $purchase_order->load([
-            'lines.color', 'lines.fabricType', 'supplier',
+            'lines.color', 'lines.fabricType', 'supplier', 'models', 'productModel',
             'requester', 'sourcer', 'financer',
         ]);
 
@@ -196,7 +197,7 @@ class PurchaseOrderController extends Controller
             return redirect()->route('purchase-orders.edit', $purchase_order);
         }
 
-        $purchase_order->load(['lines.color', 'lines.fabricType', 'requester', 'supplier']);
+        $purchase_order->load(['lines.color', 'lines.fabricType', 'requester', 'supplier', 'models', 'productModel']);
 
         return view('po.source', [
             'title'      => 'تسعير الطلب ' . $purchase_order->po_no,
@@ -361,7 +362,11 @@ class PurchaseOrderController extends Controller
     {
         $v = $request->validate([
             'planning_note'    => ['nullable', 'string'],
-            'product_model_id' => ['nullable', 'exists:product_models,id'],   // الطلب لموديل معين
+            // الطلب لأكتر من موديل — checkboxes (الميتينج: نفس الخامة لـ 6-7 موديلات)
+            'product_model_ids'   => ['nullable', 'array'],
+            'product_model_ids.*' => ['integer', 'exists:product_models,id'],
+            // يدخل فحص ولا استلام مباشر؟ صاحب الطلب هو اللي بيحدد — مش المخزن
+            'inspection_exempt'   => ['nullable', 'boolean'],
             'notes'            => ['nullable', 'string'],
 
             'lines'                  => ['required', 'array', 'min:1'],
@@ -379,9 +384,13 @@ class PurchaseOrderController extends Controller
         ]);
 
         $lines = collect($v['lines'])->filter(fn ($l) => (float) ($l['qty'] ?? 0) > 0)->values()->all();
-        unset($v['lines']);
+        $modelIds = array_values(array_unique(array_map('intval', $v['product_model_ids'] ?? [])));
+        unset($v['lines'], $v['product_model_ids']);
 
-        return ['header' => $v, 'lines' => $lines];
+        $v['inspection_exempt'] = $request->boolean('inspection_exempt');
+        $v['product_model_id']  = $modelIds[0] ?? null;   // للتوافق مع الشاشات القديمة
+
+        return ['header' => $v, 'lines' => $lines, 'model_ids' => $modelIds];
     }
 
     private function syncLines(PurchaseOrder $po, array $lines, bool $replace = false): void

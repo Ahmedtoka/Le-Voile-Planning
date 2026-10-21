@@ -192,9 +192,11 @@
         <div class="hint mb-2">
           المرفوض بيروح مخزن المرتجعات كمطالبة على المورد، والمعلّق بيستنى قرار التخطيط والمشتريات.
           الاتنين بيتخصموا من اللي هيتفرج عنه — والباقي بس هو اللي يبقى متاح لأوامر الشغل.
+          <br><b>نوع السبب مهم:</b> العرض/البنشر/الانكماش المختلف <b>قابل للتفاوض</b> (ممكن يتقبل بخصم من المورد)،
+          أما اختلاف اللون والفواصل <b>مش قابل للتفاوض</b> — بيرجع للمورد.
         </div>
         <table class="table table-sm align-middle mb-2">
-          <thead><tr><th style="width:150px">النوع</th><th style="width:90px">أتواب</th><th style="width:130px">الوزن (كجم)</th><th style="width:170px">الجهة</th><th>السبب</th></tr></thead>
+          <thead><tr><th style="width:130px">النوع</th><th style="width:80px">أتواب</th><th style="width:110px">الوزن (كجم)</th><th style="width:150px">الجهة</th><th style="width:190px">نوع السبب</th><th>السبب</th></tr></thead>
           <tbody>
           @for($r = 0; $r < 3; $r++)
             <tr>
@@ -208,6 +210,11 @@
                 <option value="quality">مصلحة الجودة</option>
                 <option value="planning" @selected(old("rejects.$r.party") === 'planning')>إدارة التخطيط</option>
                 <option value="purchasing" @selected(old("rejects.$r.party") === 'purchasing')>إدارة المشتريات</option>
+              </select></td>
+              <td><select name="rejects[{{ $r }}][reason_category]" class="form-select form-select-sm">
+                @foreach(\App\Models\GoodsReceiptRejection::CATEGORIES as $ck => $cv)
+                  <option value="{{ $ck }}" @selected(old("rejects.$r.reason_category", 'other') === $ck)>{{ $cv }}</option>
+                @endforeach
               </select></td>
               <td><input name="rejects[{{ $r }}][reason]" value="{{ old("rejects.$r.reason") }}" class="form-control form-control-sm"
                          placeholder="مثال: بيهم تل غريبة وتناسخ · لون غير مطابق"></td>

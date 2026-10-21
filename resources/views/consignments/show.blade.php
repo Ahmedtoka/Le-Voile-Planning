@@ -20,7 +20,8 @@
   ['value' => number_format((float)$row->hold_kg,1), 'label' => 'محجوز تحت الفحص', 'sub' => 'كجم',
    'tone' => $row->hold_kg > 0 ? 'warn' : 'ink'],
   ['value' => number_format((float)$row->remaining_kg,1), 'label' => 'متاح للتشغيل', 'sub' => 'كجم',
-   'tone' => $row->remaining_kg > 0 ? 'ok' : 'ink'],
+   'tone' => $row->remaining_kg > 0 ? 'ok' : 'ink',
+   'note' => $row->reserved_kg > 0 ? 'محجوز لطلبات تحضير: ' . number_format((float)$row->reserved_kg,1) . ' كجم' : null],
 ]])
 
 <div class="row g-3">
@@ -32,7 +33,11 @@
       </div>
       <table class="table table-sm mb-0">
         <tr><th style="width:140px">رقم الرسالة</th><td class="num fw-bold">{{ $row->consignment_no }}</td></tr>
-        <tr><th>تاريخ الوصول</th><td class="num">{{ $row->arrival_date?->format('Y-m-d') }}</td></tr>
+        <tr><th>تاريخ الوصول</th><td class="num">{{ $row->arrival_date?->format('Y-m-d') }} <span class="hint">(دخول تحت الفحص)</span></td></tr>
+        <tr><th>تاريخ الإفراج</th><td class="num">{{ $row->released_at?->format('Y-m-d') ?? '— لسه' }} <span class="hint">(الإضافة بعد الفحص)</span></td></tr>
+        @if($row->has_color_break)
+          <tr><th class="text-danger">فواصل / اختلاف لون</th><td class="text-danger fw-bold">{{ $row->color_break_note ?: 'نعم — راجع تقرير المعمل' }}</td></tr>
+        @endif
         <tr><th>المورد</th><td>{{ $row->supplier?->name ?? '—' }}</td></tr>
         <tr><th>أمر الشراء</th><td class="num">{{ $row->purchaseOrder?->po_no ?? '—' }}</td></tr>
         <tr><th>الخامة</th><td>{{ $row->fabricType?->name ?? '—' }}</td></tr>
@@ -57,7 +62,8 @@
           <a href="{{ route('goods-receipts.create', ['consignment_id'=>$row->id]) }}" class="btn btn-sm btn-plum">④ إذن استلام (إفراج)</a>
         @endif
         @if($row->is_ready)
-          <a href="{{ route('markers.requests.create') }}" class="btn btn-sm btn-outline-plum">طلب ماركر</a>
+          <a href="{{ route('preparation-requests.create', ['consignment_id'=>$row->id]) }}" class="btn btn-sm btn-plum">طلب تحضير (تقسيم)</a>
+          <a href="{{ route('markers.requests.create', ['consignment_id'=>$row->id]) }}" class="btn btn-sm btn-outline-plum">طلب ماركر</a>
         @endif
         @if($row->is_ready)
           <a href="{{ route('work-orders.create', ['consignment_id'=>$row->id]) }}" class="btn btn-sm btn-success">أمر شغل</a>

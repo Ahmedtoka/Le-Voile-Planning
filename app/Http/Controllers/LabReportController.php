@@ -71,15 +71,26 @@ class LabReportController extends Controller
             'consignment_id' => $request->get('consignment_id'),
         ]);
 
+        $preset = [];
         if ($row->consignment_id && $c = Consignment::find($row->consignment_id)) {
             $row->fabric_type_id = $c->fabric_type_id;
             $row->color_id       = $c->color_id;
             $row->supplier_id    = $c->supplier_id;
+
+            /* الأتواب اللي اتفحصت بتنزل جاهزة — قراءة بنشر لكل توب (الميتينج).
+               المرفوض مش بينزل، والفني يقدر يضيف أتواب زيادة ما اتفحصتش. */
+            $insp = $c->inspections()->where('status', 'approved')->latest('id')->first();
+            if ($insp) {
+                foreach ($insp->rolls()->where('status', '!=', 'rejected')->orderBy('id')->get() as $r) {
+                    $preset[] = ['roll_no' => $r->roll_no, 'gsm' => ''];
+                }
+            }
         }
 
         return view('lab.form', $this->formData([
             'row'     => $row,
             'mode'    => 'create',
+            'preset'  => $preset,
             'arrived' => isset($c) ? $c->load('fabricType', 'color', 'supplier') : null,
         ]));
     }
@@ -177,6 +188,7 @@ class LabReportController extends Controller
             'suppliers'    => Supplier::orderBy('name')->pluck('name', 'id'),
             'technicians'  => User::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'arrived'      => null,
+            'preset'       => [],
         ], $extra);
     }
 
@@ -194,21 +206,31 @@ class LabReportController extends Controller
             's1_shrink_width_pct'  => ['nullable', 'numeric'],
             's2_shrink_len_pct'    => ['nullable', 'numeric'],
             's2_shrink_width_pct'  => ['nullable', 'numeric'],
+            's3_shrink_len_pct'    => ['nullable', 'numeric'],
+            's3_shrink_width_pct'  => ['nullable', 'numeric'],
+            's4_shrink_len_pct'    => ['nullable', 'numeric'],
+            's4_shrink_width_pct'  => ['nullable', 'numeric'],
             'color_match_ok'       => ['nullable', 'boolean'],
+            'has_color_break'      => ['nullable', 'boolean'],
+            'color_break_roll_no'  => ['nullable', 'string', 'max:120'],
+            'color_break_note'     => ['nullable', 'string', 'max:191'],
             'notes'                => ['nullable', 'string'],
 
             'readings'           => ['required', 'array', 'min:1'],
             'readings.*.roll_no' => ['nullable', 'string', 'max:40'],
-            'readings.*.gsm'     => ['required', 'numeric', 'min:1'],
+            'readings.*.gsm'     => ['nullable', 'numeric', 'min:0'],
         ], [], [
             'consignment_id'  => 'الحوض',
             'readings'        => 'قراءات البنشر',
             'readings.*.gsm'  => 'وزن البنشر',
         ]);
 
-        $readings = $v['readings'];
+        // القراءة الفاضية = التوب ده ما اتقاسش — بيتشال من غير ما يوقف الحفظ
+        $readings = array_values(array_filter($v['readings'], fn ($r) => (float) ($r['gsm'] ?? 0) > 0));
         unset($v['readings']);
-        $v['color_match_ok'] = $request->boolean('color_match_ok');
+        $v['color_match_ok']  = $request->boolean('color_match_ok');
+        $v['has_color_break'] = $request->boolean('has_color_break');
+        if (!$v['has_color_break']) { $v['color_break_roll_no'] = null; $v['color_break_note'] = null; }
 
         return ['header' => $v, 'readings' => $readings];
     }

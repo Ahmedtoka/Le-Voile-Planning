@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('purpose', 'الباترونست: طول الفرشة وعدد القطع والموديلات على عرض القماش')
 @section('content')
-@php $lines = old('lines', $row->lines?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
+@php $lines = old('lines', $mode === 'create' ? ($preset ?? []) : ($row->lines?->toArray() ?? [])); $editable = $row->isEditable() || $mode==='create'; @endphp
 
 @include('partials.flow_bar', ['flow' => 'prod', 'step' => 'marker'])
 

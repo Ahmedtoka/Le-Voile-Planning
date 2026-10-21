@@ -88,7 +88,8 @@
             @else — @endif
           </td>
           <td class="num {{ $r->is_late ? 'text-danger fw-bold' : '' }}">{{ $r->due_date?->format('Y-m-d') ?? '—' }}</td>
-          <td><span class="badge bg-{{ $r->status_color }}">{{ $r->status_name }}</span></td>
+          <td><span class="badge bg-{{ $r->status_color }}">{{ $r->status_name }}</span>
+            @if($r->is_ready_to_run)<div><span class="badge bg-success">جاهز للتشغيل</span></div>@endif</td>
           <td><a href="{{ route('work-orders.show',$r) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="عرض" title="عرض"><i class="bi bi-eye" aria-hidden="true"></i></a></td>
         </tr>
       @empty

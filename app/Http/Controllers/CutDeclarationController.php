@@ -66,6 +66,9 @@ class CutDeclarationController extends Controller
     {
         $wo = WorkOrder::with(['lines.productModel', 'lines.size', 'marker'])
                 ->findOrFail($request->get('work_order_id'));
+        if (($fid = auth()->user()?->factory_id) && (int) $wo->factory_id !== (int) $fid) {
+            abort(403, 'أمر الشغل ده مش على مصنعك.');
+        }
 
         return view('cutting.form', [
             'title' => 'بيان قص لأمر الشغل ' . $wo->wo_no,

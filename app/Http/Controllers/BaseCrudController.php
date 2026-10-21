@@ -164,6 +164,17 @@ abstract class BaseCrudController extends Controller
                 continue;
             }
 
+            // صورة مرفوعة (الموديلات): بتتخزن في storage/public وبيتحفظ لينكها في العمود
+            if ($type === 'file') {
+                if ($request->hasFile($f['name'])) {
+                    $path = $request->file($f['name'])->store($f['dir'] ?? 'uploads', 'public');
+                    $data[$f['name']] = asset('storage/' . $path);
+                } else {
+                    unset($data[$f['name']]);   // ما ترفعش حاجة = سيب القديم
+                }
+                continue;
+            }
+
             // الأعمدة الرقمية NOT NULL بـ default — الفورم بيبعتها فاضية،
             // و ConvertEmptyStringsToNull بيحوّلها null ⇒ خطأ في الداتابيز.
             if ($type === 'number'

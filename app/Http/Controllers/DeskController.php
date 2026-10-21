@@ -42,6 +42,9 @@ class DeskController extends Controller
                 $this->q('طلبات ماركر مفتوحة',
                     MarkerRequest::whereIn('status', ['open', 'in_progress'])->count(),
                     route('markers.requests'), 'الطلبات', 'warn'),
+                $this->q('طلبات تحضير اتوزنت ومستنية أمر شغل',
+                    \App\Models\PreparationRequest::where('status', 'weighed')->count(),
+                    route('preparation-requests.index', ['status' => 'weighed']), 'اعمل أمر الشغل', 'ok'),
                 $this->q('أوامر شغل متأخرة', WorkOrder::late()->count(),
                     route('work-orders.index', ['late' => 1]), 'افتحها', 'danger'),
             ],
@@ -49,6 +52,7 @@ class DeskController extends Controller
             'openWos'  => WorkOrder::open()->with('factory')->latest('id')->limit(8)->get(),
             'create'   => [
                 ['طلب شراء جديد', route('purchase-orders.create'), 'bi-file-earmark-plus'],
+                ['طلب تحضير (تقسيم رسالة)', route('preparation-requests.create'), 'bi-speedometer2'],
                 ['أمر شغل جديد',  route('work-orders.create'),     'bi-hammer'],
             ],
         ]);
@@ -111,6 +115,9 @@ class DeskController extends Controller
                 $this->q('رسايل خلّصت ومستنية استلام',
                     Consignment::awaitingRelease()->count(),
                     route('goods-receipts.index'), 'استلم', 'brand'),
+                $this->q('طلبات تحضير مستنية وزن',
+                    \App\Models\PreparationRequest::where('status', 'open')->count(),
+                    route('preparation-requests.index', ['status' => 'open']), 'اوزن ورد', 'warn'),
                 $this->q('أوامر شغل لسه عايزة خام',
                     WorkOrder::needsMaterial()->count(),
                     route('material-issues.index'), 'اصرف', 'warn'),

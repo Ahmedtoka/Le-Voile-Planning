@@ -101,7 +101,17 @@ class PurchaseOrder extends Model
     }
 
     public function supplier()  { return $this->belongsTo(Supplier::class); }
+    /** @deprecated الطلب بقى لأكتر من موديل — استخدم models() */
     public function productModel() { return $this->belongsTo(ProductModel::class); }
+    /** الموديلات اللي الخامة دي ليها (الميتينج: 6-7 موديلات بيستخدموا نفس الخامة بيتطلبوا مرة واحدة) */
+    public function models() { return $this->belongsToMany(ProductModel::class, 'purchase_order_models'); }
+
+    public function getModelsLabelAttribute(): string
+    {
+        $names = $this->models->pluck('name')->all();
+        if (!$names && $this->productModel) $names = [$this->productModel->name];
+        return implode('، ', $names);
+    }
     public function warehouse() { return $this->belongsTo(Warehouse::class); }
     public function employee()  { return $this->belongsTo(User::class, 'employee_id'); }
     public function requester() { return $this->belongsTo(User::class, 'requested_by'); }

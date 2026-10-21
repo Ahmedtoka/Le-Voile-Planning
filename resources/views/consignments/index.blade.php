@@ -45,7 +45,7 @@
   <div class="table-responsive">
     <table class="table table-sm">
       <thead><tr>
-        <th>رقم الرسالة</th><th>التاريخ</th><th>المورد</th><th>الخامة</th><th>اللون</th>
+        <th>رقم الرسالة</th><th>الوصول</th><th>الإفراج</th><th>المورد</th><th>الخامة</th><th>اللون</th>
         <th>الوزن</th><th>الأتواب</th><th>أقل عرض</th><th>البنشر</th><th>محجوز</th><th>متاح</th><th>الحالة</th><th></th>
       </tr></thead>
       <tbody>
@@ -53,9 +53,11 @@
         <tr>
           <td class="num fw-bold"><a href="{{ route('consignments.show',$r) }}">{{ $r->consignment_no }}</a></td>
           <td class="num">{{ $r->arrival_date?->format('Y-m-d') }}</td>
+          <td class="num">{{ $r->released_at?->format('Y-m-d') ?? '—' }}</td>
           <td>{{ $r->supplier?->name ?? '—' }}</td>
           <td>{{ $r->fabricType?->name ?? '—' }}</td>
-          <td>{{ $r->color?->code ?? '—' }}</td>
+          <td>{{ $r->color?->code ?? '—' }}
+            @if($r->has_color_break)<i class="bi bi-exclamation-triangle-fill text-danger" title="فواصل / اختلاف لون: {{ $r->color_break_note }}"></i>@endif</td>
           <td class="num">{{ number_format((float)$r->total_kg,1) }}</td>
           <td class="num">{{ $r->rolls_count }}</td>
           <td class="num {{ $r->min_width_cm ? 'fw-bold' : 'text-muted' }}">{{ $r->min_width_cm ?? '—' }}</td>
@@ -78,7 +80,7 @@
           </td>
         </tr>
       @empty
-        <tr><td colspan="13">
+        <tr><td colspan="14">
             <div class="empty-state">
               <i class="bi bi-inbox ico" aria-hidden="true"></i>
               <div class="t">مفيش أحواض. الحوض بيتولّد لوحده من إذن الإضافة.</div>

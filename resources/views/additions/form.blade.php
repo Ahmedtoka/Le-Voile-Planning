@@ -96,13 +96,11 @@
             <input name="supplier_doc_no" class="form-control form-control-sm" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
                    placeholder="اختياري"></div>
           <div class="col-md-2"><label class="form-label">نوع الاستلام</label>
-            <select name="receipt_type" class="form-select form-select-sm"
-                    @if($mode==='create')
-                      onchange="location='{{ route('stock-additions.create') }}?type='+this.value+'&purchase_order_id={{ $po->id }}'"
-                    @endif>
-              <option value="normal" @selected(old('receipt_type',$row->receipt_type ?? 'normal')==='normal')>عادي — يدخل الفحص</option>
-              <option value="container" @selected(old('receipt_type',$row->receipt_type ?? 'normal')==='container')>حاويات — بدون فحص</option>
-            </select></div>
+            @php $rt = $po->inspection_exempt ? 'container' : 'normal'; @endphp
+            <input type="hidden" name="receipt_type" value="{{ $rt }}">
+            <div class="form-control form-control-sm" style="background:var(--lv-offwhite)">
+              {{ $rt === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</div>
+            <div class="hint">متحدد من طلب الشراء (قرار التخطيط)</div></div>
           <div class="col-md-3"><label class="form-label">ملاحظات</label>
             <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
         </div>

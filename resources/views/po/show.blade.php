@@ -63,7 +63,8 @@
               <td class="num">{{ $l->received_qty > 0 ? rtrim(rtrim(number_format((float)$l->received_qty,3),'0'),'.') : '—' }}</td>
               @php $left = max(0, (float) $l->min_allowed_qty - (float) $l->received_qty); @endphp
               <td class="num {{ $left > 0 ? 'text-danger fw-bold' : 'text-success' }}">
-                {{ $left > 0 ? rtrim(rtrim(number_format($left,3),'0'),'.') : 'اكتمل' }}</td>
+                {{ $left > 0 ? rtrim(rtrim(number_format($left,3),'0'),'.') : 'اكتمل' }}
+                @if($l->is_closed)<i class="bi bi-lock-fill" title="البند اتقفل — اكتمل استلامه" aria-label="مقفول"></i>@endif</td>
             </tr>
           @endforeach
           </tbody>
@@ -87,7 +88,8 @@
         <tr><th style="width:130px">طلبه</th>
             <td>{{ $row->requester?->name ?? '—' }} <span class="hint">{{ $row->requested_at?->format('Y-m-d H:i') }}</span>
               @if($row->planning_note)<div class="hint">«{{ $row->planning_note }}»</div>@endif
-              @if($row->productModel)<div class="hint">للموديل: <b>{{ $row->productModel->label }}</b></div>@endif</td></tr>
+              @if($row->models_label)<div class="hint">للموديلات: <b>{{ $row->models_label }}</b></div>@endif
+              <div class="hint">نوع الاستلام: <b>{{ $row->inspection_exempt ? 'استلام مباشر بدون فحص' : 'يدخل فحص' }}</b></div></td></tr>
         <tr><th>سعّره</th>
             <td>{{ $row->sourcer?->name ?? '— لسه' }} <span class="hint">{{ $row->sourced_at?->format('Y-m-d H:i') }}</span></td></tr>
         <tr><th>علمت الحسابات</th>

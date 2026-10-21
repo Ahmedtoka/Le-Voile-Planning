@@ -10,7 +10,8 @@
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   طلبه <b>{{ $row->requester?->name }}</b> يوم {{ $row->po_date?->format('Y-m-d') }}
   @if($row->planning_note) — «{{ $row->planning_note }}» @endif
-  @if($row->productModel) · للموديل <b>{{ $row->productModel->label }}</b> @endif.
+  @if($row->models_label) · للموديلات <b>{{ $row->models_label }}</b> @endif
+  · الاستلام: <b>{{ $row->inspection_exempt ? 'مباشر بدون فحص' : 'يدخل فحص' }}</b>.
   حدد المورد والسعر والوحدة وتاريخ التوريد واضغط <b>«احفظ»</b> — وخلاص.
 </div>
 

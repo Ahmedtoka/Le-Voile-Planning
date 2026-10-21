@@ -26,6 +26,7 @@ class DocNumber
         'cut_declaration'    => 'CD',
         'production_receipt' => 'PR',
         'material_issue'     => 'MI',
+        'preparation_request'=> 'PQ',
     ];
 
     /**

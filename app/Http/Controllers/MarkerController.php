@@ -30,7 +30,7 @@ class MarkerController extends Controller
 
     public function requests(Request $request)
     {
-        $q = MarkerRequest::with(['consignment', 'factory', 'patternist', 'marker'])->latest('id');
+        $q = MarkerRequest::with(['consignment', 'factory', 'patternist', 'marker', 'models', 'suggestedMarker'])->latest('id');
         if ($s = $request->get('status')) $q->where('status', $s);
 
         return view('markers.requests', [
@@ -40,45 +40,140 @@ class MarkerController extends Controller
         ]);
     }
 
-    public function createRequest()
+    public function createRequest(Request $request)
     {
+        $row = new MarkerRequest(['doc_date' => now()->toDateString(), 'copies' => 2]);
+        $row->consignment_id         = $request->get('consignment_id');
+        $row->preparation_request_id = $request->get('preparation_request_id');
+
+        // جاي من طلب تحضير؟ نفس الرسالة والموديلات
+        $picked = array_map('intval', (array) $request->get('models', []));
+        if ($row->preparation_request_id && ($pr = \App\Models\PreparationRequest::with('models')->find($row->preparation_request_id))) {
+            $row->consignment_id = $row->consignment_id ?: $pr->consignment_id;
+            $picked = $picked ?: $pr->models->pluck('id')->map(fn ($v) => (int) $v)->all();
+        }
+
         return view('markers.request_form', [
             'title'        => 'طلب ماركر جديد',
-            'row'          => new MarkerRequest(['doc_date' => now()->toDateString()]),
-            // الأحواض اللي اتفرج عنها — دي بس اللي ينفع نطلب لها ماركر بعرض مؤكد
-            'consignments' => Consignment::with('color')->readyForProduction()->latest('id')->get(),
-            'factories'    => Factory::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
+            'row'          => $row,
+            'picked'       => $picked,
+            // الأحواض اللي اتفرج عنها — الأقدم أولًا، والعرض والبنشر بييجوا منها مقفولين
+            'consignments' => Consignment::with(['color', 'fabricType'])->readyForProduction()
+                                ->orderBy('arrival_date')->orderBy('id')->get(),
+            'models'       => ProductModel::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
             'patternists'  => User::whereHas('roles', fn ($q) => $q->where('key', 'patternist'))
                                 ->where('is_active', true)->pluck('name', 'id'),
         ]);
     }
 
+    /**
+     * اقتراح ماركر قديم (الميتينج): نفس الموديلات على نفس العرض أو قريب منه.
+     * الباترونست ممكن يعمل تعشيق أكفأ — بس لو فيه ماركر جاهز، التخطيط يقدر يستخدمه على طول.
+     */
+    public function suggest(Request $request)
+    {
+        $c = Consignment::find($request->get('consignment_id'));
+        $modelIds = array_values(array_filter(array_map('intval', (array) $request->get('models', []))));
+        if (!$c || !$c->min_width_cm) return response()->json([]);
+
+        $tol   = (float) config('lvplanning.marker_suggest_width_tolerance_cm', 2);
+        $width = (float) $c->min_width_cm;
+
+        $q = Marker::with(['lines.productModel', 'lines.size'])
+            ->where('status', 'approved')->where('is_active', true)
+            ->whereBetween('fabric_width_cm', [$width - $tol, $width + 0.001]);   // ما يتعداش عرض القماش
+        if ($modelIds) {
+            $q->whereHas('lines', fn ($l) => $l->whereIn('product_model_id', $modelIds));
+        }
+
+        $out = $q->get()->map(function ($m) use ($modelIds, $width) {
+            $mids  = $m->lines->pluck('product_model_id')->unique()->map(fn ($v) => (int) $v)->all();
+            $cover = $modelIds ? count(array_intersect($modelIds, $mids)) / max(1, count($modelIds)) : 1;
+            return [
+                'id'         => $m->id,
+                'code'       => $m->code,
+                'width'      => (float) $m->fabric_width_cm,
+                'spread'     => (float) $m->spread_length_m,
+                'pieces'     => (int) $m->pieces_per_spread,
+                'efficiency' => $m->efficiency_pct !== null ? (float) $m->efficiency_pct : null,
+                'models'     => $m->lines->map(fn ($l) => ($l->productModel?->name ?? '') . ($l->size ? ' ' . $l->size->name : '') . ' ×' . $l->qty_per_spread)->implode('، '),
+                'exact'      => abs((float) $m->fabric_width_cm - $width) < 0.01,
+                'cover'      => round($cover, 2),
+                'url'        => route('markers.edit', $m),
+            ];
+        })->sortBy([['cover', 'desc'], ['exact', 'desc'], ['efficiency', 'desc']])->values()->take(6);
+
+        return response()->json($out);
+    }
+
     public function storeRequest(Request $request)
     {
         $data = $request->validate([
-            'doc_date'         => ['required', 'date'],
-            'consignment_id'   => ['nullable', 'exists:consignments,id'],
-            'factory_id'       => ['nullable', 'exists:factories,id'],
-            'fabric_width_cm'  => ['required', 'numeric', 'min:1'],
-            'requested_models' => ['required', 'string'],
-            'assigned_to'      => ['nullable', 'exists:users,id'],
-            'needed_by'        => ['nullable', 'date'],
-            'notes'            => ['nullable', 'string'],
+            'doc_date'              => ['required', 'date'],
+            'consignment_id'        => ['required', 'exists:consignments,id'],
+            'preparation_request_id'=> ['nullable', 'exists:preparation_requests,id'],
+            'product_model_ids'     => ['required', 'array', 'min:1'],
+            'product_model_ids.*'   => ['integer', 'exists:product_models,id'],
+            'sizes_note'            => ['nullable', 'string', 'max:191'],
+            'copies'                => ['nullable', 'integer', 'min:0', 'max:50'],
+            'assigned_to'           => ['nullable', 'exists:users,id'],
+            'needed_by'             => ['nullable', 'date'],
+            'notes'                 => ['nullable', 'string'],
+            'use_marker_id'         => ['nullable', 'exists:markers,id'],   // ماركر قديم مقترح — استخدمه على طول
         ], [], [
-            'fabric_width_cm'  => 'عرض القماش',
-            'requested_models' => 'الموديلات المطلوبة',
+            'consignment_id'    => 'الرسالة',
+            'product_model_ids' => 'الموديلات المطلوبة',
         ]);
 
-        $req = MarkerRequest::create($data + [
-            'doc_no'     => DocNumber::next('marker_request', 'marker_requests'),
-            'status'     => 'open',
-            'created_by' => auth()->id(),
-        ]);
+        // العرض والبنشر من الجودة — مش من الفورم (labels مقفولة)
+        $c = Consignment::findOrFail($data['consignment_id']);
+        if (!$c->min_width_cm) {
+            return back()->withInput()->withErrors(['consignment_id' => 'الرسالة دي ملهاش أقل عرض من الفحص — مينفعش نطلب ماركر عليها.']);
+        }
 
+        $modelIds = array_values(array_unique(array_map('intval', $data['product_model_ids'])));
+        $names    = ProductModel::whereIn('id', $modelIds)->orderBy('name')->get()->pluck('label')->implode(' + ');
+
+        $useMarker = !empty($data['use_marker_id']) ? Marker::find($data['use_marker_id']) : null;
+
+        $req = DB::transaction(function () use ($data, $c, $modelIds, $names, $useMarker) {
+            $req = MarkerRequest::create([
+                'doc_no'                 => DocNumber::next('marker_request', 'marker_requests'),
+                'doc_date'               => $data['doc_date'],
+                'consignment_id'         => $c->id,
+                'preparation_request_id' => $data['preparation_request_id'] ?? null,
+                'fabric_width_cm'        => $c->min_width_cm,
+                'avg_gsm'                => $c->avg_gsm,
+                'requested_models'       => $names . (!empty($data['sizes_note']) ? ' — ' . $data['sizes_note'] : ''),
+                'sizes_note'             => $data['sizes_note'] ?? null,
+                'copies'                 => $data['copies'] ?? 2,
+                'assigned_to'            => $data['assigned_to'] ?? null,
+                'needed_by'              => $data['needed_by'] ?? null,
+                'notes'                  => $data['notes'] ?? null,
+                'suggested_marker_id'    => $useMarker?->id,
+                'marker_id'              => $useMarker?->id,
+                'status'                 => $useMarker ? 'delivered' : 'open',
+                'created_by'             => auth()->id(),
+            ]);
+            $req->models()->sync($modelIds);
+
+            if ($req->preparation_request_id) {
+                \App\Models\PreparationRequest::where('id', $req->preparation_request_id)->update(['marker_request_id' => $req->id]);
+            }
+            return $req;
+        });
+
+        if ($useMarker) {
+            return redirect()->route('markers.requests')
+                ->with('success', 'اتسجل الطلب ' . $req->doc_no . ' واتقفل على الماركر القديم ' . $useMarker->code . ' — جاهز لأمر الشغل.');
+        }
+
+        $body = $req->doc_no . ' — الرسالة ' . $c->consignment_no . ' · عرض ' . $c->min_width_cm . ' سم'
+            . ' · ' . $names . ' · ' . ($req->copies) . ' نسخة مطبوعة';
         if ($req->assigned_to) {
-            Notifier::send($req->assigned_to, 'marker_request', 'طلب ماركر جديد',
-                $req->doc_no . ' — على عرض ' . $req->fabric_width_cm . ' سم',
-                route('markers.requests'), 'info');
+            Notifier::send($req->assigned_to, 'marker_request', 'طلب ماركر جديد', $body, route('markers.requests'), 'info');
+        } else {
+            Notifier::broadcastToRole('patternist', 'marker_request', 'طلب ماركر جديد', $body, route('markers.requests'), 'info');
         }
 
         return redirect()->route('markers.requests')->with(FlowMessage::flash('marker_request.created', null, ['no' => $req->doc_no]));
@@ -99,15 +194,19 @@ class MarkerController extends Controller
     {
         $row = new Marker(['status' => 'draft', 'is_active' => true]);
 
+        $preset = [];
         if ($reqId = $request->get('request_id')) {
-            if ($mr = MarkerRequest::find($reqId)) {
+            if ($mr = MarkerRequest::with('models')->find($reqId)) {
                 $row->marker_request_id = $mr->id;
                 $row->factory_id        = $mr->factory_id;
                 $row->fabric_width_cm   = $mr->fabric_width_cm;
+                $row->name              = $mr->requested_models ? \Illuminate\Support\Str::limit($mr->requested_models, 120, '') : null;
+                // الموديلات المطلوبة تنزل جاهزة — الباترونست يكمّل القطع في الفرشة
+                foreach ($mr->models as $m) $preset[] = ['product_model_id' => $m->id, 'qty_per_spread' => 1];
             }
         }
 
-        return view('markers.form', $this->formData(['row' => $row, 'mode' => 'create']));
+        return view('markers.form', $this->formData(['row' => $row, 'mode' => 'create', 'preset' => $preset]));
     }
 
     public function store(Request $request)

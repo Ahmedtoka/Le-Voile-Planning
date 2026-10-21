@@ -1,7 +1,11 @@
 @extends('layouts.app')
 @section('purpose', 'وزن البنشر والانكماش ومطابقة اللون — بعد الحفظ الرسالة بتظهر في استلام الخام')
 @section('content')
-@php $readings = old('readings', $row->readings?->toArray() ?? []); $editable = $row->isEditable() || $mode==='create'; @endphp
+@php
+  $readings = old('readings', $mode === 'create' ? ($preset ?? []) : ($row->readings?->toArray() ?? []));
+  $editable = $row->isEditable() || $mode==='create';
+  $ft = $arrived?->fabricType ?? $row->fabricType;
+@endphp
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'lab'])
 
@@ -90,17 +94,26 @@
         </div>
       @endif
 
+      @if($ft)
+        <hr class="my-3">
+        <b class="small">مواصفة الخامة المعتمدة — {{ $ft->name }}</b>
+        <div class="d-flex flex-wrap gap-3 mt-1 small">
+          <span>البنشر: <b class="num">{{ $ft->spec_gsm_min ?? '—' }} – {{ $ft->spec_gsm_max ?? '—' }}</b> جم/م²</span>
+          <span>أقل عرض: <b class="num">{{ $ft->spec_width_min_cm ?? ($ft->spec_width_cm ?? '—') }}</b> سم</span>
+          <span>أقصى انكماش: طول <b class="num">{{ $ft->max_shrink_len_pct ?? '—' }}%</b> · عرض <b class="num">{{ $ft->max_shrink_width_pct ?? '—' }}%</b></span>
+          <span class="hint">اللي يطلع برّه المواصفة بيتعلّم بعد الحفظ — وقابل للتفاوض مع المورد (خصم) أو يترفض</span>
+        </div>
+      @endif
+
       <hr class="my-3">
       <div class="row g-3">
-        <div class="col-12"><b class="small">نسبة الانكماش</b></div>
-        <div class="col-md-3"><label class="form-label">عينة 1 — طول %</label>
-          <input type="number" step="0.01" name="s1_shrink_len_pct" class="form-control form-control-sm" value="{{ old('s1_shrink_len_pct',$row->s1_shrink_len_pct) }}"></div>
-        <div class="col-md-3"><label class="form-label">عينة 1 — عرض %</label>
-          <input type="number" step="0.01" name="s1_shrink_width_pct" class="form-control form-control-sm" value="{{ old('s1_shrink_width_pct',$row->s1_shrink_width_pct) }}"></div>
-        <div class="col-md-3"><label class="form-label">عينة 2 — طول %</label>
-          <input type="number" step="0.01" name="s2_shrink_len_pct" class="form-control form-control-sm" value="{{ old('s2_shrink_len_pct',$row->s2_shrink_len_pct) }}"></div>
-        <div class="col-md-3"><label class="form-label">عينة 2 — عرض %</label>
-          <input type="number" step="0.01" name="s2_shrink_width_pct" class="form-control form-control-sm" value="{{ old('s2_shrink_width_pct',$row->s2_shrink_width_pct) }}"></div>
+        <div class="col-12"><b class="small">نسبة الانكماش</b> <span class="hint">— لحد 4 عينات، سيب اللي ما اتاخدتش فاضية</span></div>
+        @for($s = 1; $s <= 4; $s++)
+          <div class="col-md-3"><label class="form-label">عينة {{ $s }} — طول %</label>
+            <input type="number" step="0.01" name="s{{ $s }}_shrink_len_pct" class="form-control form-control-sm" value="{{ old("s{$s}_shrink_len_pct", $row->{"s{$s}_shrink_len_pct"}) }}"></div>
+          <div class="col-md-3"><label class="form-label">عينة {{ $s }} — عرض %</label>
+            <input type="number" step="0.01" name="s{{ $s }}_shrink_width_pct" class="form-control form-control-sm" value="{{ old("s{$s}_shrink_width_pct", $row->{"s{$s}_shrink_width_pct"}) }}"></div>
+        @endfor
 
         <div class="col-md-3">
           <div class="form-check mt-4">
@@ -117,6 +130,25 @@
         </div>
         <div class="col-md-5"><label class="form-label">ملاحظات</label>
           <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
+
+        {{-- الفواصل / اختلاف اللون — حقل صريح مش ملاحظة (الميتينج): بيأثر على الماركر والقص --}}
+        <div class="col-12">
+          <div class="p-2 rounded" style="border:1px solid var(--lv-line);background:var(--lv-offwhite)">
+            <div class="form-check">
+              <input type="hidden" name="has_color_break" value="0">
+              <input class="form-check-input" type="checkbox" name="has_color_break" value="1" id="cb" @checked(old('has_color_break',$row->has_color_break))
+                     onchange="document.getElementById('cbWrap').hidden = !this.checked">
+              <label class="form-check-label fw-bold" for="cb">فيه فواصل / اختلاف لون داخل الرسالة</label>
+              <span class="hint">— مهم جدًا: بيوصل للتخطيط والباترونست والقص والمصنع</span>
+            </div>
+            <div class="row g-2 mt-1" id="cbWrap" @if(!old('has_color_break',$row->has_color_break)) hidden @endif>
+              <div class="col-md-4"><label class="form-label">رقم التوب / الأتواب اللي فيها الفاصل</label>
+                <input name="color_break_roll_no" class="form-control form-control-sm" value="{{ old('color_break_roll_no',$row->color_break_roll_no) }}" placeholder="مثال: 007، 012"></div>
+              <div class="col-md-8"><label class="form-label">وصف الاختلاف</label>
+                <input name="color_break_note" class="form-control form-control-sm" value="{{ old('color_break_note',$row->color_break_note) }}" placeholder="مثال: فاصل بعد 20 متر — الدرجة أغمق"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </fieldset></div>
 
@@ -132,13 +164,31 @@
         @if($row->shrink_out_of_spec)
           <div class="alert alert-warning py-2 mt-2 mb-0 small">الانكماش خارج مواصفة الخامة المعتمدة.</div>
         @endif
+        @if($row->gsm_out_of_spec)
+          <div class="alert alert-warning py-2 mt-2 mb-0 small">متوسط البنشر {{ $row->avg_gsm }} خارج مواصفة الخامة — قابل للتفاوض مع المورد (خصم) أو يترفض.</div>
+        @endif
+        @if($row->has_color_break)
+          <div class="alert alert-danger py-2 mt-2 mb-0 small">فواصل / اختلاف لون: {{ $row->color_break_roll_no ? 'أتواب ' . $row->color_break_roll_no . ' · ' : '' }}{{ $row->color_break_note }}</div>
+        @endif
+        @php $checks = $row->specChecks(); @endphp
+        @if($checks)
+          <table class="table table-sm mt-2 mb-0" style="font-size:.8rem">
+            <thead><tr><th>البند</th><th>المواصفة</th><th>الفعلي</th><th></th></tr></thead>
+            <tbody>
+            @foreach($checks as $c)
+              <tr><td>{{ $c['label'] }}</td><td class="num">{{ $c['spec'] }}</td><td class="num fw-bold">{{ $c['actual'] }}</td>
+                <td>@if($c['ok'] === null) — @elseif($c['ok']) <span class="badge bg-success">مطابق</span> @else <span class="badge bg-danger">خارج المواصفة</span> @endif</td></tr>
+            @endforeach
+            </tbody>
+          </table>
+        @endif
       </div>
     @endif
   </div>
 
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between">
-      <span>قراءات وزن البنشر</span>
+      <span>قراءات وزن البنشر <span class="hint">— الأتواب اللي اتفحصت نزلت جاهزة، اكتب قراءة كل توب وضيف أتواب زيادة لو قست أكتر</span></span>
       @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> قراءة</button>@endif
     </div>
     <div class="table-responsive">

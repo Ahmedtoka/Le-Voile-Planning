@@ -77,6 +77,7 @@ class RejectionController extends Controller
             'qty'         => ['required', 'numeric', 'min:0'],
             'unit'        => ['required', 'string', 'max:20'],
             'party'       => ['required', 'in:quality,planning,purchasing'],
+            'reason_category' => ['nullable', 'in:' . implode(',', array_keys(GoodsReceiptRejection::CATEGORIES))],
             'reason'      => ['required', 'string'],
         ], [], [
             'rolls_count' => 'عدد الأتواب',
@@ -114,18 +115,27 @@ class RejectionController extends Controller
     public function resolve(Request $request, GoodsReceiptRejection $rejection)
     {
         $data = $request->validate([
-            'resolution'      => ['required', 'in:accepted,rejected,returned'],
+            'resolution'      => ['required', 'in:accepted,accepted_with_discount,rejected,returned'],
+            'discount_pct'    => ['nullable', 'numeric', 'min:0', 'max:100', 'required_if:resolution,accepted_with_discount'],
             'resolution_note' => ['required', 'string'],
         ], [], [
             'resolution'      => 'القرار',
+            'discount_pct'    => 'نسبة الخصم',
             'resolution_note' => 'الملاحظة',
         ]);
+
+        // اختلاف اللون / الفواصل مش قابل للتفاوض — ما يتقبلش لا بخصم ولا من غيره
+        if ($rejection->reason_category === 'color'
+            && in_array($data['resolution'], ['accepted', 'accepted_with_discount'], true)) {
+            return back()->withErrors(['msg' => 'اختلاف اللون / الفواصل مش قابل للتفاوض — البند ده يا يرجع للمورد يا يترفض نهائي.']);
+        }
 
         DB::transaction(function () use ($rejection, $data) {
             $rejection->update($data + ['resolved_by' => auth()->id(), 'resolved_at' => now()]);
 
-            // اللون المعلّق اللي اتقبل بيرجع للكمية المفرج عنها
-            if ($rejection->kind === 'on_hold' && $data['resolution'] === 'accepted' && $rejection->consignment) {
+            // اللون المعلّق اللي اتقبل (بخصم أو من غيره) بيرجع للكمية المفرج عنها
+            if ($rejection->kind === 'on_hold'
+                && in_array($data['resolution'], ['accepted', 'accepted_with_discount'], true) && $rejection->consignment) {
                 $c = $rejection->consignment;
                 $c->forceFill(['released_kg' => (float) $c->released_kg + (float) $rejection->qty])->save();
                 $c->recalcRemaining();
@@ -136,6 +146,16 @@ class RejectionController extends Controller
             'اتقفل بند معلّق',
             $rejection->label . ' — ' . $rejection->resolution_name,
             route('rejections.index'), 'info');
+
+        // قبول بخصم ⇒ المشتريات والحسابات لازم يعرفوا بالخصم على فاتورة المورد
+        if ($data['resolution'] === 'accepted_with_discount') {
+            foreach (['purchasing', 'finance'] as $role) {
+                Notifier::broadcastToRole($role, 'supplier_discount',
+                    'قبول قماش بخصم ' . rtrim(rtrim(number_format((float) $data['discount_pct'], 2), '0'), '.') . '% من المورد',
+                    $rejection->label . ' — ' . $rejection->category_name . ' · ' . $data['resolution_note'],
+                    route('rejections.index'), 'warning');
+            }
+        }
 
         ActivityLogger::log('resolved', $rejection, 'قفل ' . $rejection->kind_name . ': ' . $rejection->label);
 

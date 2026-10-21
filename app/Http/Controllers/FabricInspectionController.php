@@ -266,7 +266,8 @@ class FabricInspectionController extends Controller
             'rolls.*.roll_no'         => ['nullable', 'string', 'max:40'],
             'rolls.*.length_m'        => ['nullable', 'numeric', 'min:0'],
             'rolls.*.width_cm'        => ['nullable', 'numeric', 'min:0'],
-            'rolls.*.gsm'             => ['nullable', 'numeric', 'min:0'],
+            'rolls.*.status'          => ['nullable', 'in:ok,rejected'],
+            'rolls.*.net_kg'          => ['nullable', 'numeric', 'min:0'],
             'rolls.*.defects_count'   => ['nullable', 'integer', 'min:0'],
             'rolls.*.defect_desc'     => ['nullable', 'string'],
             'rolls.*.notes'           => ['nullable', 'string'],
@@ -283,11 +284,20 @@ class FabricInspectionController extends Controller
         $rolls = $v['rolls'];
         unset($v['rolls']);
 
+        // التوب المرفوض لازم يتوزن — وزنه هو اللي بيتخصم من الرسالة والطلب
+        foreach ($rolls as $r) {
+            if (($r['status'] ?? 'ok') === 'rejected' && (float) ($r['net_kg'] ?? 0) <= 0) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                    'التوب ' . ($r['roll_no'] ?? '') . ' متعلّم «مرفوض» من غير وزن — الأتواب مش متساوية، اوزنه واكتب وزنه بالكيلو.']);
+            }
+        }
+
         // لازم توب واحد متقاس على الأقل (طول + عرض) — من غيره مفيش أقل عرض
         $measured = collect($rolls)->filter(fn ($r) =>
-            (float) ($r['length_m'] ?? 0) > 0 && (float) ($r['width_cm'] ?? 0) > 0)->count();
+            ($r['status'] ?? 'ok') !== 'rejected'
+            && (float) ($r['length_m'] ?? 0) > 0 && (float) ($r['width_cm'] ?? 0) > 0)->count();
 
-        if (!$measured) {
+        if (!$measured && $v['result'] !== 'rejected') {
             throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
                 'لازم تقيس توب واحد على الأقل (الطول والعرض) — منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.']);
         }
@@ -304,17 +314,19 @@ class FabricInspectionController extends Controller
         foreach ($rolls as $i => $r) {
             $len = (float) ($r['length_m'] ?? 0);
             $def = (int) ($r['defects_count'] ?? 0);
+            $rej = ($r['status'] ?? 'ok') === 'rejected';
 
             /* السطور الجاهزة اللي الفاحص ما قاسهاش بتتساب — العيّنة =
-               الأتواب اللي اتقاست فعلًا، مش كل أتواب الرسالة. */
-            if ($len <= 0 && (float) ($r['width_cm'] ?? 0) <= 0 && $def === 0) continue;
+               الأتواب اللي اتقاست فعلًا، مش كل أتواب الرسالة. المرفوض بيتسجل حتى لو ما اتقاسش. */
+            if (!$rej && $len <= 0 && (float) ($r['width_cm'] ?? 0) <= 0 && $def === 0) continue;
 
             InspectionRoll::create([
                 'fabric_inspection_id' => $insp->id,
                 'roll_no'       => $r['roll_no'] ?? str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
                 'length_m'      => $len,
                 'width_cm'      => $r['width_cm'] ?? null,
-                'gsm'           => $r['gsm'] ?? null,
+                'status'        => $rej ? 'rejected' : 'ok',
+                'net_kg'        => $r['net_kg'] ?? null,
                 'defects_count' => $def,
                 'defect_pct'    => $len > 0 ? round(($def / $len) * 100, 3) : null,
                 'defect_desc'   => $r['defect_desc'] ?? null,

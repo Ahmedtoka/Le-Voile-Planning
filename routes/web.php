@@ -164,8 +164,24 @@ Route::middleware('auth.user')->group(function () {
         Route::get('marker-requests',        [MarkerController::class, 'requests'])->name('markers.requests');
         Route::get('marker-requests/create', [MarkerController::class, 'createRequest'])->name('markers.requests.create');
         Route::post('marker-requests',       [MarkerController::class, 'storeRequest'])->name('markers.requests.store');
+        Route::get('marker-requests/suggest',[MarkerController::class, 'suggest'])->name('markers.suggest');
         Route::get('markers',                [MarkerController::class, 'index'])->name('markers.index');
     });
+
+    // ── طلبات التحضير (تقسيم الرسالة) — التخطيط ⇄ المخزن ─────────
+    Route::get('preparation-requests', [\App\Http\Controllers\PreparationRequestController::class, 'index'])
+        ->middleware('can.do:prep.request,prep.weigh,wo.view')->name('preparation-requests.index');
+    Route::middleware('can.do:prep.request')->group(function () {
+        Route::get('preparation-requests/create', [\App\Http\Controllers\PreparationRequestController::class, 'create'])->name('preparation-requests.create');
+        Route::post('preparation-requests',       [\App\Http\Controllers\PreparationRequestController::class, 'store'])->name('preparation-requests.store');
+        Route::post('preparation-requests/{preparation_request}/cancel', [\App\Http\Controllers\PreparationRequestController::class, 'cancel'])->name('preparation-requests.cancel');
+    });
+    Route::post('preparation-requests/{preparation_request}/weigh', [\App\Http\Controllers\PreparationRequestController::class, 'weigh'])
+        ->middleware('can.do:prep.weigh')->name('preparation-requests.weigh');
+
+    // ── بوابة المصنع — من الموبايل أو اللاب ───────────────────────
+    Route::get('factory-portal', [\App\Http\Controllers\FactoryPortalController::class, 'index'])
+        ->middleware('can.do:factory.portal,cut.manage')->name('factory.portal');
 
     Route::middleware('can.do:marker.manage')->group(function () {
         Route::resource('markers', MarkerController::class)->except(['show', 'index']);

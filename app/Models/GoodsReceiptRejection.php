@@ -31,11 +31,28 @@ class GoodsReceiptRejection extends Model
     ];
 
     public const RESOLUTIONS = [
-        'open'     => 'مفتوح',
-        'accepted' => 'اتقبل بعد المراجعة',
-        'rejected' => 'اترفض نهائي',
-        'returned' => 'رجع للمورد',
+        'open'                   => 'مفتوح',
+        'accepted'               => 'اتقبل بعد المراجعة',
+        'accepted_with_discount' => 'اتقبل بخصم من المورد',
+        'rejected'               => 'اترفض نهائي',
+        'returned'               => 'رجع للمورد',
     ];
+
+    /**
+     * تصنيف سبب الرفض (الميتينج): التخطيط والمشتريات يقدروا يتفاوضوا في تلات عوامل
+     * (عرض/بنشر/انكماش مختلف ⇒ خصم من المورد)، واختلاف اللون/الفواصل مش قابل للتفاوض.
+     */
+    public const CATEGORIES = [
+        'width'     => 'عرض مختلف عن المطلوب',
+        'gsm'       => 'بنشر مختلف عن المواصفة',
+        'shrinkage' => 'انكماش مختلف عن المواصفة',
+        'color'     => 'اختلاف لون / فواصل',
+        'other'     => 'عيب آخر',
+    ];
+    public const NEGOTIABLE = ['width', 'gsm', 'shrinkage'];
+
+    public function getCategoryNameAttribute(): string { return self::CATEGORIES[$this->reason_category] ?? (string) $this->reason_category; }
+    public function getIsNegotiableAttribute(): bool   { return in_array($this->reason_category, self::NEGOTIABLE, true); }
 
     public function goodsReceipt() { return $this->belongsTo(GoodsReceipt::class); }
     public function inspection()   { return $this->belongsTo(FabricInspection::class, 'fabric_inspection_id'); }

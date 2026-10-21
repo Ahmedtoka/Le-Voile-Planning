@@ -69,6 +69,39 @@ class WorkOrder extends Model
     public function receipts()      { return $this->hasMany(ProductionReceipt::class); }
     public function accessoryRequirements() { return $this->hasMany(AccessoryRequirement::class); }
     public function revisedFrom() { return $this->belongsTo(self::class, 'revised_from_id'); }
+    public function preparationRequests() { return $this->hasMany(PreparationRequest::class); }
+
+    /**
+     * «جاهز للتشغيل» (الميتينج): المسودة اللي الاتنين ردّوا عليها —
+     * المخزن وزن الخامة (طلب التحضير اتوزن) والباترونست سلّم الماركر لكل خامة.
+     */
+    public function getIsReadyToRunAttribute(): bool
+    {
+        if ($this->status !== 'draft' || $this->fabrics->isEmpty()) return false;
+        foreach ($this->fabrics as $f) {
+            if (!$f->marker_id) return false;
+            if ($f->preparation_request_id) {
+                $pr = $f->relationLoaded('preparationRequest') ? $f->preparationRequest : PreparationRequest::find($f->preparation_request_id);
+                if ($pr && !in_array($pr->status, ['weighed', 'used'], true)) return false;
+            }
+        }
+        return true;
+    }
+
+    /** إيه اللي ناقص عشان يبقى جاهز — للعرض */
+    public function readinessGaps(): array
+    {
+        $g = [];
+        foreach ($this->fabrics as $f) {
+            $name = ($f->fabricType?->name ?? 'خامة') . ' ' . ($f->color?->code ?? '');
+            if (!$f->marker_id) $g[] = $name . ': مستني الماركر من الباترونست';
+            if ($f->preparation_request_id) {
+                $pr = PreparationRequest::find($f->preparation_request_id);
+                if ($pr && $pr->status === 'open') $g[] = $name . ': مستني وزن المخزن (' . $pr->doc_no . ')';
+            }
+        }
+        return $g;
+    }
     public function revisions()   { return $this->hasMany(self::class, 'revised_from_id'); }
 
     public function getStatusNameAttribute(): string

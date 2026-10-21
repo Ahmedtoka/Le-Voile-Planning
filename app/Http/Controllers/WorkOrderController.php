@@ -41,6 +41,9 @@ class WorkOrderController extends Controller
     {
         $q = WorkOrder::with(['factory', 'fabrics.consignment', 'fabrics.color']);
 
+        // مستخدم المصنع بيشوف أوامر مصنعه بس
+        if ($fid = auth()->user()?->factory_id) $q->where('factory_id', $fid);
+
         $this->applyFilters($q, $request, ['wo_no', 'product_title', 'product_code', 'qb_code'], 'wo_date',
             ['status' => 'status', 'factory_id' => 'factory_id', 'variance_flag' => 'variance_flag']);
 
@@ -83,7 +86,7 @@ class WorkOrderController extends Controller
         ]);
 
         // لو جاي من شاشة الحوض، نبدأ بسطر خامة جاهز عليه
-        $fabrics = [];
+        $fabrics = []; $products = [];
         if ($cid = $request->get('consignment_id')) {
             if ($c = Consignment::find($cid)) {
                 $fabrics[] = [
@@ -97,10 +100,39 @@ class WorkOrderController extends Controller
             }
         }
 
+        /* جاي من طلب تحضير اتوزن: الوزن الفعلي من المخزن هو الكمية (الميتينج)،
+           والماركر لو الباترونست سلّمه على الطلب الموازي، والمصنع والموديلات زي ما اتطلبوا. */
+        if ($pid = $request->get('preparation_request_id')) {
+            $pr = \App\Models\PreparationRequest::with(['consignment', 'models', 'markerRequest.marker'])->find($pid);
+            if ($pr && $pr->consignment && in_array($pr->status, ['weighed', 'open'], true)) {
+                $c = $pr->consignment;
+                $mk = $pr->markerRequest?->marker;
+                $fabrics = [[
+                    'consignment_id'         => $c->id,
+                    'preparation_request_id' => $pr->id,
+                    'calc_mode'              => 'weight',
+                    'unit'                   => 'كجم',
+                    'planned_qty'            => $pr->qty_for_work_order,
+                    'fabric_width_m'         => $c->min_width_cm ? round((float) $c->min_width_cm / 100, 3) : null,
+                    'gsm_kg_m2'              => $c->avg_gsm ? round((float) $c->avg_gsm / 1000, 4) : null,
+                    'marker_id'              => $mk?->status === 'approved' ? $mk->id : null,
+                    'spread_length_m'        => $mk?->spread_length_m,
+                    'pieces_per_spread'      => $mk?->pieces_per_spread,
+                ]];
+                $row->factory_id    = $pr->factory_id;
+                $row->product_title = $pr->models_label ?: null;
+                foreach ($pr->models as $m) $products[] = ['product_model_id' => $m->id];
+                if ($pr->status === 'open') {
+                    session()->flash('warning', 'طلب التحضير ' . $pr->doc_no . ' لسه ما اتوزنش — الكمية دي تقريبية، والأمر مش هيبقى «جاهز للتشغيل» غير بعد رد المخزن.');
+                }
+            }
+        }
+
         return view('workorders.form', $this->formData([
-            'row'     => $row,
-            'mode'    => 'create',
-            'fabrics' => $fabrics,
+            'row'      => $row,
+            'mode'     => 'create',
+            'fabrics'  => $fabrics,
+            'products' => $products,
         ]));
     }
 
@@ -129,9 +161,13 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $work_order)
     {
+        if (($fid = auth()->user()?->factory_id) && (int) $work_order->factory_id !== (int) $fid) {
+            abort(403, 'أمر الشغل ده مش على مصنعك.');
+        }
+
         $work_order->load([
             'factory', 'planner',
-            'fabrics.consignment.color', 'fabrics.fabricType', 'fabrics.color', 'fabrics.marker',
+            'fabrics.consignment.color', 'fabrics.fabricType', 'fabrics.color', 'fabrics.marker', 'fabrics.preparationRequest',
             'lines.productModel', 'lines.size',
             'cutDeclarations' => fn ($q) => $q->orderBy('id', 'desc'),
             'cutDeclarations.lines',
@@ -178,6 +214,10 @@ class WorkOrderController extends Controller
         DB::transaction(function () use ($work_order, $data) {
             $work_order->update($data['header']);
             $old = $work_order->fabrics->pluck('consignment_id')->filter()->all();
+
+            // طلبات التحضير اللي كانت على الأمر ترجع «اتوزنت» لحد ما تتربط تاني
+            \App\Models\PreparationRequest::where('work_order_id', $work_order->id)
+                ->update(['work_order_id' => null, 'status' => 'weighed']);
 
             $work_order->fabrics()->delete();
             $work_order->lines()->delete();
@@ -371,6 +411,8 @@ class WorkOrderController extends Controller
         abort_unless($work_order->isDraft(), 403);
 
         $ids = $work_order->fabrics->pluck('consignment_id')->filter()->all();
+        \App\Models\PreparationRequest::where('work_order_id', $work_order->id)
+            ->update(['work_order_id' => null, 'status' => 'weighed']);
         $work_order->delete();
 
         foreach (Consignment::whereIn('id', $ids)->get() as $c) {
@@ -409,7 +451,11 @@ class WorkOrderController extends Controller
     {
         return array_merge([
             'title'        => 'أمر شغل',
-            'consignments' => Consignment::with(['color', 'fabricType'])->readyForProduction()->latest('id')->get(),
+            // الأقدم أولًا (FIFO) — القديم يخرج الأول (الميتينج)
+            'consignments' => Consignment::with(['color', 'fabricType'])->readyForProduction()
+                                ->orderBy('arrival_date')->orderBy('id')->get(),
+            'safetyCm'     => (float) config('lvplanning.safety_margin_cm', 5),
+            'products'     => [],
             'markers'      => Marker::where('status', 'approved')->where('is_active', true)->latest('id')->get(),
             'factories'    => Factory::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'models'       => ProductModel::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
@@ -441,6 +487,7 @@ class WorkOrderController extends Controller
             // ── الخامات ──
             'fabrics'                        => ['required', 'array', 'min:1'],
             'fabrics.*.consignment_id'       => ['required', 'exists:consignments,id'],
+            'fabrics.*.preparation_request_id' => ['nullable', 'exists:preparation_requests,id'],
             'fabrics.*.marker_id'            => ['nullable', 'exists:markers,id'],
             'fabrics.*.role'                 => ['nullable', 'string', 'max:20'],
             'fabrics.*.calc_mode'            => ['required', 'in:weight,length'],
@@ -487,6 +534,18 @@ class WorkOrderController extends Controller
         foreach (array_values($fabrics) as $i => $f) {
             $c = Consignment::find($f['consignment_id']);
 
+            // طول الأمان: 5 سم ثابتة بتتضاف تلقائيًا على طول الفرشة لو المخطط ما كتبش (الميتينج)
+            if (empty($f['spread_length_safe_m']) && !empty($f['spread_length_m'])) {
+                $f['spread_length_safe_m'] = round((float) $f['spread_length_m'] + (float) config('lvplanning.safety_margin_cm', 5) / 100, 3);
+            }
+
+            // طلب التحضير اللي الأمر اتعمل عليه — بيتعلّم «دخل أمر شغل» وحجزه بيتحول لتخصيص الأمر
+            if (!empty($f['preparation_request_id'])) {
+                \App\Models\PreparationRequest::where('id', $f['preparation_request_id'])
+                    ->whereNull('work_order_id')
+                    ->update(['work_order_id' => $wo->id, 'status' => 'used']);
+            }
+
             $calc = PlanningEngine::computeFabric([
                 'calc_mode'            => $f['calc_mode'],
                 'spread_length_m'      => $f['spread_length_m'],
@@ -501,6 +560,7 @@ class WorkOrderController extends Controller
                 'work_order_id'        => $wo->id,
                 'line_no'              => $i + 1,
                 'consignment_id'       => $c?->id,
+                'preparation_request_id' => $f['preparation_request_id'] ?? null,
                 'fabric_type_id'       => $c?->fabric_type_id,
                 'color_id'             => $c?->color_id,
                 'marker_id'            => $f['marker_id'] ?? null,

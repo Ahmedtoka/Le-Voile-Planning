@@ -3,7 +3,7 @@
 @section('content')
 @php
   $fabs  = old('fabrics', $fabrics ?: []);
-  $prods = old('products', $mode === 'edit' ? $row->lines->toArray() : []);
+  $prods = old('products', $mode === 'edit' ? $row->lines->toArray() : ($products ?? []));
 @endphp
 
 @include('partials.flow_bar', ['flow' => 'prod', 'step' => 'wo'])
@@ -71,11 +71,15 @@
 
   {{-- ② الخامات --}}
   <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between">
+    <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
       <span>الخامات وحسبة كل واحدة</span>
-      <button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('fabTpl','fabrics'); LVF.calc()">
-        <i class="bi bi-plus-lg" aria-hidden="true"></i> خامة
-      </button>
+      <div class="d-flex gap-2 align-items-center">
+        <input class="form-control form-control-sm" style="width:260px" placeholder="فلتر الرسايل: كود / خامة / لون (مثال 0805)"
+               oninput="LVF.filter(this.value)" title="بيفلتر قايمة الرسايل في كل السطور — مرتبة بالأقدم أولًا">
+        <button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('fabTpl','fabrics'); LVF.calc()">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i> خامة
+        </button>
+      </div>
     </div>
     <div class="table-responsive wo-fab-wrap">
       <table class="table table-sm line-table wo-fab mb-0">
@@ -113,6 +117,8 @@
       <div class="hint mt-1">
         <b>الرقات والقص المعتمد</b> سيبهم فاضيين والسيستم هيملاهم بحسبته.
         لو كتبت رقم مختلف، ده اللي هيروح للمصنع والفرق هيفضل ظاهر.
+        <b>طول الأمان</b> = طول الفرشة + {{ rtrim(rtrim(number_format($safetyCm,2),'0'),'.') }} سم تلقائيًا لو سيبته فاضي.
+        الرسايل مرتبة <b>بالأقدم أولًا</b> — القديم يخرج الأول.
       </div>
     </div>
   </div>
@@ -227,9 +233,32 @@ const LVF = (function () {
     if (qty) { qty.value = (plies * perPly).toFixed(3); calc(); }
   }
 
+  const SAFETY_M = {{ $safetyCm }} / 100;
+
+  /* فلتر قايمة الرسايل في كل السطور — بحث بجزء من الكود/الخامة/اللون */
+  function filter(v) {
+    v = (v || '').toLowerCase().trim();
+    document.querySelectorAll('#fabrics select.f-cn option').forEach(o => {
+      if (!o.value) return;
+      o.hidden = v && !(o.dataset.search || '').includes(v);
+    });
+  }
+
+  /* طول الأمان الثابت: بيتملى لوحده أول ما تكتب طول الفرشة */
+  function safety(el) {
+    const r = el.closest('tr'), sps = r.querySelector('.f-sps');
+    const sp = Number(el.value) || 0;
+    if (sps && sp > 0 && (!sps.value || sps.dataset.auto === '1')) {
+      sps.value = (sp + SAFETY_M).toFixed(3); sps.dataset.auto = '1';
+    }
+    calc();
+  }
+
   function pick(sel) {
     const o = sel.selectedOptions[0], row = sel.closest('tr');
     if (!o || !o.value) return;
+    const bw = row.querySelector('.f-break');
+    if (bw) { bw.hidden = o.dataset.break !== '1'; bw.title = o.dataset.breaknote || ''; }
     const wd = row.querySelector('.f-wd'), gsm = row.querySelector('.f-gsm'), qty = row.querySelector('.f-qty');
     if (wd && !wd.value && o.dataset.w) wd.value = (Number(o.dataset.w) / 100).toFixed(3);
     if (gsm && !gsm.value && o.dataset.g) gsm.value = (Number(o.dataset.g) / 1000).toFixed(4);
@@ -297,7 +326,7 @@ const LVF = (function () {
   }
 
   document.addEventListener('DOMContentLoaded', () => setTimeout(run, 200));
-  return {pick, calc, target};
+  return {pick, calc, target, filter, safety};
 })();
 </script>
 @endpush

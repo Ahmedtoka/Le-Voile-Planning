@@ -21,6 +21,7 @@
     ]],
     'prod' => ['label' => 'دورة التشغيل', 'steps' => [
       ['k'=>'consign',   't'=>'حوض مُفرَج عنه',   'r'=>'consignments.index',        'i'=>'bi-box-seam'],
+      ['k'=>'prep',      't'=>'طلب تحضير',        'r'=>'preparation-requests.index','i'=>'bi-speedometer2'],
       ['k'=>'mreq',      't'=>'طلب الماركر',      'r'=>'markers.requests',          'i'=>'bi-envelope-paper'],
       ['k'=>'marker',    't'=>'الماركر',          'r'=>'markers.index',             'i'=>'bi-grid-3x3'],
       ['k'=>'wo',        't'=>'أمر الشغل',        'r'=>'work-orders.index',         'i'=>'bi-hammer'],

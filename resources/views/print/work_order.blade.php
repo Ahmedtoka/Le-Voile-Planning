@@ -57,7 +57,9 @@
     @foreach($wo->lines as $i => $l)
       <tr>
         <td>{{ $i + 1 }}</td>
-        <td class="r">{{ $l->productModel?->name }}@if($l->productModel?->code) — {{ $l->productModel->code }}@endif</td>
+        <td class="r">
+          @if($l->productModel?->photo_url)<img src="{{ $l->productModel->photo_url }}" alt="" style="height:34px;max-width:50px;vertical-align:middle;border:1px solid #ccc;margin-inline-end:4px">@endif
+          {{ $l->productModel?->name }}@if($l->productModel?->code) — {{ $l->productModel->code }}@endif</td>
         <td>{{ $l->size?->name ?? 'الكل' }}</td>
         <td>{{ $l->qty_per_spread }}</td>
         <td>{{ $l->consumption_per_piece ? rtrim(rtrim(number_format((float) $l->consumption_per_piece, 5), '0'), '.') : '—' }}</td>
@@ -114,7 +116,8 @@
     @php
       $rows = [
         ['طول الفرشة',        fn ($f) => $f->spread_length_m . ($f->spread_length_safe_m ? ' م / ' . $f->spread_length_safe_m . ' م بالأمان' : ' م')],
-        ['عرض القماش',        fn ($f) => $f->fabric_width_m ?: '—'],
+        ['عرض القماش (سم)',   fn ($f) => $f->fabric_width_m ? rtrim(rtrim(number_format((float) $f->fabric_width_m * 100, 1), '0'), '.') : '—'],
+        ['فواصل / اختلاف لون', fn ($f) => $f->consignment?->has_color_break ? ('نعم — ' . $f->consignment->color_break_note) : 'لا'],
         ['عدد الرقات',        fn ($f) => $f->plies ?: '—'],
         ['عدد القطع في الفرشة', fn ($f) => $f->pieces_per_spread ?: '—'],
         ['استهلاك القطعة',    fn ($f) => $f->consumption_per_piece ? rtrim(rtrim(number_format((float) $f->consumption_per_piece, 4), '0'), '.') : '—'],
@@ -129,7 +132,7 @@
       </tr>
     @endforeach
     <tr>
-      <td>8</td><td class="r">عدد نسخ الماركر المرسلة</td>
+      <td>9</td><td class="r">عدد نسخ الماركر المرسلة</td>
       <td colspan="{{ max(1, $wo->fabrics->count()) }}"><b>{{ $wo->marker_copies }}</b></td>
     </tr>
   </tbody>
@@ -167,6 +170,7 @@
 
 <div class="sigs">
   <div class="sig">إدارة التخطيط<div class="line">{{ $wo->planner?->name }}</div></div>
+  <div class="sig">المخزن (صرف الخام)<div class="line"></div></div>
   <div class="sig">قسم القص<div class="line"></div></div>
   <div class="sig">المصنع<div class="line">{{ $wo->factory?->name }}</div></div>
 </div>

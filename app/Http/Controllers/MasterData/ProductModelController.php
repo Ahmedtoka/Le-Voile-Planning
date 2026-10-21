@@ -29,7 +29,8 @@ class ProductModelController extends BaseCrudController
              'hint' => 'ده اللي بيتوزّع بيه الاستهلاك لما الموديل يشارك موديلات تانية في نفس الفرشة'],
             ['name' => 'fp_code',           'label' => 'F.P CODE',         'type' => 'text',     'rules' => ['nullable','string','max:20'], 'list' => true],
             ['name' => 'barcode',           'label' => 'الباركود',          'type' => 'text',     'rules' => ['nullable','string','max:80']],
-            ['name' => 'photo_url',         'label' => 'لينك صورة الموديل', 'type' => 'text',     'rules' => ['nullable','string','max:500']],
+            ['name' => 'photo_url',         'label' => 'صورة الموديل',      'type' => 'file',     'dir' => 'models', 'rules' => ['nullable','image','max:4096'],
+             'hint' => 'بتظهر على ورقة أمر الشغل اللي بتروح المصنع'],
             ['name' => 'is_active',         'label' => 'نشط',              'type' => 'checkbox', 'rules' => ['boolean'], 'list' => true],
             ['name' => 'notes',             'label' => 'ملاحظات',          'type' => 'textarea', 'rules' => ['nullable','string']],
         ];

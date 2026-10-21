@@ -11,6 +11,10 @@
         <div class="mb-2"><label class="form-label">التليفون</label><input name="phone" class="form-control form-control-sm"></div>
         <div class="mb-2"><label class="form-label">المسمى الوظيفي</label><input name="job_title" class="form-control form-control-sm"></div>
         <div class="mb-2"><label class="form-label req">كلمة المرور</label><input type="password" name="password" class="form-control form-control-sm" required></div>
+        <div class="mb-2"><label class="form-label">المصنع (لمستخدم بوابة المصنع)</label>
+          <select name="factory_id" class="form-select form-select-sm"><option value="">— مش مصنع —</option>
+            @foreach($factories as $k=>$v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+          </select></div>
         <div class="mb-2"><label class="form-label">الأدوار</label>
           @foreach($roles as $r)
             <div class="form-check"><input class="form-check-input" type="checkbox" name="roles[]" value="{{ $r->id }}" id="nr{{ $r->id }}">
@@ -47,6 +51,10 @@
                   <div class="mb-2"><label class="form-label">التليفون</label><input name="phone" class="form-control form-control-sm" value="{{ $u->phone }}"></div>
                   <div class="mb-2"><label class="form-label">المسمى الوظيفي</label><input name="job_title" class="form-control form-control-sm" value="{{ $u->job_title }}"></div>
                   <div class="mb-2"><label class="form-label">كلمة مرور جديدة</label><input type="password" name="password" class="form-control form-control-sm" placeholder="سيبها فاضية لو مش هتتغير"></div>
+                  <div class="mb-2"><label class="form-label">المصنع (لمستخدم بوابة المصنع)</label>
+                    <select name="factory_id" class="form-select form-select-sm"><option value="">— مش مصنع —</option>
+                      @foreach($factories as $k=>$v)<option value="{{ $k }}" @selected($u->factory_id == $k)>{{ $v }}</option>@endforeach
+                    </select></div>
                   <div class="mb-2"><label class="form-label">الأدوار</label>
                     @foreach($roles as $r)
                       <div class="form-check"><input class="form-check-input" type="checkbox" name="roles[]" value="{{ $r->id }}"

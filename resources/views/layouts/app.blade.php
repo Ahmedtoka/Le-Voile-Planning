@@ -703,6 +703,8 @@ a.flow-step:hover{background:var(--lv-surface-2);color:var(--lv-ink);text-decora
        'المخطط بيطلب تعشيقة على أقل عرض'],
       ['markers.index', '9 · الماركرات', 'bi-grid-3x3', 'marker.view',
        'الباترونست: طول الفرشة وعدد القطع والموديلات'],
+      ['preparation-requests.index', 'طلبات التحضير (تقسيم)', 'bi-speedometer2', 'prep.request|prep.weigh',
+       'التخطيط يطلب كمية تقريبية من رسالة والمخزن يوزن ويرد بالفعلي'],
       ['work-orders.index', '10 · أوامر الشغل', 'bi-hammer', 'wo.view',
        'ورقة المصنع: الرسالة + الماركر + الحسبة، والخامة الحاكمة بتحدد الإنتاج'],
       ['material-issues.index', '11 · إذن صرف خام', 'bi-box-arrow-up', 'receipt.view|wo.view',
@@ -711,6 +713,8 @@ a.flow-step:hover{background:var(--lv-surface-2);color:var(--lv-ink);text-decora
        'الفعلي من المصنع وانحرافه عن المتوقع'],
       ['production-receipts.index', '13 · استلامات الإنتاج', 'bi-inboxes', 'prod.manage|wo.view',
        'استلام على دفعات لحد ما أمر الشغل يتقفل لوحده'],
+      ['factory.portal', 'بوابة المصنع', 'bi-phone', 'factory.portal|cut.manage',
+       'شاشة المصنع من الموبايل: أوامره، القص، والاستلام'],
     ]],
 
     ['stock', 'المخزون', 'bi-boxes', [

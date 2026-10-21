@@ -187,6 +187,15 @@ class DocumentEffects
                 }
 
                 $po->refresh()->load('lines');
+
+                /* قفل البند اللي اكتمل — مش الطلب كله (الميتينج):
+                   السطر اللي وصل حده الأدنى بيتقفل لوحده وباقي السطور تفضل مفتوحة. */
+                foreach ($po->lines as $l) {
+                    if (!$l->is_closed && (float) $l->received_qty >= (float) $l->min_allowed_qty) {
+                        $l->forceFill(['is_closed' => true, 'closed_at' => now()])->saveQuietly();
+                    }
+                }
+
                 $fully = $po->lines->every(fn ($l) =>
                     (float) $l->received_qty >= (float) $l->min_allowed_qty);
 
@@ -360,6 +369,7 @@ class DocumentEffects
                     'released_kg' => min((float) $consignment->total_kg,
                                          (float) $consignment->released_kg + $releasedKg),
                     'hold_kg'     => 0,
+                    'released_at' => $gr->doc_date,   // تاريخ الإضافة بعد الفحص — غير تاريخ الوصول
                 ])->save();
 
                 // المرفوض ينزل في مكانه: مخزن المرتجعات
@@ -476,7 +486,18 @@ class DocumentEffects
             ? 'rejected'
             : ($c->avg_gsm ? 'lab_done' : 'inspected');
 
+        /* رفض على مستوى التوب (الميتينج): التوب المرفوض اتوزن لوحده، ووزنه بيتخصم
+           من الرسالة ومن المستلم على طلب الشراء، وبينزل مخزن المرتجعات كمطالبة على المورد. */
+        if ($insp->result !== 'rejected' && (int) $insp->rejected_rolls > 0) {
+            $payload['rolls_count'] = max(0, (int) ($payload['rolls_count'] ?? $c->rolls_count) - (int) $insp->rejected_rolls);
+            $payload['total_kg']    = max(0, (float) ($payload['total_kg'] ?? $c->total_kg) - (float) $insp->rejected_kg);
+        }
+
         $c->forceFill($payload)->save();
+
+        if ($insp->result !== 'rejected' && (int) $insp->rejected_rolls > 0) {
+            self::rejectRollsFromInspection($insp, $c);
+        }
 
         if ($insp->rolls_variance != 0) {
             Notifier::broadcastToRole('stock_controller', 'roll_variance',
@@ -509,10 +530,14 @@ class DocumentEffects
                 ]);
             }
 
-            Notifier::broadcastToRole('purchasing', 'rejection_open',
-                'قماش اترفض في الفحص',
-                'الرسالة ' . $c->consignment_no . ' — ' . ($insp->notes ?: 'من غير سبب مكتوب'),
-                null, 'danger');
+            // الرسالة كلها اترفضت ⇒ المشتريات والتخطيط لازم يعرفوا ويقعدوا يقرروا (الميتينج)
+            foreach (['purchasing', 'planner'] as $role) {
+                Notifier::broadcastToRole($role, 'rejection_open',
+                    'رسالة اترفضت بالكامل في الفحص — محتاجة قرار',
+                    'الرسالة ' . $c->consignment_no . ' — ' . ($insp->notes ?: 'من غير سبب مكتوب')
+                        . ' · سجّل القرار من شاشة المرفوضات.',
+                    route('rejections.index'), 'danger');
+            }
 
             return;
         }
@@ -521,6 +546,84 @@ class DocumentEffects
             'حوض متفحص — جاهز لإذن الاستلام',
             'الرسالة ' . $c->consignment_no,
             null, 'info');
+    }
+
+    /**
+     * أتواب مرفوضة داخل فحص مقبول: مطالبة على المورد + خصم من الطلب + حركة للمرتجعات.
+     * بيتنفذ مرة واحدة لكل تقرير.
+     */
+    protected static function rejectRollsFromInspection(FabricInspection $insp, Consignment $c): void
+    {
+        $exists = \App\Models\GoodsReceiptRejection::where('fabric_inspection_id', $insp->id)
+            ->whereNull('goods_receipt_id')->where('kind', 'rejected')->exists();
+        if ($exists) return;
+
+        $nos = $insp->rolls()->where('status', 'rejected')->pluck('roll_no')->filter()->implode('، ');
+        $kg  = (float) $insp->rejected_kg;
+
+        \App\Models\GoodsReceiptRejection::create([
+            'fabric_inspection_id' => $insp->id,
+            'consignment_id'       => $c->id,
+            'color_id'             => $c->color_id,
+            'color_code'           => $c->color?->code,
+            'lot_label'            => $c->consignment_no,
+            'kind'                 => 'rejected',
+            'rolls_count'          => (int) $insp->rejected_rolls,
+            'qty'                  => $kg,
+            'unit'                 => 'كجم',
+            'party'                => 'quality',
+            'reason_category'      => 'other',
+            'reason'               => 'أتواب اترفضت في الفحص' . ($nos ? ' (' . $nos . ')' : '') . ($insp->notes ? ' — ' . $insp->notes : ''),
+            'resolution'           => 'open',
+            'created_by'           => auth()->id(),
+        ]);
+
+        // خصم من المستلم على طلب الشراء — بوحدة الطلب
+        if ($kg > 0 && ($po = $c->purchaseOrder)) {
+            $poLine = $po->lines()->where('fabric_type_id', $c->fabric_type_id)
+                ->where('color_id', $c->color_id)->first();
+            if ($poLine) {
+                $dec = self::toUnit($kg, 'كجم', $poLine->unit);
+                $poLine->forceFill([
+                    'received_qty' => max(0, (float) $poLine->received_qty - $dec),
+                    'is_closed'    => false,
+                    'closed_at'    => null,
+                ])->saveQuietly();
+            }
+        }
+
+        // حركة المخزون: خروج من المحجوز ودخول المرتجعات
+        if ($kg > 0) {
+            $rtn = \App\Models\Warehouse::where('code', 'RTN')->value('id')
+                ?? \App\Models\Warehouse::where('type', 'other')->value('id');
+
+            foreach ([['out', 'hold', $c->warehouse_id], ['in', 'rejected', $rtn]] as [$dir, $state, $wh]) {
+                StockMovement::create([
+                    'moved_at'       => $insp->doc_date,
+                    'warehouse_id'   => $wh,
+                    'item_type'      => 'fabric',
+                    'fabric_type_id' => $c->fabric_type_id,
+                    'color_id'       => $c->color_id,
+                    'consignment_id' => $c->id,
+                    'direction'      => $dir,
+                    'quality_state'  => $state,
+                    'qty'            => round($kg, 3),
+                    'unit'           => 'كجم',
+                    'source_type'    => FabricInspection::class,
+                    'source_id'      => $insp->id,
+                    'reference'      => $insp->doc_no . ' — أتواب مرفوضة',
+                    'created_by'     => auth()->id(),
+                ]);
+            }
+        }
+
+        $c->recalcRemaining();
+
+        Notifier::broadcastToRole('purchasing', 'fabric_rejected',
+            'أتواب اترفضت في الفحص — مطالبة على المورد',
+            'الرسالة ' . $c->consignment_no . ' — ' . (int) $insp->rejected_rolls . ' توب بوزن '
+                . rtrim(rtrim(number_format($kg, 3), '0'), '.') . ' كجم' . ($nos ? ' (' . $nos . ')' : ''),
+            route('rejections.index'), 'danger');
     }
 
     /** ③ تقرير معمل معتمد ⇒ نقل متوسط البنشر والانكماش للحوض */
@@ -536,6 +639,11 @@ class DocumentEffects
             'shrink_len_pct'   => $lab->avg_shrink_len_pct,
             'shrink_width_pct' => $lab->avg_shrink_width_pct,
             'color_match_ok'   => $lab->color_match_ok,
+            // الفواصل / اختلاف اللون — لازم توصل للتخطيط والباترونست والقص والمصنع
+            'has_color_break'  => (bool) $lab->has_color_break,
+            'color_break_note' => $lab->has_color_break
+                ? trim(($lab->color_break_roll_no ? 'أتواب ' . $lab->color_break_roll_no . ' · ' : '') . (string) $lab->color_break_note)
+                : null,
             // الحوض المحجوز بيفضل محجوز — الإفراج بإذن الاستلام بس.
             // والمُفرَج عنه (استلام مباشر) بياخد القراءات وحالته زي ما هي.
             'status'           => match (true) {
@@ -545,6 +653,26 @@ class DocumentEffects
                 default                                               => 'under_inspection',
             },
         ])->save();
+
+        if ($lab->has_color_break) {
+            foreach (['planner', 'patternist', 'factory_follow'] as $role) {
+                Notifier::broadcastToRole($role, 'color_break',
+                    'رسالة فيها فواصل / اختلاف لون',
+                    'الرسالة ' . $c->consignment_no . ' — ' . ($c->color_break_note ?: 'راجع تقرير المعمل')
+                        . ' · خد بالك في الماركر والقص.',
+                    route('consignments.show', $c), 'warning');
+            }
+        }
+        if ($lab->gsm_out_of_spec) {
+            foreach (['planner', 'purchasing'] as $role) {
+                Notifier::broadcastToRole($role, 'gsm_out_of_spec',
+                    'بنشر خارج مواصفة الخامة',
+                    'الرسالة ' . $c->consignment_no . ' — متوسط البنشر ' . $lab->avg_gsm . ' والمواصفة '
+                        . ($lab->fabricType?->spec_gsm_min ?? '؟') . '–' . ($lab->fabricType?->spec_gsm_max ?? '؟')
+                        . ' · قابل للتفاوض مع المورد (خصم) أو يترفض.',
+                    route('consignments.show', $c), 'warning');
+            }
+        }
     }
 
     /**

@@ -165,7 +165,16 @@
             <b class="num {{ $row->width_alert ? 'text-danger' : '' }}">{{ $row->width_spread_cm ?? '—' }}</b></div>
           <div class="col"><div class="hint">إجمالي الطول</div><b class="num">{{ number_format((float)$row->total_length_m,1) }} م</b></div>
           <div class="col"><div class="hint">نسبة العيوب</div><b class="num">{{ $row->defect_pct }}%</b></div>
+          <div class="col"><div class="hint">أتواب مرفوضة</div>
+            <b class="num {{ $row->rejected_rolls > 0 ? 'text-danger' : '' }}">{{ (int) $row->rejected_rolls }}
+              @if($row->rejected_kg > 0)· {{ rtrim(rtrim(number_format((float)$row->rejected_kg,3),'0'),'.') }} كجم @endif</b></div>
         </div>
+        @if($row->rejected_rolls > 0)
+          <div class="alert alert-danger py-2 mt-2 mb-0 small">
+            {{ (int) $row->rejected_rolls }} توب اترفضوا بوزن {{ rtrim(rtrim(number_format((float)$row->rejected_kg,3),'0'),'.') }} كجم —
+            اتخصموا من الرسالة ومن طلب الشراء ونزلوا مخزن المرتجعات كمطالبة على المورد.
+          </div>
+        @endif
         @if($row->rolls_variance != 0)
           <div class="alert alert-danger py-2 mt-2 mb-0 small">
             فرق في الجرد: إذن الإضافة قال {{ $row->declared_rolls }} توب، والمجرود {{ $row->counted_rolls }}.
@@ -190,7 +199,8 @@
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
       <span>③ قياس الأتواب
-        <span class="hint">— طول وعرض كل توب. أقل عرض هو اللي الماركر هيتبني عليه</span>
+        <span class="hint">— طول وعرض كل توب. أقل عرض هو اللي الماركر هيتبني عليه.
+          التوب البايظ علّمه <b>مرفوض</b> واكتب وزنه — بيتخصم من الرسالة ويروح المرتجعات. البنشر مكانه تقرير المعمل.</span>
       </span>
       @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> توب</button>@endif
     </div>
@@ -198,7 +208,8 @@
       <table class="table table-sm line-table mb-0">
         <thead><tr>
           <th style="width:35px">م</th><th style="width:90px">رقم التوب</th><th style="width:100px">الطول (م)</th>
-          <th style="width:100px">العرض (سم)</th><th style="width:100px">البنشر</th><th style="width:90px">عدد العيوب</th>
+          <th style="width:100px">العرض (سم)</th><th style="width:100px">الحالة</th><th style="width:110px">وزن التوب (كجم)</th>
+          <th style="width:90px">عدد العيوب</th>
           <th>وصف العيب</th><th>ملاحظات</th><th style="width:40px"></th>
         </tr></thead>
         <tbody id="lines">
@@ -227,6 +238,15 @@
 
 @push('scripts')
 <script>
+/* التوب المرفوض لازم يتوزن — الأتواب مش متساوية الوزن */
+window.LVI = {
+  rollStatus: function (sel) {
+    var tr = sel.closest('tr'), kg = tr.querySelector('.roll-kg');
+    var rej = sel.value === 'rejected';
+    tr.classList.toggle('table-danger', rej);
+    if (kg) { kg.required = rej; kg.placeholder = rej ? 'إجباري' : 'اختياري'; if (rej) kg.focus(); }
+  }
+};
 (function () {
   var input = document.getElementById('resultInput');
   if (!input) return;

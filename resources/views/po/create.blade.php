@@ -25,12 +25,27 @@
                  placeholder="مثال: تغطية فوركاست الربع الأول — الأساسيات">
         </div>
         <div class="col-md-4">
-          <label class="form-label">الطلب لموديل معين؟ (اختياري)</label>
-          <select name="product_model_id" class="form-select form-select-sm">
-            <option value="">— عام / مش لموديل —</option>
-            @foreach($models as $k=>$v)<option value="{{ $k }}" @selected(old('product_model_id')==$k)>{{ $v }}</option>@endforeach
+          <label class="form-label">نوع الاستلام</label>
+          @php $exempt = (bool) old('inspection_exempt', false); @endphp
+          <select name="inspection_exempt" class="form-select form-select-sm">
+            <option value="0" @selected(!$exempt)>يدخل فحص (الافتراضي)</option>
+            <option value="1" @selected($exempt)>استلام مباشر — بدون فحص (حاويات / مستورد)</option>
           </select>
-          <div class="hint">لو الخامة دي لموديل بعينه — بيظهر في المشتريات والحسابات</div>
+          <div class="hint">إنت اللي بتحدد — المخزن هياخد القرار ده زي ما هو عند إذن الإضافة</div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">الخامة دي لأنهي موديلات؟ <span class="hint">(اختياري — علّم كل الموديلات اللي بتستخدمها)</span></label>
+          @php $picked = array_map('intval', old('product_model_ids', [])); @endphp
+          <div class="d-flex flex-wrap gap-2" style="max-height:170px;overflow:auto;padding:6px;border:1px solid var(--lv-line);border-radius:6px">
+            @foreach($models as $k=>$v)
+              <label class="form-check form-check-inline m-0 small" style="min-width:220px">
+                <input class="form-check-input" type="checkbox" name="product_model_ids[]" value="{{ $k }}" @checked(in_array((int)$k, $picked, true))>
+                <span class="form-check-label">{{ $v }}</span>
+              </label>
+            @endforeach
+          </div>
+          <div class="hint">بيظهر للمشتريات والحسابات وبيتحط على طلب الماركر بعدين</div>
         </div>
       </div>
 

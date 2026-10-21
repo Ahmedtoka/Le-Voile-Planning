@@ -20,6 +20,7 @@ class RolePermissionSeeder extends Seeder
         'inspector'        => ['فاحص قماش', 'تقارير فحص القماش'],
         'patternist'       => ['باترونست', 'رفع الماركرات وبياناتها'],
         'factory_follow'   => ['متابعة مصانع', 'بيانات القص واستلامات الإنتاج'],
+        'factory'          => ['مصنع (بوابة)', 'مستخدم المصنع نفسه: يشوف أوامره ويسجل القص والاستلام من الموبايل'],
         'finance'          => ['مالية', 'متابعة المستحقات للموردين'],
         'gm'               => ['مدير عام', 'عرض شامل على كل الدورة'],
     ];
@@ -52,11 +53,14 @@ class RolePermissionSeeder extends Seeder
             'wo.view'        => 'عرض أوامر الشغل',
             'wo.manage'      => 'إنشاء أوامر الشغل',
             'wo.close'       => 'قفل أوامر الشغل',
+            'prep.request'   => 'طلب تحضير (تقسيم رسالة) من المخزن',
+            'prep.weigh'     => 'الرد على طلب التحضير بالوزن الفعلي (المخزن)',
         ],
         'الإنتاج' => [
             'cut.view'    => 'عرض بيانات القص',
             'cut.manage'  => 'إدخال بيانات القص',
             'prod.manage' => 'استلام الإنتاج',
+            'factory.portal' => 'بوابة المصنع (أوامر مصنعي بس)',
         ],
         'الفوركاست' => [
             'forecast.view'   => 'عرض الفوركاست والتغطية',
@@ -75,16 +79,18 @@ class RolePermissionSeeder extends Seeder
     public const ROLE_PERMISSIONS = [
         // التخطيط هو اللي بيبدأ طلب الشراء
         'planner' => ['master.view','po.view','po.request','receipt.view','qc.view','marker.view','marker.manage',
-                      'wo.view','wo.manage','wo.close','cut.view','forecast.view','forecast.manage','import.manage'],
+                      'wo.view','wo.manage','wo.close','cut.view','forecast.view','forecast.manage','import.manage',
+                      'prep.request'],
         // المشتريات بتسعّر وتحدد المورد — مش بتنشئ الطلب
         'purchasing' => ['master.view','po.view','po.source','receipt.view'],
         'purchasing_mgr' => ['master.view','po.view','po.source','po.manage','receipt.view'],
-        'storekeeper' => ['master.view','receipt.view','receipt.manage','prod.manage','qc.view'],
+        'storekeeper' => ['master.view','receipt.view','receipt.manage','prod.manage','qc.view','prep.weigh'],
         'stock_controller' => ['master.view','receipt.view','qc.view'],
         'lab_tech' => ['qc.view','qc.manage','master.view'],
         'inspector' => ['qc.view','qc.manage','master.view'],
         'patternist' => ['marker.view','marker.manage','master.view','wo.view'],
         'factory_follow' => ['wo.view','cut.view','cut.manage','prod.manage','master.view'],
+        'factory' => ['factory.portal','wo.view','cut.view','cut.manage','prod.manage'],
         'finance' => ['po.view','po.finance','forecast.view'],
         'gm' => ['master.view','po.view','po.finance','receipt.view','qc.view','marker.view',
                  'wo.view','cut.view','forecast.view','settings.audit'],

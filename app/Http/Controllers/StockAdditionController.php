@@ -94,9 +94,13 @@ class StockAdditionController extends Controller
             $row->warehouse_id      = $po->warehouse_id
                 ?: Warehouse::where('type', 'fabric')->value('id');
 
+            // نوع الاستلام قرار صاحب الطلب — مش المخزن
+            $row->receipt_type = $po->inspection_exempt ? 'container' : 'normal';
+
             foreach ($po->lines as $l) {
                 $remaining = max(0, (float) $l->qty - (float) $l->received_qty);
-                if ($remaining <= 0) continue;
+                // البند اللي اتقفل (اكتمل) ما بيظهرش تاني في الإذن
+                if ($l->is_closed || $remaining <= 0) continue;
 
                 /* البيانات الجاية من الطلب ثابتة زي ما هي:
                    طلبت طن؟ بتستلم بالطن — مفيش تحويل ولا تعديل على الطلب. */
@@ -304,6 +308,7 @@ class StockAdditionController extends Controller
 
                 $qty = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
                 if ((float) $poLine->received_qty + $qty > $poLine->max_allowed_qty + 0.0001) {
+                    $this->alertTolerance($stock_addition, $po, $poLine, $qty);
                     return 'الكمية بتتعدى نسبة الزيادة المسموح بها (' . $poLine->tolerance_pct
                         . '%) على الطلب ' . $po->po_no . ' — المستلم قبل كده '
                         . rtrim(rtrim(number_format((float) $poLine->received_qty, 2), '0'), '.')
@@ -313,6 +318,30 @@ class StockAdditionController extends Controller
             }
         }
         return null;
+    }
+
+    /**
+     * تجاوز نسبة الزيادة ⇒ إشعار للتخطيط والمشتريات (مرة واحدة لكل إذن).
+     * القرار بتاعهم: التخطيط يزوّد النسبة أو يعدّل الطلب، أو المشتريات تحلّها مع المورد —
+     * الزيادة مش مسؤولية التخطيط ومفيش طلب شراء جديد ليها (الميتينج).
+     */
+    private function alertTolerance(StockAddition $sa, PurchaseOrder $po, \App\Models\PurchaseOrderLine $poLine, float $incoming): void
+    {
+        if ($sa->tolerance_alerted_at) return;
+
+        $name = trim(($poLine->fabricType?->name ?? '') . ' ' . ($poLine->color?->code ?? ''));
+        $body = 'الإذن ' . $sa->doc_no . ' على الطلب ' . $po->po_no . ' — الصنف «' . $name . '»: المطلوب '
+            . rtrim(rtrim(number_format((float) $poLine->qty, 3), '0'), '.') . ' ' . $poLine->unit
+            . ' بزيادة ' . rtrim(rtrim(number_format((float) $poLine->tolerance_pct, 2), '0'), '.') . '%'
+            . '، والوارد التراكمي ' . rtrim(rtrim(number_format((float) $poLine->received_qty + $incoming, 3), '0'), '.')
+            . '. المخزن مش هيقدر يستلم لحد ما التخطيط يزوّد النسبة أو يعدّل الطلب، أو المشتريات تحلها مع المورد.';
+
+        \App\Services\Notifier::broadcastToRole('planner', 'tolerance_breach', 'توريد متعدي نسبة الزيادة', $body,
+            route('purchase-orders.edit', $po), 'danger');
+        \App\Services\Notifier::broadcastToRole('purchasing', 'tolerance_breach', 'توريد متعدي نسبة الزيادة — راجع المورد', $body,
+            route('purchase-orders.edit', $po), 'danger');
+
+        $sa->forceFill(['tolerance_alerted_at' => now()])->saveQuietly();
     }
 
     /**
@@ -426,6 +455,11 @@ class StockAdditionController extends Controller
         // اللي ما اتكتبلوش كمية = ما وصلش المرة دي — بيتشال من الإذن
         $lines = array_values(array_filter($v['lines'], fn ($l) => (float) ($l['qty'] ?? 0) > 0));
         unset($v['lines']);
+
+        // نوع الاستلام بييجي من طلب الشراء (قرار التخطيط) — المخزن ما بيغيّروش
+        if (!empty($v['purchase_order_id']) && ($po = PurchaseOrder::find($v['purchase_order_id']))) {
+            $v['receipt_type'] = $po->inspection_exempt ? 'container' : 'normal';
+        }
 
         if (!count($lines)) {
             throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>

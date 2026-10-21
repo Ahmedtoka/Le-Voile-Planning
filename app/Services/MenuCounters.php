@@ -114,6 +114,21 @@ class MenuCounters
             $c['material-issues.index'] = WorkOrder::needsMaterial()->count();
         }
 
+        // ── طلبات التحضير: المخزن يوزن / التخطيط يعمل أمر شغل ──
+        if ($can('prep.weigh')) {
+            $c['preparation-requests.index'] = \App\Models\PreparationRequest::where('status', 'open')->count();
+        } elseif ($can('prep.request')) {
+            $c['preparation-requests.index'] = \App\Models\PreparationRequest::where('status', 'weighed')->count();
+        }
+
+        // ── بوابة المصنع: أوامر مستنية قص أو عليها قطع ──
+        if ($user->factory_id && $can('factory.portal')) {
+            $c['factory.portal'] = WorkOrder::where('factory_id', $user->factory_id)
+                ->where(fn ($q) => $q->whereIn('status', ['sent_to_factory', 'cutting'])
+                    ->orWhere(fn ($qq) => $qq->open()->whereColumn('cut_pieces', '>', 'received_pieces')))
+                ->count();
+        }
+
         // ── المرفوضات: البنود المفتوحة اللي محتاجة قرار ──
         if ($can('wo.manage') || $can('po.source')) {
             $c['rejections.index'] = \App\Models\GoodsReceiptRejection::open()->count();

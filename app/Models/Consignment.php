@@ -18,7 +18,7 @@ class Consignment extends Model
     use HasDocumentIdentity, HasComments;
 
     protected $guarded = [];
-    protected $casts = ['arrival_date' => 'date', 'color_match_ok' => 'boolean'];
+    protected $casts = ['arrival_date' => 'date', 'released_at' => 'date', 'color_match_ok' => 'boolean', 'has_color_break' => 'boolean'];
 
     public const DOC_TYPE = 'consignment';
 
@@ -62,6 +62,7 @@ class Consignment extends Model
     public function issueLines()      { return $this->hasMany(MaterialIssueLine::class); }
     public function rejections()      { return $this->hasMany(GoodsReceiptRejection::class); }
     public function goodsReceipts() { return $this->hasMany(GoodsReceipt::class); }
+    public function preparationRequests() { return $this->hasMany(PreparationRequest::class); }
 
     public function getStatusNameAttribute(): string
     {
@@ -150,6 +151,10 @@ class Consignment extends Model
             ->whereHas('workOrder', fn ($q) => $q->where('status', 'closed'))
             ->sum('issued_qty');
 
+        /* طلبات التحضير (تقسيم الرسالة) بتحجز فورًا لحد ما تبقى أمر شغل —
+           بالفعلي لو المخزن وزن، وبالتقريبي لو لسه (الميتينج). */
+        $reserved = (float) $this->preparationRequests()->reserving()->get()->sum('reserved_qty');
+
         $allocated = $open + $closed;
 
         /* المفرج عنه بيتاخد زي ما هو من إذن الاستلام.
@@ -169,7 +174,8 @@ class Consignment extends Model
             'hold_kg'      => $hold,
             'released_kg'  => $released,
             'allocated_kg' => $allocated,
-            'remaining_kg' => max(0, $released - $allocated),
+            'reserved_kg'  => $reserved,
+            'remaining_kg' => max(0, $released - $allocated - $reserved),
         ])->saveQuietly();
     }
 }

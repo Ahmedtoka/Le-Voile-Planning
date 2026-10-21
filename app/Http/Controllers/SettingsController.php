@@ -20,6 +20,7 @@ class SettingsController extends Controller
             'title' => 'المستخدمين',
             'rows'  => User::with('roles')->orderBy('id', 'desc')->paginate(50),
             'roles' => Role::orderBy('name')->get(),
+            'factories' => \App\Models\Factory::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
         ]);
     }
 
@@ -32,6 +33,7 @@ class SettingsController extends Controller
             'phone'     => ['nullable', 'string', 'max:30'],
             'job_title' => ['nullable', 'string', 'max:191'],
             'password'  => ['required', 'string', 'min:6'],
+            'factory_id'=> ['nullable', 'exists:factories,id'],
             'roles'     => ['array'],
         ], [], ['name' => 'الاسم', 'username' => 'اسم الدخول', 'password' => 'كلمة المرور']);
 
@@ -42,6 +44,7 @@ class SettingsController extends Controller
                 'email'     => $data['email'] ?? null,
                 'phone'     => $data['phone'] ?? null,
                 'job_title' => $data['job_title'] ?? null,
+                'factory_id'=> $data['factory_id'] ?? null,
                 'password'  => $data['password'],
                 'is_active' => true,
             ]);
@@ -59,6 +62,7 @@ class SettingsController extends Controller
             'phone'     => ['nullable', 'string', 'max:30'],
             'job_title' => ['nullable', 'string', 'max:191'],
             'password'  => ['nullable', 'string', 'min:6'],
+            'factory_id'=> ['nullable', 'exists:factories,id'],
             'is_active' => ['boolean'],
             'roles'     => ['array'],
         ], [], ['name' => 'الاسم']);
@@ -69,6 +73,7 @@ class SettingsController extends Controller
                 'email'     => $data['email'] ?? null,
                 'phone'     => $data['phone'] ?? null,
                 'job_title' => $data['job_title'] ?? null,
+                'factory_id'=> $data['factory_id'] ?? null,
                 'is_active' => $request->boolean('is_active'),
             ];
             if (!empty($data['password'])) $payload['password'] = $data['password'];

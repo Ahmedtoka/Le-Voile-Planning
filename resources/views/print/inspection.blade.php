@@ -18,7 +18,7 @@
 <table class="grid">
   <thead><tr>
     <th style="width:60px">التوب</th><th style="width:80px">الطــول</th><th style="width:70px">العرض</th>
-    <th style="width:70px">البنشر</th><th style="width:65px">العيوب</th><th>العيــــب</th><th style="width:150px">ملاحظــات</th>
+    <th style="width:60px">الحالة</th><th style="width:70px">الوزن</th><th style="width:65px">العيوب</th><th>العيــــب</th><th style="width:150px">ملاحظــات</th>
   </tr></thead>
   <tbody>
     @foreach($insp->rolls as $r)
@@ -26,14 +26,15 @@
         <td>{{ $r->roll_no }}</td>
         <td>{{ rtrim(rtrim(number_format((float)$r->length_m, 2), '0'), '.') }}</td>
         <td>{{ rtrim(rtrim(number_format((float)$r->width_cm, 2), '0'), '.') }}</td>
-        <td>{{ $r->gsm ? rtrim(rtrim(number_format((float)$r->gsm,2),'0'),'.') : '' }}</td>
+        <td>{{ $r->status === 'rejected' ? 'مرفوض' : 'سليم' }}</td>
+        <td>{{ $r->net_kg ? rtrim(rtrim(number_format((float)$r->net_kg,3),'0'),'.') : '' }}</td>
         <td>{{ $r->defects_count }}</td>
         <td class="r">{{ $r->defect_desc }}</td>
         <td class="r">{{ $r->notes }}</td>
       </tr>
     @endforeach
     @for($i = $insp->rolls->count(); $i < 10; $i++)
-      <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
     @endfor
   </tbody>
 </table>
@@ -48,6 +49,10 @@
     <td class="k">أقل عرض</td><td><b>{{ $insp->min_width_cm }} سم</b></td>
     <td class="k">متوسط العرض</td><td>{{ $insp->avg_width_cm }} سم</td>
     <td class="k">نسبة العيوب</td><td>{{ $insp->defect_pct }}%</td>
+  </tr>
+  <tr>
+    <td class="k">أتواب مرفوضة</td><td colspan="5">{{ (int) $insp->rejected_rolls }} توب
+      @if($insp->rejected_kg > 0) بوزن {{ rtrim(rtrim(number_format((float)$insp->rejected_kg,3),'0'),'.') }} كجم — اتخصموا من الرسالة ونزلوا المرتجعات @endif</td>
   </tr>
 </table>
 

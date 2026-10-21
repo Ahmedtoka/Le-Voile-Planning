@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('content')
 
-<form method="post"
+<form method="post" enctype="multipart/form-data"
       action="{{ $mode === 'create' ? route($routeName.'.store') : route($routeName.'.update', $row->id) }}">
   @csrf
   @if($mode === 'edit') @method('PUT') @endif
@@ -47,6 +47,9 @@
               @elseif($type === 'number')
                 <input type="number" step="{{ $f['step'] ?? '1' }}" name="{{ $f['name'] }}"
                        class="form-control form-control-sm" value="{{ $val }}">
+              @elseif($type === 'file')
+                <input type="file" name="{{ $f['name'] }}" accept="image/*" class="form-control form-control-sm">
+                @if($val)<div class="mt-1"><img src="{{ $val }}" alt="" style="max-height:90px;border:1px solid var(--lv-line);border-radius:6px"></div>@endif
               @else
                 <input type="text" name="{{ $f['name'] }}" class="form-control form-control-sm" value="{{ $val }}">
               @endif

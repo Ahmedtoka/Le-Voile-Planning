@@ -58,8 +58,11 @@ class FabricInspection extends Model
     public function recalc(): void
     {
         $rows = $this->rolls()->get();
-        $widths  = $rows->pluck('width_cm')->filter(fn ($v) => $v > 0)->map(fn ($v) => (float) $v);
-        $lengths = $rows->pluck('length_m')->map(fn ($v) => (float) $v);
+        // الأعراض والأطوال من الأتواب السليمة بس — المرفوض خارج الرسالة
+        $okRows  = $rows->where('status', '!=', 'rejected');
+        $rejRows = $rows->where('status', 'rejected');
+        $widths  = $okRows->pluck('width_cm')->filter(fn ($v) => $v > 0)->map(fn ($v) => (float) $v);
+        $lengths = $okRows->pluck('length_m')->map(fn ($v) => (float) $v);
 
         $min = $widths->min();
         $max = $widths->max();
@@ -91,6 +94,8 @@ class FabricInspection extends Model
             'width_spread_cm' => $spread,
             'total_defects'   => $totalDefects,
             'defect_pct'      => $defectPct,
+            'rejected_rolls'  => $rejRows->count(),
+            'rejected_kg'     => round((float) $rejRows->sum('net_kg'), 3),
             // فرق العرض الكبير بين أتواب نفس الحوض = القماش نفسه فيه مشكلة
             'width_alert'     => $spread !== null && $spread > (float) config('lvplanning.width_spread_alert_cm', 5),
         ])->saveQuietly();

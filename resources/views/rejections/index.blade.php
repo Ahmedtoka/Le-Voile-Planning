@@ -62,7 +62,11 @@
           <td class="num">{{ $r->rolls_count }}</td>
           <td class="num fw-bold">{{ rtrim(rtrim(number_format((float)$r->qty,3),'0'),'.') }} {{ $r->unit }}</td>
           <td class="hint">{{ $r->party_name }}</td>
-          <td class="hint">{{ Str::limit($r->reason, 60) }}</td>
+          <td class="hint">
+            <span class="badge bg-{{ $r->reason_category === 'color' ? 'danger' : ($r->is_negotiable ? 'info' : 'secondary') }}">{{ $r->category_name }}</span>
+            {{ Str::limit($r->reason, 60) }}
+            @if($r->discount_pct !== null)<div class="text-warning fw-bold">خصم {{ rtrim(rtrim(number_format((float)$r->discount_pct,2),'0'),'.') }}%</div>@endif
+          </td>
           <td>
             <span class="badge bg-{{ $r->resolution === 'open' ? 'secondary' : 'success' }}">{{ $r->resolution_name }}</span>
             @if($r->resolved_at)<div class="hint">{{ $r->resolver?->name }} · {{ $r->resolved_at->format('Y-m-d') }}</div>@endif
@@ -84,11 +88,22 @@
             <div class="modal-body">
               <div class="hint mb-2">السبب المسجّل: {{ $r->reason }}</div>
               <label class="form-label req">القرار</label>
-              <select name="resolution" class="form-select form-select-sm mb-2" required>
-                <option value="accepted">اتقبل بعد المراجعة — يرجع للكمية المتاحة</option>
+              <div class="hint mb-2">نوع السبب: <b>{{ $r->category_name }}</b> —
+                {{ $r->reason_category === 'color' ? 'مش قابل للتفاوض: يرجع للمورد أو يترفض نهائي.' : ($r->is_negotiable ? 'قابل للتفاوض: ممكن يتقبل بخصم من المورد.' : '') }}</div>
+              <select name="resolution" class="form-select form-select-sm mb-2" required
+                      onchange="this.closest('form').querySelector('.disc-wrap').hidden = this.value !== 'accepted_with_discount'">
+                @if($r->reason_category !== 'color')
+                  <option value="accepted">اتقبل بعد المراجعة — يرجع للكمية المتاحة</option>
+                  <option value="accepted_with_discount">اتقبل بخصم من المورد (عرض/بنشر/انكماش)</option>
+                @endif
                 <option value="returned">رجع للمورد</option>
                 <option value="rejected">اترفض نهائي</option>
               </select>
+              <div class="disc-wrap mb-2" hidden>
+                <label class="form-label req">نسبة الخصم من المورد %</label>
+                <input type="number" step="0.01" min="0" max="100" name="discount_pct" class="form-control form-control-sm" placeholder="مثال: 10">
+                <div class="hint">بيوصل إشعار للمشتريات والحسابات بالخصم</div>
+              </div>
               <label class="form-label req">الملاحظة</label>
               <textarea name="resolution_note" rows="3" class="form-control form-control-sm" required
                         placeholder="مثال: المورد وافق على الاستبدال، والرسالة البديلة هتوصل الأسبوع الجاي"></textarea>

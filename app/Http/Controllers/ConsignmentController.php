@@ -16,6 +16,12 @@ class ConsignmentController extends Controller
     {
         $q = Consignment::with(['supplier', 'fabricType', 'color', 'warehouse'])->latest('id');
 
+        /* تحت الفحص بين المخزن والجودة بس (الميتينج): التخطيط والحسابات ما يشوفوش
+           القماش غير لما يتفرج عنه — ده مش خام جاهز للتشغيل ولا خام اتدفعت فلوسه. */
+        $u = auth()->user();
+        $seesHold = $u && ($u->isAdmin() || $u->can2('receipt.manage') || $u->can2('qc.manage') || $u->can2('po.source'));
+        if (!$seesHold) $q->whereIn('status', ['released', 'in_production', 'closed']);
+
         if ($s = $request->get('status'))   $q->where('status', $s);
         if ($c = $request->get('color_id')) $q->where('color_id', $c);
         if ($f = $request->get('fabric_type_id')) $q->where('fabric_type_id', $f);
@@ -45,7 +51,9 @@ class ConsignmentController extends Controller
                 ['label' => 'مرفوضة', 'value' => $b()->where('status','rejected')->count(), 'tone' => 'danger',
                  'note' => 'اترفضت في الفحص.'],
             ],
-            'statuses'    => Consignment::STATUSES,
+            'statuses'    => $seesHold ? Consignment::STATUSES
+                                : array_intersect_key(Consignment::STATUSES, array_flip(['released', 'in_production', 'closed'])),
+            'seesHold'    => $seesHold,
             'colors'      => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
             'fabricTypes' => FabricType::orderBy('name')->pluck('name', 'id'),
         ]);
