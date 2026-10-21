@@ -93,6 +93,13 @@
             <td class="num {{ $insp && $insp->rolls_variance != 0 ? 'text-danger fw-bold' : '' }}">
               {{ $insp ? $insp->counted_rolls . '/' . $insp->declared_rolls . ' — ' . $insp->rolls_variance_label : '—' }}
             </td></tr>
+          @php $est = $insp?->weightEstimate(); @endphp
+          @if($est)
+            <tr><th>الوزن المتوقع من العيّنة</th>
+              <td class="num {{ $est['level'] === 'danger' ? 'text-danger fw-bold' : ($est['level'] === 'warn' ? 'text-warning fw-bold' : '') }}">
+                {{ lv_kg($est['expected'], false) }} <span class="hint">({{ $est['diff_pct'] >= 0 ? '+' : '' }}{{ lv_num($est['diff_pct'], 1) }}% عن الإذن)</span>
+                @if($est['level'] === 'danger')<div class="hint">راجع الوزن مع المخزن قبل الإفراج</div>@endif</td></tr>
+          @endif
           <tr><th>العيّنة ونسبة العيوب</th>
             <td class="num">{{ $insp ? $insp->sample_pct . '% · عيوب ' . $insp->defect_pct . '%' : '—' }}</td></tr>
           <tr><th>تقرير المعمل</th>

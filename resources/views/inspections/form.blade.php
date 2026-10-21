@@ -162,6 +162,12 @@
         @if($row->sample_too_small)
           <div class="alert alert-warning py-2 mt-2 mb-0 small">العيّنة {{ lv_num($row->sample_pct, 2) }}% بس من الأتواب — أي أرقام مبنية عليها تقديرية.</div>
         @endif
+        @php $est = $row->weightEstimate(); @endphp
+        @if($est && $est['level'] !== 'ok')
+          <div class="alert alert-{{ $est['level'] === 'danger' ? 'danger' : 'warning' }} py-2 mt-2 mb-0 small">
+            الوزن المتوقع من العيّنة {{ lv_kg($est['expected'], false) }} مقابل {{ lv_kg($est['declared'], false) }} على الإذن — فرق {{ $est['diff_pct'] >= 0 ? '+' : '' }}{{ lv_num($est['diff_pct'], 1) }}%
+            {{ $est['level'] === 'danger' ? '· راجع الوزن مع المخزن قبل الإفراج' : '· أكبر من الطبيعي' }}</div>
+        @endif
         @if($row->rejected_rolls > 0)
           <div class="alert alert-danger py-2 mt-2 mb-0 small">{{ (int) $row->rejected_rolls }} توب اترفضوا بوزن {{ lv_kg($row->rejected_kg, false) }} — اتخصموا من الرسالة ومن طلب الشراء ونزلوا مخزن المرتجعات كمطالبة على المورد.</div>
         @endif
@@ -190,6 +196,13 @@
           @if(!count($rolls)) @include('inspections.line',['i'=>0,'l'=>[]]) @endif
         </tbody>
       </table>
+    </div>
+    {{-- الوزن المتوقع من العيّنة مقابل وزن الإذن — تنبيه بس --}}
+    <div class="card-footer bg-white" id="estWrap" hidden
+         data-declared="{{ (float) ($row->counted_kg ?: $c?->total_kg ?: 0) }}"
+         data-warn="{{ config('lvplanning.weight_estimate.warn_pct', 5) }}" data-danger="{{ config('lvplanning.weight_estimate.danger_pct', 10) }}"
+         data-minsample="{{ config('lvplanning.min_inspection_sample_pct', 15) }}">
+      <div id="estText" class="small"></div>
     </div>
   </div>
 
@@ -375,12 +388,44 @@ window.LVI = {
   }
   document.querySelectorAll('.result-btn').forEach(function (b) { b.addEventListener('click', function () { input.value = b.dataset.result; paint(); }); });
 
-  // البنشر التلقائي من الطول والعرض والوزن
+  // البنشر التلقائي من الطول والعرض والوزن + الوزن المتوقع من العيّنة
   document.getElementById('lines').addEventListener('input', function (e) {
     var n = e.target.name || '';
     if (/\[(length_m|width_cm|net_kg)\]$/.test(n)) LVI.autoGsm(e.target);
     if (e.target.classList.contains('roll-gsm')) e.target.dataset.auto = '0';
+    estimate();
   });
+  document.getElementById('lines').addEventListener('change', estimate);
+  var ckg = document.querySelector('[name=counted_kg]'); if (ckg) ckg.addEventListener('input', estimate);
+  if (cnt) cnt.addEventListener('input', estimate);
+
+  /* الوزن المتوقع = متوسط وزن التوب في العيّنة × الأتواب المجرودة — مقارنة بوزن الإذن (تنبيه بس) */
+  function estimate() {
+    var wrap = document.getElementById('estWrap'), out = document.getElementById('estText');
+    if (!wrap) return;
+    var ws = [];
+    document.querySelectorAll('#lines tr').forEach(function (tr) {
+      if (tr.querySelector('.roll-status')?.value === 'rejected') return;
+      var kg = parseFloat(tr.querySelector('.roll-kg')?.value) || 0;
+      if (kg > 0) ws.push(kg);
+    });
+    var n = parseInt(cnt?.value || '0', 10) || 0;
+    var declared = parseFloat(ckg?.value) || parseFloat(wrap.dataset.declared) || 0;
+    if (!ws.length || !n || !declared) { wrap.hidden = true; return; }
+    var avg = ws.reduce((a, b) => a + b, 0) / ws.length, exp = avg * n, diff = (exp - declared) / declared * 100;
+    var warn = parseFloat(wrap.dataset.warn), danger = parseFloat(wrap.dataset.danger);
+    var tone = Math.abs(diff) >= danger ? 'danger' : (Math.abs(diff) >= warn ? 'warning' : 'success');
+    var nf = function (v, d) { return Number(v).toLocaleString('en-US', {maximumFractionDigits: d}); };
+    var small = (ws.length / n * 100) < parseFloat(wrap.dataset.minsample);
+    out.className = 'small alert alert-' + tone + ' py-2 mb-0';
+    out.innerHTML = '<b>الوزن المتوقع من العيّنة:</b> ' + nf(exp, 1) + ' كجم '
+      + '<span class="hint">(متوسط التوب ' + nf(avg, 2) + ' كجم × ' + n + ' توب — عيّنة ' + ws.length + ' توب)</span>'
+      + ' مقابل <b>' + nf(declared, 1) + ' كجم</b> على الإذن — فرق <b>' + (diff >= 0 ? '+' : '') + nf(diff, 1) + '%</b>'
+      + (tone === 'danger' ? ' · <b>راجع الوزن مع المخزن قبل الإفراج</b>' : tone === 'warning' ? ' · فرق أكبر من الطبيعي' : ' · في الحدود الطبيعية')
+      + (small ? ' <span class="hint">· تقديري — العيّنة أقل من ' + wrap.dataset.minsample + '%</span>' : '');
+    wrap.hidden = false;
+  }
+  estimate();
 
   // «تم» جنب الأتواب المجرودة ⇒ سطر لكل توب
   var btn = document.getElementById('buildRows'), cnt = document.getElementById('countedRolls');

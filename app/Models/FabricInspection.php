@@ -101,6 +101,28 @@ class FabricInspection extends Model
         ])->saveQuietly();
     }
 
+    /**
+     * الوزن المتوقع للرسالة من العيّنة: متوسط وزن التوب المجرود × عدد الأتواب.
+     * تنبيه بس — الفحص عيّنة والفرق الطبيعي 2-4%.
+     * @return array{sample:int,avg:float,expected:float,declared:float,diff_pct:float,level:string}|null
+     */
+    public function weightEstimate(): ?array
+    {
+        $rows = $this->relationLoaded('rolls') ? $this->rolls : $this->rolls()->get();
+        $w = $rows->where('status', '!=', 'rejected')->pluck('net_kg')->filter(fn ($v) => (float) $v > 0)->map(fn ($v) => (float) $v);
+        $n = (int) ($this->counted_rolls ?: $this->total_rolls);
+        $declared = (float) ($this->counted_kg ?: $this->consignment?->total_kg ?: 0);
+        if ($w->count() < 1 || $n < 1 || $declared <= 0) return null;
+
+        $avg = $w->avg(); $expected = $avg * $n;
+        $diff = ($expected - $declared) / $declared * 100;
+        $cfg = config('lvplanning.weight_estimate', ['warn_pct' => 5, 'danger_pct' => 10]);
+        $level = abs($diff) >= (float) $cfg['danger_pct'] ? 'danger' : (abs($diff) >= (float) $cfg['warn_pct'] ? 'warn' : 'ok');
+
+        return ['sample' => $w->count(), 'avg' => round($avg, 3), 'expected' => round($expected, 3),
+                'declared' => $declared, 'diff_pct' => round($diff, 2), 'level' => $level];
+    }
+
     /** هل حجم العينة مقبول؟ */
     public function getSampleTooSmallAttribute(): bool
     {
