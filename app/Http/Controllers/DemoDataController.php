@@ -31,13 +31,13 @@ class DemoDataController extends Controller
 
         @set_time_limit(900);
 
-        // generate() بيمسح الأول لوحده — أرقام المستندات متسلسلة
-        $stats = (new DemoDataService())->generate();
-        ActivityLogger::log('demo_generated', null, 'توليد ديمو كامل');
+        // generateFull() بيمسح الترانزاكشنات الأول لوحده — أرقام المستندات متسلسلة
+        $stats = (new DemoDataService())->generateFull();
+        ActivityLogger::log('demo_generated', null, 'توليد ديمو كامل (90 يوم)');
 
         return back()->with('info',
-            '<b>تم توليد الديمو الكامل.</b> السيستم دلوقتي فيه مستندات في كل مرحلة — '
-            . 'ادخل بأي دور وشوف الرقم الأحمر جنب شاشاته.<br><span class="hint">'
+            '<b>تم توليد الديمو الكامل.</b> 90 يوم شغل متسق — طلبات ورسايل وأوامر في كل مرحلة. '
+            . 'اخرج وادخل من زراير «دخول تجريبي» بأي دور وشوف الرقم الأحمر جنب شاشاته.<br><span class="hint">'
             . e(collect($stats)->map(fn ($v, $k) => "{$k}: {$v}")->implode(' · ')) . '</span>');
     }
 

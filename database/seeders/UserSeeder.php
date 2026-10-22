@@ -96,8 +96,15 @@ class UserSeeder extends Seeder
         $order = array_column(self::USERS, 0);
         $dept  = array_combine($order, array_column(self::USERS, 4));
 
-        return User::with(['roles', 'employerFactory'])
-            ->whereIn('username', $order)->where('is_active', true)->get()
+        $users = User::with('roles')->whereIn('username', $order)->where('is_active', true)->get();
+
+        // المصنع بيتحمّل بالـ factory_id مباشرة (علاقة employerFactory في الموديل بتدوّر على employer_factory_id)
+        $factories = Factory::whereIn('id', $users->pluck('factory_id')->filter())->get()->keyBy('id');
+        foreach ($users as $u) {
+            $u->setRelation('employerFactory', $u->factory_id ? ($factories[$u->factory_id] ?? null) : null);
+        }
+
+        return $users
             ->sortBy(fn ($u) => array_search($u->username, $order, true))
             ->groupBy(fn ($u) => $dept[$u->username] ?? 'أخرى');
     }
