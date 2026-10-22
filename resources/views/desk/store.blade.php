@@ -8,13 +8,16 @@
 @section('tracking')
 
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="card-header">
     <span>آخر أذون الإضافة</span>
-    <a href="{{ route('stock-additions.index') }}" class="btn btn-sm btn-outline-plum py-0">الكل</a>
+    <a href="{{ route('stock-additions.index') }}" class="btn btn-sm btn-outline-plum">الكل <i class="bi bi-arrow-left" aria-hidden="true"></i></a>
   </div>
   <div class="table-responsive">
   <table class="table table-sm mb-0">
-    <thead><tr><th>الإذن</th><th>التاريخ</th><th>المورد</th><th>الرسالة</th><th>الكمية</th><th>الحالة</th></tr></thead>
+    <thead><tr>
+      <th>الإذن</th><th class="num">التاريخ</th><th>المورد</th><th>الرسالة</th><th class="num">الكمية</th><th>الحالة</th>
+      <th class="text-end"><span class="visually-hidden">إجراءات</span></th>
+    </tr></thead>
     <tbody>
     @forelse($recent as $r)
       <tr>
@@ -22,12 +25,19 @@
         <td class="num">{{ $r->doc_date?->format('Y-m-d') }}</td>
         <td>{{ $r->supplier?->name ?? '—' }}</td>
         <td class="num hint">{{ $r->consignment_no ?: '—' }}</td>
-        <td class="num">{{ rtrim(rtrim(number_format((float)$r->total_qty,2),'0'),'.') }}</td>
+        <td class="num">{{ lv_num($r->total_qty, 2) }}</td>
         <td><span class="badge bg-{{ $r->status_color }}">{{ $r->status_label }}</span></td>
+        <td class="text-end">
+          <div class="row-actions">
+            <a href="{{ route('stock-additions.edit',$r) }}" class="btn btn-sm btn-outline-plum btn-icon"
+               title="افتح الإذن" aria-label="افتح الإذن {{ $r->doc_no }}"><i class="bi bi-box-arrow-up-left" aria-hidden="true"></i></a>
+          </div>
+        </td>
       </tr>
     @empty
-      <tr><td colspan="6"><div class="empty-state"><i class="bi bi-inbox ico" aria-hidden="true"></i>
-        <div class="t">مفيش أذون لسه.</div></div></td></tr>
+      <tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox ico" aria-hidden="true"></i>
+        <div class="t">مفيش أذون لسه.</div>
+        <div class="hint">ابدأ بـ«إذن إضافة جديد» أو «استلام حاويات» من فوق.</div></div></td></tr>
     @endforelse
     </tbody>
   </table>

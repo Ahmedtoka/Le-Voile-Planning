@@ -17,6 +17,19 @@
   }
   $queueTotal = array_sum(array_column($myQueue, 'count')) + array_sum($queueExtra);
 
+  /* أسماء وشرح الكاونترات اللي مالهاش مفتاح في lang/ar/nav.php — عشان ما يطلعش مفتاح خام زي nav.xxx */
+  $extraLabel = [
+    'preparation-requests.index' => 'طلبات التحضير',
+    'factory.portal'             => 'بوابة المصنع',
+    'notifications.index'        => 'الإشعارات',
+  ];
+  $extraNote = [
+    'preparation-requests.index' => 'طلبات تقسيم رسالة مستنية خطوتك: وزن أو أمر شغل.',
+    'factory.portal'             => 'أوامر شغل على مصنعك مستنية قص أو تسليم.',
+    'notifications.index'        => 'إشعارات جديدة لسه ما اتقرتش.',
+  ];
+  $extraTitle = fn (string $route) => Lang::has('nav.' . $route) ? __('nav.' . $route) : ($extraLabel[$route] ?? $route);
+
   /* ── الدورة دلوقتي: نفس أرقام الكروت القديمة بالظبط، مترتبة بترتيب الدورة.
        [المفتاح, رقم الخطوة في المنيو, العنوان, الرقم, سطر تحت الرقم, الشرح, اللينك, نوعه]
        النوع: wait = شغل واقف (بيدخل في حساب «فين الزحمة») · ready = حالة كويسة · volume = حجم */
@@ -90,7 +103,7 @@
 .dash-section{margin-bottom:var(--sp-6)}
 .dash-section > .section-head{margin-top:0}
 /* ② الدورة دلوقتي — البايبلاين */
-.pipe{background:var(--lv-white);border:1px solid var(--lv-line);border-radius:var(--r-lg);box-shadow:var(--e-1);overflow:hidden}
+.pipe{background:var(--lv-white);border:1px solid var(--lv-line);border-radius:var(--r-md);box-shadow:var(--e-1);overflow:hidden}
 .pipe-hot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--lv-line-soft);
   background:var(--lv-surface-2);font-size:var(--fs-sm);color:var(--lv-ink-2)}
 .pipe-hot b{color:var(--lv-brand-ink)}
@@ -119,11 +132,15 @@
 .pipe-node .pv{font-size:var(--fs-xl);font-weight:700;line-height:1.15;color:var(--lv-brand-ink);font-variant-numeric:tabular-nums}
 .pipe-node .pl{font-size:var(--fs-sm);font-weight:600;color:var(--lv-ink-2);line-height:1.35}
 .pipe-node .ps{font-size:var(--fs-xs);color:var(--lv-muted);font-variant-numeric:tabular-nums;line-height:1.4}
+/* سطر الشرح: جملة واحدة ظاهرة تحت الرقم — مش في title بس */
+.pipe-node .pn{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.45;margin-top:2px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pipe-node.t-wait .sn{border-color:var(--lv-warn-line);background:var(--lv-warn-bg);color:var(--lv-warn)}
 .pipe-node.t-ready .sn{border-color:var(--lv-ok-line);background:var(--lv-ok-bg);color:var(--lv-ok)}
 .pipe-node.t-ready .pv{color:var(--lv-ok)}
-.pipe-node.is-zero .pv{color:#A79BA4}
-.pipe-node.is-zero .sn{border-color:var(--lv-line);background:var(--lv-white);color:#A79BA4}
+.pipe-node.is-zero .pv{color:var(--lv-faint)}
+.pipe-node.is-zero .sn{border-color:var(--lv-line);background:var(--lv-white);color:var(--lv-faint)}
+.pipe-node.is-zero .pn{color:var(--lv-faint)}
 .pipe-node.is-hot{background:var(--lv-tint);border-color:var(--lv-soft)}
 .pipe-node.is-hot .sn{background:var(--lv-brand);border-color:var(--lv-brand);color:#fff;box-shadow:0 0 0 4px rgba(157,25,126,.12)}
 .pipe-node.is-hot .pv{color:var(--lv-brand)}
@@ -145,7 +162,8 @@
   .pipe-node .pl{order:1;flex:1 1 auto}
   .pipe-node .pv{order:2;font-size:var(--fs-lg)}
   .pipe-node .ps{order:3;flex-basis:100%;padding-inline-start:38px;margin-top:-2px}
-  .pipe-node .hot-tag{order:4;margin-inline-start:38px}
+  .pipe-node .pn{order:4;flex-basis:100%;padding-inline-start:38px;margin-top:0}
+  .pipe-node .hot-tag{order:5;margin-inline-start:38px}
   .pipe-steps > li:not(:last-child) > .pipe-node::after{top:36px;inset-inline-start:21px;width:2px;height:calc(100% - 30px)}
   .pipe-hot{padding:10px 14px}
 }
@@ -153,25 +171,30 @@
 /* ③ التنبيهات */
 .al-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,165px),1fr));gap:var(--sp-3)}
 .al-tile{position:relative;display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--lv-white);
-  border:1px solid var(--lv-danger-line);border-inline-start:3px solid var(--lv-danger-dot);border-radius:var(--r-md);color:var(--lv-ink)}
+  border:1px solid var(--lv-danger-line);border-inline-start:3px solid var(--lv-danger-dot);border-radius:var(--r-md);color:var(--lv-ink);
+  box-shadow:var(--e-1);transition:box-shadow var(--dur) var(--ease)}
 a.al-tile:hover{box-shadow:var(--e-2);text-decoration:none;color:var(--lv-ink)}
 a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
 .al-tile .ai{width:32px;height:32px;flex:0 0 32px;border-radius:8px;background:var(--lv-danger-bg);color:var(--lv-danger);
   display:inline-flex;align-items:center;justify-content:center;font-size:1rem}
 .al-tile .an{font-size:var(--fs-lg);font-weight:700;color:var(--lv-danger);line-height:1.1;font-variant-numeric:tabular-nums}
 .al-tile .al{font-size:var(--fs-sm);font-weight:600;color:var(--lv-ink-2);line-height:1.35}
+.al-tile .anote{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.45;margin-top:2px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .al-tile .ago{font-size:var(--fs-xs);font-weight:600;color:var(--lv-brand);margin-top:2px;display:inline-flex;gap:4px;align-items:center}
 .ok-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:var(--sp-3);font-size:var(--fs-xs);color:var(--lv-muted)}
 .ok-line .lead{color:var(--lv-ok);font-weight:700;display:inline-flex;align-items:center;gap:4px}
 
 /* ④ شريط الأرقام الهادي */
 .vol-strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--lv-white);border:1px solid var(--lv-line);
-  border-radius:var(--r-md)}
+  border-radius:var(--r-md);box-shadow:var(--e-1)}
 .vol-cell{padding:12px 18px;min-width:0}
 .vol-cell + .vol-cell{border-inline-start:1px solid var(--lv-line-soft)}
-.vol-cell .vl{font-size:var(--fs-xs);color:var(--lv-muted);font-weight:500;display:flex;align-items:center;gap:6px}
+.vol-cell .vl{font-size:var(--fs-sm);color:var(--lv-ink-2);font-weight:600;display:flex;align-items:center;gap:6px}
 .vol-cell .vv{font-size:var(--fs-lg);font-weight:700;color:var(--lv-ink);font-variant-numeric:tabular-nums;line-height:1.3}
+.vol-cell .vv .num.is-zero{color:var(--lv-faint)}
 .vol-cell .vu{font-size:var(--fs-xs);color:var(--lv-muted);font-weight:500;margin-inline-start:4px}
+.vol-cell .vn{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.45;margin-top:2px}
 @media (max-width:991.98px){
   .vol-strip{grid-template-columns:repeat(2,1fr)}
   .vol-cell:nth-child(3){border-inline-start:0}
@@ -218,12 +241,12 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
         </a>
       @endforeach
       @foreach($queueExtra as $route => $n)
-        <a href="{{ route($route) }}" class="q-tile">
+        <a href="{{ route($route) }}" class="q-tile" title="{{ $extraNote[$route] ?? $extraTitle($route) }}">
           <div class="q-top">
             <span class="q-n">{{ number_format($n) }}</span>
-            <span class="q-l">{{ __('nav.' . $route) }}</span>
+            <span class="q-l">{{ $extraTitle($route) }}</span>
           </div>
-          <span class="q-go">افتح <i class="bi bi-arrow-left" aria-hidden="true"></i></span>
+          <span class="q-go">{{ $extraNote[$route] ?? 'افتح' }} <i class="bi bi-arrow-left" aria-hidden="true"></i></span>
         </a>
       @endforeach
     </div>
@@ -281,6 +304,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
                   <span class="pv num">{{ $value }}</span>
                   <span class="pl">{{ $label }}</span>
                   <span class="ps">{{ $sub }}</span>
+                  <span class="pn">{{ $note }}</span>
                   @if($key === $hotKey)<span class="hot-tag">هنا الزحمة</span>@endif
                 </a>
               </li>
@@ -311,6 +335,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
             <span class="d-flex flex-column">
               <span class="an num text-start">{{ $a['n'] }}</span>
               <span class="al">{{ $a['label'] }}</span>
+              <span class="anote">{{ $a['note'] }}</span>
               @if($a['link'])
                 <span class="ago">{{ $a['link'][1] }} <i class="bi bi-arrow-left" aria-hidden="true"></i></span>
               @endif
@@ -338,21 +363,25 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
 {{-- ══ ٤ · الحجم والفلوس ══ --}}
 <section class="dash-section" aria-label="أرقام الحجم والقيمة">
   <div class="vol-strip">
-    <div class="vol-cell" title="إجمالي قيمة الطلبات اللي اتحدد لها مورد وسعر ولسه ما اتقفلتش.">
+    <div class="vol-cell">
       <div class="vl"><span class="dot dot-brand" aria-hidden="true"></span> مستحق متوقع للموردين</div>
-      <div class="vv"><span class="num">{{ $money($purchase['payable']) }}</span><span class="vu">{{ config('lvplanning.currency') }}</span></div>
+      <div class="vv"><span class="num {{ (float) $purchase['payable'] == 0 ? 'is-zero' : '' }}">{{ $money($purchase['payable']) }}</span><span class="vu">{{ config('lvplanning.currency') }}</span></div>
+      <div class="vn">إجمالي قيمة الطلبات اللي اتحدد لها مورد وسعر ولسه ما اتقفلتش.</div>
     </div>
-    <div class="vol-cell" title="قماش في المخزن ممنوع تشغيله لحد ما يتفرج عنه.">
+    <div class="vol-cell">
       <div class="vl"><span class="dot dot-warn" aria-hidden="true"></span> كجم محجوزة تحت الفحص</div>
-      <div class="vv"><span class="num">{{ $money($fabric['hold_kg']) }}</span><span class="vu">كجم</span></div>
+      <div class="vv"><span class="num {{ (float) $fabric['hold_kg'] == 0 ? 'is-zero' : '' }}">{{ $money($fabric['hold_kg']) }}</span><span class="vu">كجم</span></div>
+      <div class="vn">قماش في المخزن ممنوع تشغيله لحد ما يتفرج عنه.</div>
     </div>
-    <div class="vol-cell" title="الرصيد المتاح في الأحواض الجاهزة للتشغيل.">
+    <div class="vol-cell">
       <div class="vl"><span class="dot dot-ok" aria-hidden="true"></span> كجم متاحة للتشغيل</div>
-      <div class="vv"><span class="num">{{ $money($fabric['ready_kg']) }}</span><span class="vu">كجم · {{ $fabric['ready'] }} حوض</span></div>
+      <div class="vv"><span class="num {{ (float) $fabric['ready_kg'] == 0 ? 'is-zero' : '' }}">{{ $money($fabric['ready_kg']) }}</span><span class="vu">كجم · {{ $fabric['ready'] }} حوض</span></div>
+      <div class="vn">الرصيد المتاح في الأحواض الجاهزة للتشغيل.</div>
     </div>
-    <div class="vol-cell" title="إجمالي المنتج التام اللي دخل المخزن الشهر ده.">
+    <div class="vol-cell">
       <div class="vl"><span class="dot dot-ok" aria-hidden="true"></span> قطع مستلمة الشهر ده</div>
-      <div class="vv"><span class="num">{{ $money($production['received_month']) }}</span><span class="vu">قطعة · {{ $production['closed_month'] }} أمر مقفول</span></div>
+      <div class="vv"><span class="num {{ (float) $production['received_month'] == 0 ? 'is-zero' : '' }}">{{ $money($production['received_month']) }}</span><span class="vu">قطعة · {{ $production['closed_month'] }} أمر مقفول</span></div>
+      <div class="vn">إجمالي المنتج التام اللي دخل المخزن الشهر ده.</div>
     </div>
   </div>
 </section>
@@ -388,7 +417,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
     <div class="card dash-card">
       <div class="card-header">
         <i class="bi bi-pie-chart" aria-hidden="true"></i> القماش واقف فين
-        <a href="{{ route('consignments.index') }}" class="btn btn-sm btn-outline-plum py-0 ch-side">كل الأحواض</a>
+        <a href="{{ route('consignments.index') }}" class="btn btn-sm btn-outline-plum ch-side">كل الأحواض</a>
       </div>
       <div class="card-body">
         <div style="position:relative;height:200px">
@@ -433,7 +462,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
     <div class="card dash-card">
       <div class="card-header">
         <i class="bi bi-bar-chart-steps" aria-hidden="true"></i> شرايح التغطية
-        <a href="{{ route('planning.coverage') }}" class="btn btn-sm btn-outline-plum py-0 ch-side">كل التغطية</a>
+        <a href="{{ route('planning.coverage') }}" class="btn btn-sm btn-outline-plum ch-side">كل التغطية</a>
       </div>
       <div class="card-body">
         <div style="position:relative;height:200px">
@@ -523,7 +552,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
     <div class="card dash-card">
       <div class="card-header">
         <i class="bi bi-clock-history" aria-hidden="true"></i> أخطر الموديلات في التغطية
-        <a href="{{ route('planning.coverage') }}" class="btn btn-sm btn-outline-plum py-0 ch-side">الكل</a>
+        <a href="{{ route('planning.coverage') }}" class="btn btn-sm btn-outline-plum ch-side">الكل</a>
       </div>
       <div class="table-responsive">
         <table class="table table-sm">
@@ -564,7 +593,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
     <div class="card dash-card">
       <div class="card-header">
         <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> أوامر شغل متأخرة
-        <a href="{{ route('work-orders.index', ['late' => 1]) }}" class="btn btn-sm btn-outline-plum py-0 ch-side">الكل</a>
+        <a href="{{ route('work-orders.index', ['late' => 1]) }}" class="btn btn-sm btn-outline-plum ch-side">الكل</a>
       </div>
       <ul class="list-group list-group-flush dash-list">
         @forelse($lateOrders as $w)

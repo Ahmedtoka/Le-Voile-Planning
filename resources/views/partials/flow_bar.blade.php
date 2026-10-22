@@ -82,12 +82,12 @@
       <div class="flow-next">
         <span class="hint">{{ $f['label'] }}:</span>
         @if($prev)
-          <a href="{{ route($prev['r']) }}" class="btn btn-sm btn-outline-secondary py-0">
+          <a href="{{ route($prev['r']) }}" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-chevron-right" aria-hidden="true"></i> اللي قبله: {{ $prev['t'] }}
           </a>
         @endif
         @if($next)
-          <a href="{{ route($next['r']) }}" class="btn btn-sm btn-outline-plum py-0 ms-auto">
+          <a href="{{ route($next['r']) }}" class="btn btn-sm btn-outline-plum ms-auto">
             الخطوة اللي بعدها: {{ $next['t'] }} <i class="bi bi-chevron-left" aria-hidden="true"></i>
           </a>
         @endif
