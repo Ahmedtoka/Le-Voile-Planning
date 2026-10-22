@@ -6,7 +6,7 @@
 @endif
 
 @if(!empty($intro))
-  <div class="note-box mb-3"><i class="bi bi-info-circle" aria-hidden="true"></i> {!! $intro !!}</div>
+  <div class="note-box mb-3"><i class="bi bi-info-circle" aria-hidden="true"></i><span>{!! $intro !!}</span></div>
 @endif
 
 @include('partials.summary')
@@ -14,7 +14,7 @@
 {{-- جدول علوي اختياري — زي «طلبات مستنية استلام» في أذون الإضافة --}}
 @if(!empty($topTable))
   <div class="card mb-3">
-    <div class="card-header d-flex align-items-center gap-2"><span class="dot dot-warn" aria-hidden="true"></span>{{ $topTable['title'] }}</div>
+    <div class="card-header"><span><span class="dot dot-warn" aria-hidden="true"></span>{{ $topTable['title'] }}</span></div>
     <div class="table-responsive">
       <table class="table table-sm mb-0">
         <thead><tr>@foreach($topTable['cols'] as $c)<th>{{ $c }}</th>@endforeach</tr></thead>
@@ -30,16 +30,23 @@
   </div>
 @endif
 
-<div class="card">
-  <div class="card-header d-flex gap-2 flex-wrap align-items-center">
-    <span class="d-inline-flex align-items-center gap-2">{{ $title }} <span class="pill pill-muted num">{{ number_format($rows->total()) }}</span></span>
+@php $hasFilters = collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty(); @endphp
 
-    <form class="d-flex gap-2 flex-wrap ms-auto align-items-center" method="get">
-      <input name="q" value="{{ request('q') }}" class="form-control form-control-sm" style="width:180px"
-             placeholder="{{ $searchHint ?? 'بحث برقم المستند…' }}">
+<div class="card">
+  <div class="card-header">
+    <span>{{ $title }} <span class="pill pill-muted num">{{ number_format($rows->total()) }}</span></span>
+
+    {{-- الفلاتر: سطر واحد، كل حقل على قد محتواه، بحث بالإنتر، وزرار مسح --}}
+    <form class="filter-bar" method="get" role="search" aria-label="فلترة القايمة">
+      <div class="fb-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input name="q" value="{{ request('q') }}" class="form-control" aria-label="بحث"
+               placeholder="{{ $searchHint ?? 'بحث برقم المستند…' }}">
+      </div>
 
       @foreach(($filters ?? []) as $f)
-        <select name="{{ $f['name'] }}" class="form-select form-select-sm" style="width:{{ $f['width'] ?? 150 }}px"
+        <select name="{{ $f['name'] }}" class="form-select" aria-label="{{ $f['label'] }}"
+                @if(!empty($f['width'])) style="width:{{ $f['width'] }}px" @endif
                 onchange="this.form.submit()">
           <option value="">{{ $f['label'] }}</option>
           @foreach($f['options'] as $k => $v)
@@ -49,11 +56,11 @@
       @endforeach
 
       @if(($dateFilter ?? true))
-        <div class="d-flex align-items-center gap-1">
-          <label class="hint mb-0" for="f-from">من</label>
-          <input type="date" id="f-from" name="from" value="{{ request('from') }}" class="form-control form-control-sm" style="width:140px">
-          <label class="hint mb-0" for="f-to">إلى</label>
-          <input type="date" id="f-to" name="to" value="{{ request('to') }}" class="form-control form-control-sm" style="width:140px">
+        <div class="fb-range">
+          <label class="hint" for="f-from">من</label>
+          <input type="date" id="f-from" name="from" value="{{ request('from') }}" class="form-control">
+          <label class="hint" for="f-to">إلى</label>
+          <input type="date" id="f-to" name="to" value="{{ request('to') }}" class="form-control">
         </div>
       @endif
 
@@ -61,9 +68,9 @@
       @if(request('sort'))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
       @if(request('dir'))<input type="hidden" name="dir" value="{{ request('dir') }}">@endif
 
-      <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
-      @if(collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty())
-        <a href="{{ url()->current() }}" class="btn btn-sm btn-link p-0">مسح الفلاتر</a>
+      <button class="btn btn-sm btn-outline-secondary" title="طبّق الفلاتر"><i class="bi bi-funnel" aria-hidden="true"></i> فلتر</button>
+      @if($hasFilters)
+        <a href="{{ url()->current() }}" class="btn btn-sm btn-ghost" title="شيل كل الفلاتر"><i class="bi bi-x-lg" aria-hidden="true"></i> مسح</a>
       @endif
     </form>
 
@@ -79,8 +86,6 @@
   @endif
 
   <div class="table-responsive">
-    {{-- أرقام المستندات والتواريخ ما تتكسرش على سطرين --}}
-    <style>.doc-table td.num{white-space:nowrap}</style>
     <table class="table table-sm doc-table">
       <thead><tr>
         @php
@@ -108,17 +113,17 @@
             <th>{{ $c }}</th>
           @endif
         @endforeach
-        <th style="width:90px"><span class="visually-hidden">إجراءات</span></th>
+        <th style="width:84px"><span class="visually-hidden">إجراءات</span></th>
       </tr></thead>
       <tbody>
       @forelse($rows as $r)
         <tr>
           {!! $rowRenderer($r) !!}
           <td class="text-nowrap text-end"><div class="row-actions">
-            <a href="{{ route($editRoute, $r) }}" class="btn btn-sm btn-outline-plum py-0"
-               title="فتح" aria-label="فتح المستند"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+            <a href="{{ route($editRoute, $r) }}" class="btn btn-sm btn-outline-plum btn-icon"
+               title="فتح المستند" aria-label="فتح المستند"><i class="bi bi-box-arrow-up-left" aria-hidden="true"></i></a>
             @if(!empty($printRoute))
-              <a href="{{ route($printRoute, $r) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0"
+              <a href="{{ route($printRoute, $r) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary btn-icon"
                  title="طباعة" aria-label="طباعة المستند"><i class="bi bi-printer" aria-hidden="true"></i></a>
             @endif
           </div></td>
@@ -128,8 +133,9 @@
           <div class="empty-state">
             <i class="bi bi-inbox ico" aria-hidden="true"></i>
             <div class="t">{{ $emptyText ?? 'مفيش مستندات مطابقة للفلاتر.' }}</div>
-            @if(collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty())
-              <a href="{{ url()->current() }}" class="btn btn-sm btn-outline-plum mt-2">امسح الفلاتر واعرض الكل</a>
+            @if($hasFilters)
+              <div class="hint mb-2">جرّب تشيل الفلاتر أو توسّع مدى التاريخ.</div>
+              <a href="{{ url()->current() }}" class="btn btn-sm btn-outline-plum mt-1">امسح الفلاتر واعرض الكل</a>
             @elseif(!empty($createRoute) && Route::has($createRoute))
               <a href="{{ route($createRoute) }}" class="btn btn-sm btn-plum mt-2">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ $createLabel ?? 'ابدأ واحد جديد' }}</a>
@@ -143,6 +149,9 @@
 
   <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>{{ $rows->links() }}</div>
+    @if($rows->total() > 0)
+      <div class="hint num">{{ $rows->firstItem() }}–{{ $rows->lastItem() }} من {{ number_format($rows->total()) }}</div>
+    @endif
     @if(!empty($footNote))<div class="hint">{{ $footNote }}</div>@endif
   </div>
 </div>
