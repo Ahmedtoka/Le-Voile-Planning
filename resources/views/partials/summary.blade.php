@@ -1,4 +1,5 @@
-{{-- شريط سامري فوق أي جدول --}}
+{{-- شريط سامري فوق أي جدول — بياخد $summary من الكونترولر:
+     كل كارت: value + label (+ tone, sub, note = جملة تفسّر الرقم, link = [url, label], fx = المعادلة بالأرقام, why) --}}
 @if(!empty($summary))
 <div class="row g-3 mb-4">
   @foreach($summary as $s)
@@ -10,6 +11,8 @@
         'sub'   => $s['sub']  ?? null,
         'note'  => $s['note'] ?? null,
         'link'  => $s['link'] ?? null,
+        'fx'    => $s['fx']   ?? null,
+        'why'   => $s['why']  ?? null,
       ])
     </div>
   @endforeach

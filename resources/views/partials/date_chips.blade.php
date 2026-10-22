@@ -12,13 +12,13 @@
                           'to'   => now()->subMonthNoOverflow()->endOfMonth()->toDateString()],
   ];
 @endphp
-<div class="chip-bar">
+<div class="chip-bar" role="navigation" aria-label="مدى زمني سريع">
   <span class="hint me-1">مدى سريع:</span>
   @foreach($chips as $lbl => $range)
     @php $on = request('from') === $range['from'] && request('to') === $range['to']; @endphp
     <a href="{{ $qs($range) }}" class="chip {{ $on ? 'on' : '' }}" @if($on) aria-current="true" @endif>{{ $lbl }}</a>
   @endforeach
   @if(request('from') || request('to'))
-    <a href="{{ $qs([]) }}" class="btn btn-sm btn-link py-0 px-1">كل التواريخ</a>
+    <a href="{{ $qs([]) }}" class="chip" title="شيل فلتر التاريخ"><i class="bi bi-x-lg" aria-hidden="true"></i> كل التواريخ</a>
   @endif
 </div>

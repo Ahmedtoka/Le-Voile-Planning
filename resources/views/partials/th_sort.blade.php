@@ -1,5 +1,6 @@
 {{-- رأس عمود قابل للترتيب — بيحافظ على كل الفلاتر الشغالة
-     الاستخدام: @include('partials.th_sort', ['label' => 'رقم الأمر', 'col' => 'wo_no']) --}}
+     الاستخدام: @include('partials.th_sort', ['label' => 'رقم الأمر', 'col' => 'wo_no'])
+     اختياري: 'width' => '120px' · 'class' => 'num' --}}
 @php
   $curSort = request('sort');
   $curDir  = request('dir') === 'asc' ? 'asc' : 'desc';
@@ -9,6 +10,7 @@
                request()->except(['page', 'sort', 'dir']), ['sort' => $col, 'dir' => $next]));
 @endphp
 <th @if($on) aria-sort="{{ $curDir === 'asc' ? 'ascending' : 'descending' }}" @endif
+    @if(!empty($class)) class="{{ $class }}" @endif
     @if(!empty($width)) style="width:{{ $width }}" @endif>
   <a href="{{ $url }}" class="th-sort {{ $on ? 'on' : '' }}"
      title="ترتيب بـ{{ $label }} {{ $next === 'asc' ? 'تصاعدي' : 'تنازلي' }}">

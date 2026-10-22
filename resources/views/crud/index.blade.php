@@ -1,14 +1,27 @@
 @extends('layouts.app')
 @section('content')
 
+@php
+  $hasFilters = collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty();
+  $listCols   = collect($fields)->filter(fn ($f) => !empty($f['list']))->count();
+@endphp
+
 <div class="card">
-  <div class="card-header d-flex align-items-center gap-2 flex-wrap">
-    <span class="d-inline-flex align-items-center gap-2">{{ $title }} <span class="pill pill-muted num">{{ number_format($rows->total()) }}</span></span>
-    <form class="d-flex gap-2 flex-wrap ms-auto align-items-center" method="get">
-      <input name="q" value="{{ request('q') }}" class="form-control form-control-sm" style="width:200px" placeholder="بحث…">
+  <div class="card-header">
+    <span>{{ $title }} <span class="pill pill-muted num">{{ number_format($rows->total()) }}</span></span>
+
+    <a href="{{ route($routeName.'.create') }}" class="btn btn-sm btn-plum">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ $singular }} جديد
+    </a>
+
+    <form class="filter-bar" method="get" role="search" aria-label="فلترة {{ $title }}">
+      <div class="fb-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input name="q" value="{{ request('q') }}" class="form-control" aria-label="بحث" placeholder="بحث…">
+      </div>
       @foreach($fields as $f)
         @if(!empty($f['filter']))
-          <select name="{{ $f['name'] }}" class="form-select form-select-sm" style="width:150px" onchange="this.form.submit()">
+          <select name="{{ $f['name'] }}" class="form-select" aria-label="{{ $f['label'] }}" onchange="this.form.submit()">
             <option value="">كل {{ $f['label'] }}</option>
             @foreach(($f['options'] ?? []) as $k => $v)
               <option value="{{ $k }}" @selected(request($f['name']) == $k)>{{ $v }}</option>
@@ -18,21 +31,18 @@
       @endforeach
       @if(request('sort'))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
       @if(request('dir'))<input type="hidden" name="dir" value="{{ request('dir') }}">@endif
-      <button class="btn btn-sm btn-outline-secondary" aria-label="بحث"><i class="bi bi-search" aria-hidden="true"></i></button>
-      @if(collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty())
-        <a href="{{ url()->current() }}" class="btn btn-sm btn-link p-0">مسح</a>
+      <button class="btn btn-sm btn-outline-secondary" title="طبّق الفلاتر"><i class="bi bi-funnel" aria-hidden="true"></i> فلتر</button>
+      @if($hasFilters)
+        <a href="{{ url()->current() }}" class="btn btn-sm btn-ghost" title="شيل كل الفلاتر"><i class="bi bi-x-lg" aria-hidden="true"></i> مسح</a>
       @endif
     </form>
-    <a href="{{ route($routeName.'.create') }}" class="btn btn-sm btn-plum">
-      <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ $singular }} جديد
-    </a>
   </div>
 
   <div class="table-responsive">
-    <table class="table table-sm">
+    <table class="table table-sm doc-table">
       <thead>
         <tr>
-          <th style="width:40px">#</th>
+          <th style="width:40px" class="num">#</th>
           @foreach($fields as $f)
             @if(!empty($f['list']))
               @if(empty($f['relation']) && ($f['type'] ?? '') !== 'checkbox')
@@ -60,9 +70,9 @@
                 @elseif(($f['type'] ?? '') === 'select')
                   {{ ($f['options'][$val] ?? $val) ?: '—' }}
                 @elseif(($f['type'] ?? '') === 'date')
-                  <span class="num">{{ $val?->format('Y-m-d') ?? '—' }}</span>
+                  {{ $val?->format('Y-m-d') ?? '—' }}
                 @elseif(($f['type'] ?? '') === 'number')
-                  <span class="num">{{ $val !== null ? rtrim(rtrim(number_format((float)$val, 3), '0'), '.') : '—' }}</span>
+                  {{ $val !== null ? lv_num($val) : '—' }}
                 @else
                   {{ $val ?: '—' }}
                 @endif
@@ -70,26 +80,29 @@
             @endif
           @endforeach
           <td class="text-nowrap text-end"><div class="row-actions">
-            <a href="{{ route($routeName.'.edit', $row->id) }}" class="btn btn-sm btn-outline-plum py-0" aria-label="تعديل" title="تعديل"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+            <a href="{{ route($routeName.'.edit', $row->id) }}" class="btn btn-sm btn-outline-plum btn-icon"
+               title="فتح / تعديل" aria-label="فتح {{ $row->name ?? $row->id }}"><i class="bi bi-box-arrow-up-left" aria-hidden="true"></i></a>
             @if($routeName === 'product-models')
-              <a href="{{ route('product-models.sizes', $row->id) }}" class="btn btn-sm btn-outline-secondary py-0" title="المقاسات والإكسسوارات"><i class="bi bi-list-check" aria-hidden="true"></i></a>
+              <a href="{{ route('product-models.sizes', $row->id) }}" class="btn btn-sm btn-outline-secondary btn-icon"
+                 title="المقاسات والإكسسوارات" aria-label="المقاسات والإكسسوارات لـ{{ $row->name ?? $row->id }}"><i class="bi bi-list-check" aria-hidden="true"></i></a>
             @endif
             @if($canDelete)
-              <form method="post" action="{{ route($routeName.'.destroy', $row->id) }}" class="d-inline"
+              <form method="post" action="{{ route($routeName.'.destroy', $row->id) }}"
                     onsubmit="return confirm('متأكد من الحذف؟')">
                 @csrf @method('DELETE')
-                <button class="btn btn-sm btn-outline-danger py-0" aria-label="حذف" title="حذف"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                <button class="btn btn-sm btn-outline-danger btn-icon" title="حذف" aria-label="حذف {{ $row->name ?? $row->id }}"><i class="bi bi-trash" aria-hidden="true"></i></button>
               </form>
             @endif
           </div></td>
         </tr>
       @empty
-        <tr><td colspan="{{ collect($fields)->filter(fn ($f) => !empty($f['list']))->count() + 2 }}">
+        <tr><td colspan="{{ $listCols + 2 }}">
           <div class="empty-state">
             <i class="bi bi-inbox ico" aria-hidden="true"></i>
-            <div class="t">مفيش بيانات لسه.</div>
-            @if(collect(request()->except(['page','sort','dir']))->filter()->isNotEmpty())
-              <a href="{{ url()->current() }}" class="btn btn-sm btn-outline-plum mt-2">امسح البحث واعرض الكل</a>
+            <div class="t">{{ $hasFilters ? 'مفيش نتايج مطابقة للبحث.' : 'مفيش بيانات لسه.' }}</div>
+            @if($hasFilters)
+              <div class="hint mb-2">جرّب كلمة تانية أو شيل الفلاتر.</div>
+              <a href="{{ url()->current() }}" class="btn btn-sm btn-outline-plum mt-1">امسح البحث واعرض الكل</a>
             @else
               <a href="{{ route($routeName.'.create') }}" class="btn btn-sm btn-plum mt-2">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i> ضيف {{ $singular }}</a>
@@ -101,6 +114,11 @@
     </table>
   </div>
 
-  <div class="card-footer bg-white">{{ $rows->links() }}</div>
+  <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>{{ $rows->links() }}</div>
+    @if($rows->total() > 0)
+      <div class="hint num">{{ $rows->firstItem() }}–{{ $rows->lastItem() }} من {{ number_format($rows->total()) }}</div>
+    @endif
+  </div>
 </div>
 @endsection
