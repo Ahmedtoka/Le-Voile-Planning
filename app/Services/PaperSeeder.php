@@ -223,9 +223,9 @@ class PaperSeeder
 
     private function purchaseOrder(): PurchaseOrder
     {
-        $planner = User::where('username', 'planner')->value('id');
-        $purch   = User::where('username', 'moaz')->value('id');
-        $fin     = User::where('username', 'finance')->value('id');
+        $planner = \Database\Seeders\UserSeeder::idByRole('planner');
+        $purch   = \Database\Seeders\UserSeeder::idByRole('purchasing');
+        $fin     = \Database\Seeders\UserSeeder::idByRole('finance');
 
         $po = PurchaseOrder::create([
             'po_no'          => 'PO-2026-00107',
@@ -283,9 +283,9 @@ class PaperSeeder
 
     private function consignments(PurchaseOrder $po): array
     {
-        $store = User::where('username', 'store')->value('id');
-        $qc    = User::where('username', 'qc')->value('id');
-        $lab   = User::where('username', 'lab')->value('id');
+        $store = \Database\Seeders\UserSeeder::idByRole('storekeeper');
+        $qc    = \Database\Seeders\UserSeeder::idByRole('inspector');
+        $lab   = \Database\Seeders\UserSeeder::idByRole('lab_tech');
 
         $obr = Warehouse::where('code', 'OBR')->value('id');
         $mia = FabricType::where('code', '14810091')->first();
@@ -526,7 +526,7 @@ class PaperSeeder
 
     private function workOrders(Consignment $mami, Consignment $tufr): array
     {
-        $planner = User::where('username', 'planner')->value('id');
+        $planner = \Database\Seeders\UserSeeder::idByRole('planner');
         $kb      = Factory::where('code', 'KB')->value('id');
         $model   = ProductModel::where('code', 'O1014')->first();
 
@@ -631,7 +631,7 @@ class PaperSeeder
 
     private function materialIssue(WorkOrder $kb106, WorkOrder $kb107, Consignment $mami, Consignment $tufr): void
     {
-        $store = User::where('username', 'store')->value('id');
+        $store = \Database\Seeders\UserSeeder::idByRole('storekeeper');
 
         $mi = MaterialIssue::create([
             'doc_no'        => 'MI-2026-1303774',
@@ -684,11 +684,11 @@ class PaperSeeder
     */
     private function ky81(): void
     {
-        $planner = User::where('username', 'planner')->value('id');
-        $purch   = User::where('username', 'moaz')->value('id');
-        $store   = User::where('username', 'store')->value('id');
-        $qc      = User::where('username', 'qc')->value('id');
-        $lab     = User::where('username', 'lab')->value('id');
+        $planner = \Database\Seeders\UserSeeder::idByRole('planner');
+        $purch   = \Database\Seeders\UserSeeder::idByRole('purchasing');
+        $store   = \Database\Seeders\UserSeeder::idByRole('storekeeper');
+        $qc      = \Database\Seeders\UserSeeder::idByRole('inspector');
+        $lab     = \Database\Seeders\UserSeeder::idByRole('lab_tech');
         $obr     = Warehouse::where('code', 'OBR')->value('id');
         $sup     = Supplier::where('code', '043')->value('id');
         $vsf     = FabricType::where('code', 'VSF')->first();
