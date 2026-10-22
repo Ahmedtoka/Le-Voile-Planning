@@ -36,6 +36,9 @@ class MenuCounters
 
         $can = fn (string $p) => $user->can2($p);
         $c   = [];
+        // مستخدم المصنع: كل الكاونترات على مصنعه بس
+        $fid = $user->factory_id && !$user->isAdmin() ? (int) $user->factory_id : null;
+        $onFactory = fn ($q) => $fid ? $q->where('factory_id', $fid) : $q;
 
         // ── المشتريات: الطلبات اللي نزلت من التخطيط ومستنية تسعير ──
         if ($can('po.source')) {
@@ -87,9 +90,9 @@ class MenuCounters
                 ->where('created_by_patternist', $user->id)->count();
         }
 
-        // ── أوامر الشغل: مسودات ومتأخرات ──
-        if ($can('wo.manage') || $can('wo.view')) {
-            $c['work-orders.index'] = WorkOrder::where(function ($q) use ($user) {
+        // ── أوامر الشغل: مسودات ومتأخرات — للي بيدير الأوامر أو للمصنع على أوامره ──
+        if ($can('wo.manage') || $fid) {
+            $c['work-orders.index'] = $onFactory(WorkOrder::query())->where(function ($q) use ($user) {
                 $q->where(fn ($qq) => $qq->whereIn('status', ['draft', 'rejected'])->where('created_by', $user->id))
                   ->orWhere(fn ($qq) => $qq->open()->whereNotNull('due_date')
                                             ->whereDate('due_date', '<', now()->toDateString()));
@@ -98,14 +101,14 @@ class MenuCounters
 
         // ── بيان القص: أوامر عند المصنع من غير بيان ──
         if ($can('cut.manage')) {
-            $c['cut-declarations.index'] = WorkOrder::whereIn('status', ['sent_to_factory', 'cutting'])
+            $c['cut-declarations.index'] = $onFactory(WorkOrder::query())->whereIn('status', ['sent_to_factory', 'cutting'])
                 ->whereDoesntHave('cutDeclarations', fn ($q) => $q->where('status', 'approved'))
                 ->count();
         }
 
         // ── استلام الإنتاج: أوامر عليها متبقي ──
         if ($can('prod.manage')) {
-            $c['production-receipts.index'] = WorkOrder::open()
+            $c['production-receipts.index'] = $onFactory(WorkOrder::open())
                 ->whereColumn('cut_pieces', '>', 'received_pieces')->count();
         }
 

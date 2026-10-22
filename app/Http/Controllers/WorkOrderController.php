@@ -42,7 +42,9 @@ class WorkOrderController extends Controller
         $q = WorkOrder::with(['factory', 'fabrics.consignment', 'fabrics.color']);
 
         // مستخدم المصنع بيشوف أوامر مصنعه بس
-        if ($fid = auth()->user()?->factory_id) $q->where('factory_id', $fid);
+        $fid = auth()->user()?->factory_id;
+        if ($fid) $q->where('factory_id', $fid);
+        $onF = fn ($x) => $fid ? $x->where('factory_id', $fid) : $x;   // الأرقام فوق كمان على مصنعه بس
 
         $this->applyFilters($q, $request, ['wo_no', 'product_title', 'product_code', 'qb_code'], 'wo_date',
             ['status' => 'status', 'factory_id' => 'factory_id', 'variance_flag' => 'variance_flag']);
@@ -56,18 +58,18 @@ class WorkOrderController extends Controller
             'statuses'  => WorkOrder::STATUSES,
             'factories' => Factory::orderBy('name')->pluck('name', 'id'),
             'summary'   => [
-                ['label' => 'مفتوحة', 'value' => WorkOrder::open()->count(), 'tone' => 'brand',
+                ['label' => 'مفتوحة', 'value' => $onF(WorkOrder::open())->count(), 'tone' => 'brand',
                  'note' => 'لسه ما اتقفلتش ولا اتلغت.'],
-                ['label' => 'متأخرة', 'value' => WorkOrder::late()->count(), 'tone' => 'danger',
+                ['label' => 'متأخرة', 'value' => $onF(WorkOrder::late())->count(), 'tone' => 'danger',
                  'note' => 'فات تاريخ تسليمها.'],
                 ['label' => 'قطع على المصانع',
-                 'value' => number_format((int) WorkOrder::open()->selectRaw(self::OUTSTANDING)->value('o')),
+                 'value' => number_format((int) $onF(WorkOrder::open())->selectRaw(self::OUTSTANDING)->value('o')),
                  'note' => 'مقصوص ولسه ما اتسلّمش.'],
                 ['label' => 'خامات مش متوازنة',
-                 'value' => WorkOrder::open()->whereHas('fabrics', fn ($x) => $x->where('is_governing', true))
+                 'value' => $onF(WorkOrder::open())->whereHas('fabrics', fn ($x) => $x->where('is_governing', true))
                                 ->get()->filter(fn ($w) => $w->fabric_gap > 0)->count(),
                  'tone' => 'warn', 'note' => 'فيه خامة هتخلص قبل التانية وتوقف الإنتاج.'],
-                ['label' => 'مقفولة', 'value' => WorkOrder::where('status', 'closed')->count(), 'tone' => 'ok',
+                ['label' => 'مقفولة', 'value' => $onF(WorkOrder::where('status', 'closed'))->count(), 'tone' => 'ok',
                  'note' => 'اتسلّمت بالكامل.'],
             ],
         ]);
@@ -522,7 +524,7 @@ class WorkOrderController extends Controller
         $fabrics  = $v['fabrics'];
         $products = $v['products'] ?? [];
         $model    = $v['product_model_id'] ?? null;
-        unset($v['fabrics'], $v['products'], $v['product_model_id']);
+        unset($v['fabrics'], $v['products'], $v['product_model_id'], $v['picked_models']);   // picked_models من البيكر بس — مش عمود
 
         $v['marker_copies'] = $v['marker_copies'] ?? 1;
 

@@ -327,7 +327,9 @@ const LVF = (function () {
       label: (r.querySelector('.f-cn')?.selectedOptions[0]?.dataset.name) || 'خامة',
       calc_mode: r.querySelector('.f-mode')?.value || 'weight',
       spread_length_m: r.querySelector('.f-sp')?.value || 0,
-      spread_length_safe_m: r.querySelector('.f-sps')?.value || 0,
+      // لو طول الأمان فاضي (مثلًا الطول جاي جاهز من طلب التحضير) نحسب بنفس قاعدة السيرفر: الطول + 5 سم
+      spread_length_safe_m: r.querySelector('.f-sps')?.value
+        || ((Number(r.querySelector('.f-sp')?.value) || 0) > 0 ? (Number(r.querySelector('.f-sp').value) + SAFETY_M).toFixed(3) : 0),
       fabric_width_m: r.querySelector('.f-wd')?.value || 0,
       gsm_kg_m2: r.querySelector('.f-gsm')?.value || 0,
       pieces_per_spread: r.querySelector('.f-pps')?.value || 0,

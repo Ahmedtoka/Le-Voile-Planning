@@ -8,6 +8,14 @@
   $cov = fn ($f) => \App\Services\CoverageService::flagColor($f);
   $money = fn ($n) => number_format((float) $n, 0);
 
+  /* كل جزء في اللوحة بيظهر بس للي عنده صلاحية شاشته — نفس منطق المنيو */
+  $dashUser = auth()->user();
+  $can = function (?string $perm) use ($dashUser) {
+      if (!$perm || !$dashUser) return true;
+      foreach (explode('|', $perm) as $p) if ($dashUser->can2($p)) return true;
+      return false;
+  };
+
   /* ── اللي مستني منك: الطابور الشخصي + أي كاونتر من المنيو مالوش وصف في الطابور ── */
   $queueLinks = array_column($myQueue, 'link');
   $queueExtra = [];
@@ -34,7 +42,7 @@
        [المفتاح, رقم الخطوة في المنيو, العنوان, الرقم, سطر تحت الرقم, الشرح, اللينك, نوعه]
        النوع: wait = شغل واقف (بيدخل في حساب «فين الزحمة») · ready = حالة كويسة · volume = حجم */
   $phases = [
-    ['n' => '①', 'title' => 'دورة الشراء', 'all' => [route('purchase-orders.index'), 'كل الطلبات'], 'steps' => [
+    ['n' => '①', 'title' => 'دورة الشراء', 'perm' => 'po.view|po.source|po.finance', 'all' => [route('purchase-orders.index'), 'كل الطلبات'], 'steps' => [
       ['purchasing', '2', 'عند المشتريات', $purchase['purchasing'], 'طلب',
         'مستنية تحديد مورد وسعر وتاريخ توريد.',
         route('purchase-orders.index', ['stage' => 'purchasing']), 'wait'],
@@ -42,7 +50,7 @@
         'وصل جزء منها والباقي مستني.',
         route('stock-additions.index'), 'wait'],
     ]],
-    ['n' => '②', 'title' => 'وصول القماش', 'all' => [route('consignments.index'), 'كل الأحواض'], 'steps' => [
+    ['n' => '②', 'title' => 'وصول القماش', 'perm' => 'receipt.view|qc.view', 'all' => [route('consignments.index'), 'كل الأحواض'], 'steps' => [
       ['awaiting_inspection', '5', 'مستنية فحص', $fabric['awaiting_inspection'], 'حوض',
         'وصلت بإذن إضافة ومحجوزة. الفاحص هيجرد الأتواب ويقيس العرض.',
         route('inspections.index'), 'wait'],
@@ -56,7 +64,7 @@
         'مفرج عنها ولسه فيها رصيد متاح — تقدر تعمل عليها أوامر شغل.',
         route('consignments.index', ['ready' => 1]), 'ready'],
     ]],
-    ['n' => '③', 'title' => 'التشغيل', 'all' => [route('work-orders.index'), 'أوامر الشغل'], 'steps' => [
+    ['n' => '③', 'title' => 'التشغيل', 'perm' => 'wo.view|marker.view|cut.view|prod.manage', 'all' => [route('work-orders.index'), 'أوامر الشغل'], 'steps' => [
       ['marker_requests', '8', 'طلبات ماركر مفتوحة', $production['marker_requests'], 'طلب',
         'الباترونست لسه ما رفعش الماركر.',
         route('markers.requests'), 'wait'],
@@ -72,6 +80,8 @@
     ]],
   ];
 
+  $phases = array_values(array_filter($phases, fn ($ph) => $can($ph['perm'] ?? null)));
+
   // فين الزحمة: أكبر رقم بين مراحل «شغل واقف» (لو كلها صفر مفيش تمييز)
   $hotKey = null; $hotMax = 0; $hotLabel = null;
   foreach ($phases as $ph) foreach ($ph['steps'] as $s) {
@@ -80,20 +90,21 @@
 
   /* ── التنبيهات: اللي محتاج انتباه بس ── */
   $alerts = [
-    ['n' => $purchase['late_supply'], 'label' => 'توريد متأخر', 'icon' => 'bi-truck',
+    ['n' => $purchase['late_supply'], 'label' => 'توريد متأخر', 'icon' => 'bi-truck', 'perm' => 'po.view|po.source',
      'note' => 'طلبات معتمدة فات تاريخ توريدها وما وصلتش كاملة.', 'link' => null],
-    ['n' => $production['late'], 'label' => 'أوامر متأخرة', 'icon' => 'bi-hourglass-bottom',
+    ['n' => $production['late'], 'label' => 'أوامر متأخرة', 'icon' => 'bi-hourglass-bottom', 'perm' => 'wo.view|cut.view',
      'note' => 'فات تاريخ تسليمها ولسه مفتوحة.', 'link' => [route('work-orders.index', ['late' => 1]), 'افتح']],
-    ['n' => $production['danger'], 'label' => 'انحراف خارج الحدود', 'icon' => 'bi-rulers',
+    ['n' => $production['danger'], 'label' => 'انحراف خارج الحدود', 'icon' => 'bi-rulers', 'perm' => 'cut.view|wo.view',
      'note' => 'الفرق بين المتوقع والمقصوص تعدى ' . config('lvplanning.variance.warn_pct') . '% — محتاج سبب.', 'link' => null],
-    ['n' => $fabric['roll_variance'], 'label' => 'فروق في جرد الأتواب', 'icon' => 'bi-list-ol',
+    ['n' => $fabric['roll_variance'], 'label' => 'فروق في جرد الأتواب', 'icon' => 'bi-list-ol', 'perm' => 'qc.view|receipt.view',
      'note' => 'تقارير فحص لقت عدد أتواب مختلف عن اللي المورد قال عليه.', 'link' => [route('inspections.index'), 'راجعها']],
-    ['n' => $fabric['width_alerts'], 'label' => 'تنبيهات فرق العرض', 'icon' => 'bi-arrows-expand-vertical',
+    ['n' => $fabric['width_alerts'], 'label' => 'تنبيهات فرق العرض', 'icon' => 'bi-arrows-expand-vertical', 'perm' => 'qc.view|marker.view',
      'note' => 'فرق عرض كبير بين أتواب حوض واحد — مؤشر إن القماش نفسه فيه مشكلة.', 'link' => null],
-    ['n' => $planning['danger'], 'label' => 'موديلات في الخطر', 'icon' => 'bi-clock-history',
+    ['n' => $planning['danger'], 'label' => 'موديلات في الخطر', 'icon' => 'bi-clock-history', 'perm' => 'forecast.view|wo.view',
      'note' => 'الرصيد يكفي ' . config('lvplanning.coverage.danger_days') . ' يوم أو أقل — لازم تشغيل دلوقتي.',
      'link' => [route('planning.coverage'), 'شوف التغطية']],
   ];
+  $alerts    = array_values(array_filter($alerts, fn ($a) => $can($a['perm'] ?? null)));
   $alertsOn  = array_values(array_filter($alerts, fn ($a) => (int) $a['n'] > 0));
   $alertsOff = array_values(array_filter($alerts, fn ($a) => (int) $a['n'] === 0));
 @endphp
@@ -186,7 +197,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
 .ok-line .lead{color:var(--lv-ok);font-weight:700;display:inline-flex;align-items:center;gap:4px}
 
 /* ④ شريط الأرقام الهادي */
-.vol-strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--lv-white);border:1px solid var(--lv-line);
+.vol-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));background:var(--lv-white);border:1px solid var(--lv-line);
   border-radius:var(--r-md);box-shadow:var(--e-1)}
 .vol-cell{padding:12px 18px;min-width:0}
 .vol-cell + .vol-cell{border-inline-start:1px solid var(--lv-line-soft)}
@@ -260,6 +271,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
 </section>
 
 {{-- ══ ٢ · الدورة دلوقتي ══ --}}
+@if(count($phases))
 <section class="dash-section" aria-labelledby="h-pipe">
   <div class="section-head">
     <h2 id="h-pipe">الدورة دلوقتي</h2>
@@ -275,11 +287,13 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
         <i class="bi bi-check2-circle" style="color:var(--lv-ok)" aria-hidden="true"></i>
         مفيش شغل واقف في أي مرحلة.
       @endif
+      @if($can('po.finance'))
       <span class="pipe-side" title="اتسعّر ونزل للحسابات، ولسه ما سجّلتش علمها بيه. مش بيوقّف الاستلام.">
         <i class="bi bi-cash-coin" aria-hidden="true"></i>
         للحسابات: <b>{{ $purchase['finance'] }}</b> مستحق ما اتشافش (مش بيوقّف الاستلام)
         <a href="{{ route('finance.payables', ['unseen' => 1]) }}">راجعها</a>
       </span>
+      @endif
     </div>
 
     <div class="pipe-body">
@@ -315,8 +329,10 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
     </div>
   </div>
 </section>
+@endif
 
 {{-- ══ ٣ · محتاج انتباه ══ --}}
+@if(count($alerts))
 <section class="dash-section" aria-labelledby="h-alerts">
   <div class="section-head">
     <h2 id="h-alerts">محتاج انتباه</h2>
@@ -359,15 +375,20 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
     </div>
   @endif
 </section>
+@endif
 
 {{-- ══ ٤ · الحجم والفلوس ══ --}}
+@if($can('po.view|po.finance|receipt.view|qc.view|wo.view|prod.manage|cut.view'))
 <section class="dash-section" aria-label="أرقام الحجم والقيمة">
   <div class="vol-strip">
+    @if($can('po.view|po.finance'))
     <div class="vol-cell">
       <div class="vl"><span class="dot dot-brand" aria-hidden="true"></span> مستحق متوقع للموردين</div>
       <div class="vv"><span class="num {{ (float) $purchase['payable'] == 0 ? 'is-zero' : '' }}">{{ $money($purchase['payable']) }}</span><span class="vu">{{ config('lvplanning.currency') }}</span></div>
       <div class="vn">إجمالي قيمة الطلبات اللي اتحدد لها مورد وسعر ولسه ما اتقفلتش.</div>
     </div>
+    @endif
+    @if($can('receipt.view|qc.view'))
     <div class="vol-cell">
       <div class="vl"><span class="dot dot-warn" aria-hidden="true"></span> كجم محجوزة تحت الفحص</div>
       <div class="vv"><span class="num {{ (float) $fabric['hold_kg'] == 0 ? 'is-zero' : '' }}">{{ $money($fabric['hold_kg']) }}</span><span class="vu">كجم</span></div>
@@ -378,13 +399,17 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
       <div class="vv"><span class="num {{ (float) $fabric['ready_kg'] == 0 ? 'is-zero' : '' }}">{{ $money($fabric['ready_kg']) }}</span><span class="vu">كجم · {{ $fabric['ready'] }} حوض</span></div>
       <div class="vn">الرصيد المتاح في الأحواض الجاهزة للتشغيل.</div>
     </div>
+    @endif
+    @if($can('wo.view|prod.manage|cut.view'))
     <div class="vol-cell">
       <div class="vl"><span class="dot dot-ok" aria-hidden="true"></span> قطع مستلمة الشهر ده</div>
       <div class="vv"><span class="num {{ (float) $production['received_month'] == 0 ? 'is-zero' : '' }}">{{ $money($production['received_month']) }}</span><span class="vu">قطعة · {{ $production['closed_month'] }} أمر مقفول</span></div>
       <div class="vn">إجمالي المنتج التام اللي دخل المخزن الشهر ده.</div>
     </div>
+    @endif
   </div>
 </section>
+@endif
 
 {{-- ══ ٥ · التحليلات ══ --}}
 <section aria-labelledby="h-analytics">
@@ -394,6 +419,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
 </div>
 
 <div class="row g-3 mb-3">
+  @if($can('forecast.view|wo.view'))
   <div class="col-lg-7">
     <div class="card dash-card">
       <div class="card-header">
@@ -412,7 +438,9 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
       </div>
     </div>
   </div>
+  @endif
 
+  @if($can('receipt.view|qc.view'))
   <div class="col-lg-5">
     <div class="card dash-card">
       <div class="card-header">
@@ -455,9 +483,11 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
       </div>
     </div>
   </div>
+  @endif
 </div>
 
 <div class="row g-3 mb-3">
+  @if($can('forecast.view'))
   <div class="col-lg-5">
     <div class="card dash-card">
       <div class="card-header">
@@ -496,7 +526,9 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
       </div>
     </div>
   </div>
+  @endif
 
+  @if($can('po.view|wo.view'))
   <div class="col-lg-7">
     <div class="card dash-card">
       <div class="card-header">
@@ -545,9 +577,11 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
       </div>
     </div>
   </div>
+  @endif
 </div>
 
 <div class="row g-3 mb-3">
+  @if($can('forecast.view'))
   <div class="col-lg-7">
     <div class="card dash-card">
       <div class="card-header">
@@ -588,7 +622,9 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
       </div>
     </div>
   </div>
+  @endif
 
+  @if($can('wo.view|cut.view'))
   <div class="col-lg-5">
     <div class="card dash-card">
       <div class="card-header">
@@ -617,9 +653,11 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
       </ul>
     </div>
   </div>
+  @endif
 </div>
 
 <div class="row g-3">
+  @if($can('wo.view|cut.view|prod.manage'))
   <div class="col-lg-7">
     <div class="card dash-card">
       <div class="card-header">
@@ -656,6 +694,7 @@ a.al-tile:focus-visible{outline:0;box-shadow:var(--ring)}
       </div>
     </div>
   </div>
+  @endif
 
   <div class="col-lg-5">
     <div class="card dash-card">

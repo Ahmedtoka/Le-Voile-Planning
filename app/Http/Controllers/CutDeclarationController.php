@@ -26,18 +26,21 @@ class CutDeclarationController extends Controller
     public function index(Request $request)
     {
         $q = CutDeclaration::with(['workOrder', 'factory']);
+        $fid = auth()->user()?->factory_id;
+        if ($fid) $q->where('factory_id', $fid);   // مستخدم المصنع: بياناته بس
         $this->applyFilters($q, $request,
             ['doc_no', 'workOrder.wo_no'],
             'doc_date',
             ['status' => 'status', 'factory_id' => 'factory_id', 'variance_flag' => 'variance_flag']
         );
 
-        $base    = CutDeclaration::query();
-        $waiting = WorkOrder::whereIn('status', ['sent_to_factory','cutting'])
+        $onF     = fn ($x) => $fid ? $x->where('factory_id', $fid) : $x;
+        $base    = $onF(CutDeclaration::query());
+        $waiting = $onF(WorkOrder::whereIn('status', ['sent_to_factory','cutting']))
             ->whereDoesntHave('cutDeclarations', fn ($x) => $x->where('status', 'approved'))->count();
 
         /* طابور القص: الأوامر اللي عند المصنع */
-        $awaitingWos = \App\Models\WorkOrder::with('factory')
+        $awaitingWos = $onF(\App\Models\WorkOrder::with('factory'))
             ->whereIn('status', ['sent_to_factory', 'cutting'])
             ->latest('id')->limit(10)->get();
 
@@ -64,6 +67,9 @@ class CutDeclarationController extends Controller
 
     public function create(Request $request)
     {
+        if (!$request->filled('work_order_id')) {
+            return redirect()->route(auth()->user()?->factory_id ? 'factory.portal' : 'work-orders.index')->with('warning', 'اختار أمر الشغل اللي هتسجّل عليه القص.');
+        }
         $wo = WorkOrder::with(['lines.productModel', 'lines.size', 'marker'])
                 ->findOrFail($request->get('work_order_id'));
         if (($fid = auth()->user()?->factory_id) && (int) $wo->factory_id !== (int) $fid) {
@@ -106,6 +112,9 @@ class CutDeclarationController extends Controller
 
     public function edit(CutDeclaration $cut_declaration)
     {
+        if (($fid = auth()->user()?->factory_id) && (int) $cut_declaration->factory_id !== (int) $fid) {
+            abort(403, 'بيان القص ده مش على مصنعك.');
+        }
         $cut_declaration->load(['lines', 'workOrder.lines.productModel', 'workOrder.lines.size', ]);
 
         return view('cutting.form', [

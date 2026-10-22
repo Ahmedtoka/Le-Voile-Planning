@@ -28,7 +28,7 @@
   <div class="table-responsive">
     <table class="table table-sm doc-table">
       <thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>الحوض</th><th>عرض / بنشر</th>
-        <th>المطلوب</th><th>نسخ</th><th>الباترونست</th><th>مطلوب في</th><th>الحالة</th>
+        <th style="min-width:220px">المطلوب</th><th>نسخ</th><th>الباترونست</th><th>مطلوب في</th><th>الحالة</th>
         <th style="width:130px">الماركر</th></tr></thead>
       <tbody>
       @forelse($rows as $r)
@@ -39,7 +39,9 @@
           <td class="num">{{ $r->consignment?->consignment_no ?? '—' }}
             @if($r->consignment?->has_color_break)<i class="bi bi-exclamation-triangle-fill text-danger" title="فواصل / اختلاف لون" aria-label="فواصل / اختلاف لون"></i>@endif</td>
           <td class="num fw-bold">{{ $r->fabric_width_cm }} <span class="hint">/ {{ $r->avg_gsm ?? '—' }}</span></td>
-          <td class="hint">{{ Str::limit($r->models_label, 70) }}
+          <td class="hint" style="white-space:normal">
+            @forelse($r->models as $m)<div class="text-nowrap">{{ $m->label }}</div>@empty {{ Str::limit($r->models_label, 70) }} @endforelse
+            @if($r->sizes_note)<div>{{ $r->sizes_note }}</div>@endif
             @if($r->suggestedMarker)<div class="text-success">اتقفل على ماركر قديم {{ $r->suggestedMarker->code }}</div>@endif</td>
           <td class="num">{{ $r->copies }}</td>
           <td>{{ $r->patternist?->name ?? '—' }}</td>

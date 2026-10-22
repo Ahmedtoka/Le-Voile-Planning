@@ -26,17 +26,20 @@ class ProductionReceiptController extends Controller
     public function index(Request $request)
     {
         $q = ProductionReceipt::with(['workOrder', 'factory', 'warehouse']);
+        $fid = auth()->user()?->factory_id;
+        if ($fid) $q->where('factory_id', $fid);   // مستخدم المصنع: استلاماته بس
         $this->applyFilters($q, $request,
             ['doc_no', 'workOrder.wo_no'],
             'doc_date',
             ['status' => 'status', 'factory_id' => 'factory_id', 'warehouse_id' => 'warehouse_id']
         );
 
-        $base    = ProductionReceipt::query();
-        $waiting = WorkOrder::open()->whereColumn('cut_pieces', '>', 'received_pieces')->count();
+        $onF     = fn ($x) => $fid ? $x->where('factory_id', $fid) : $x;
+        $base    = $onF(ProductionReceipt::query());
+        $waiting = $onF(WorkOrder::open())->whereColumn('cut_pieces', '>', 'received_pieces')->count();
 
         /* طابور الاستلام: فيه قطع مقصوصة لسه على المصنع */
-        $awaitingWos = \App\Models\WorkOrder::with('factory')
+        $awaitingWos = $onF(\App\Models\WorkOrder::with('factory'))
             ->whereColumn('cut_pieces', '>', 'received_pieces')
             ->whereNotIn('status', ['cancelled', 'closed', 'superseded'])
             ->latest('id')->limit(10)->get();
@@ -64,6 +67,9 @@ class ProductionReceiptController extends Controller
 
     public function create(Request $request)
     {
+        if (!$request->filled('work_order_id')) {
+            return redirect()->route(auth()->user()?->factory_id ? 'factory.portal' : 'work-orders.index')->with('warning', 'اختار أمر الشغل اللي هتسلّم منه إنتاج.');
+        }
         $wo = WorkOrder::with(['lines.productModel', 'lines.size', 'consignment'])
                 ->findOrFail($request->get('work_order_id'));
         if (($fid = auth()->user()?->factory_id) && (int) $wo->factory_id !== (int) $fid) {
@@ -105,6 +111,9 @@ class ProductionReceiptController extends Controller
 
     public function edit(ProductionReceipt $production_receipt)
     {
+        if (($fid = auth()->user()?->factory_id) && (int) $production_receipt->factory_id !== (int) $fid) {
+            abort(403, 'إذن الاستلام ده مش على مصنعك.');
+        }
         $production_receipt->load(['lines', 'workOrder.lines.productModel', 'workOrder.lines.size', ]);
 
         return view('production.form', [

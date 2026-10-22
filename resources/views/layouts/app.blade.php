@@ -892,7 +892,7 @@ details[open]>summary::before{transform:rotate(-90deg)}
 
     /* مكاتب الإدارات — كل واحد بيفتح مكتبه فيلاقي شغله مستنيه */
     ['desks', 'مكاتب الإدارات', 'bi-person-workspace', [
-      ['desk.planning',   'التخطيط', 'bi-graph-up-arrow', 'wo.view|po.request|forecast.view',
+      ['desk.planning',   'التخطيط', 'bi-graph-up-arrow', 'wo.manage|po.request|forecast.manage',
        'طلب الخامة، أوامر الشغل، التغطية والفوركاست'],
       ['desk.purchasing', 'المشتريات', 'bi-cart3', 'po.source',
        'تسعير الطلبات وتحديد المورد وتاريخ التوريد'],
@@ -991,7 +991,11 @@ details[open]>summary::before{transform:rotate(-90deg)}
     ]],
   ];
 
-  $allowed = function (?string $perm) use ($u) {
+  /* مستخدم المصنع (مربوط بمصنع وعنده بوابة): شاشاته بس — البوابة وأوامر مصنعه والقص والاستلام */
+  $factoryOnly = $u && $u->factory_id && !$u->isAdmin() && $u->can2('factory.portal');
+  $factoryRoutes = ['factory.portal', 'work-orders.index', 'cut-declarations.index', 'production-receipts.index'];
+  $allowed = function (?string $perm, ?string $route = null) use ($u, $factoryOnly, $factoryRoutes) {
+      if ($factoryOnly && $route && !in_array($route, $factoryRoutes, true)) return false;
       if (!$perm || !$u) return true;
       foreach (explode('|', $perm) as $p) if ($u->can2($p)) return true;
       return false;
@@ -1021,7 +1025,7 @@ details[open]>summary::before{transform:rotate(-90deg)}
     @php
       [$gid, $group, $gicon, $items] = $g;
       $phase = $g[4] ?? '';
-      $visible = array_values(array_filter($items, fn ($it) => Route::has($it[0]) && $allowed($it[3])));
+      $visible = array_values(array_filter($items, fn ($it) => Route::has($it[0]) && $allowed($it[3], $it[0])));
       $groupCount = 0; $isOpen = false;
       foreach ($visible as $it) {
         $groupCount += $cnt[$it[0]] ?? 0;
