@@ -22,10 +22,11 @@
         <div class="col-md-4">
           <label class="form-label req">الكمية المطلوبة</label>
           <div class="input-group input-group-sm">
-            <input type="number" step="0.001" min="0" name="requested_qty" id="qty" class="form-control" value="{{ old('requested_qty') }}" placeholder="تقريبي — مثال: 200">
+            <input type="number" step="0.001" min="0" name="requested_qty" id="qty" class="form-control" value="{{ old('requested_qty') }}" placeholder="تقريبي — مثال: 200" oninput="LVP.calc()">
             <span class="input-group-text">كجم</span>
           </div>
           <div class="hint">المتاح على الرسالة: <b class="num" id="remLbl">—</b></div>
+          <div id="leftLbl" class="small mt-1 fw-bold" hidden></div>
         </div>
         <div class="col-md-8">
           <label class="form-label">ولا الباقي كله؟</label>
@@ -85,13 +86,29 @@
 @push('scripts')
 <script>
 window.LVP = (function () {
+  var nf = v => Number(v).toLocaleString('en-US', {maximumFractionDigits: 1});
+  function rem() { var v = document.querySelector('[name=consignment_id]'); return v && v.value && v.dataset.rem !== undefined ? Number(v.dataset.rem) : null; }
   function pick() {
-    var v = document.querySelector('[name=consignment_id]');
-    document.getElementById('remLbl').textContent = v && v.value && v.dataset.rem !== undefined
-      ? Number(v.dataset.rem).toLocaleString('en-US', {maximumFractionDigits: 1}) + ' كجم' : '—';
+    var r = rem();
+    document.getElementById('remLbl').textContent = r !== null ? nf(r) + ' كجم' : '—';
+    calc();
+  }
+  /* مع كل رقم تكتبه: هيفضل على الرسالة كام بعد الطلب ده */
+  function calc() {
+    var out = document.getElementById('leftLbl'), q = Number(document.getElementById('qty').value) || 0, r = rem();
+    if (r === null || !q) { out.hidden = true; return; }
+    var left = r - q;
+    out.hidden = false;
+    if (left < -0.0005) {
+      out.className = 'small mt-1 fw-bold text-danger';
+      out.textContent = 'أكتر من المتاح بـ ' + nf(-left) + ' كجم — قلّل الكمية أو اختار «الباقي كله»';
+    } else {
+      out.className = 'small mt-1 fw-bold ' + (left < 0.0005 ? 'text-warning' : 'text-success');
+      out.textContent = 'هيفضل على الرسالة بعد الطلب ده: ' + nf(left) + ' كجم' + (left < 0.0005 ? ' — الرسالة هتخلص' : '');
+    }
   }
   document.addEventListener('DOMContentLoaded', pick);
-  return {pick};
+  return {pick, calc};
 })();
 </script>
 @endpush
