@@ -23,7 +23,7 @@
 
 <style>
 /* ⓘ فوق كارت KPI (الكارت نفسه من partials.kpi) */
-.kpi-fx{position:absolute;inset-inline-end:12px;inset-block-start:12px;z-index:2}
+
 </style>
 {{-- السامري: نفس كروت partials.summary بس كل رقم محسوب جنبه ⓘ بحسبته --}}
 <div class="row g-3 mb-4">

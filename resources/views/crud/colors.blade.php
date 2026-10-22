@@ -208,6 +208,6 @@
 
 <style>
   /* نقطة لون العرض جنب اسم اللون */
-  .color-dot{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid var(--lv-line);vertical-align:-1px;margin-inline-end:4px}
+
 </style>
 @endsection

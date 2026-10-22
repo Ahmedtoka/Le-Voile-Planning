@@ -91,7 +91,7 @@
 
 <style>
 /* ⓘ فوق كارت KPI (الكارت نفسه من partials.kpi) */
-.kpi-fx{position:absolute;inset-inline-end:12px;inset-block-start:12px;z-index:2}
+
 </style>
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-2">

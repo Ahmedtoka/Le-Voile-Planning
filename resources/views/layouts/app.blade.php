@@ -757,7 +757,9 @@ details[open]>summary::before{transform:rotate(-90deg)}
   margin-inline-start:4px;cursor:help;flex:0 0 18px;transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
 .fx:hover,.fx:focus-visible,.fx[aria-describedby]{background:var(--lv-brand);color:#fff;outline:0}
 .fx .bi{font-size:.72rem}
-.stat .fx{position:absolute;inset-inline-end:12px;inset-block-start:12px}
+.stat .fx,.kpi-fx{position:absolute;inset-inline-end:12px;inset-block-start:12px;z-index:2}
+/* نقطة لون صغيرة جنب كود اللون */
+.color-dot{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid var(--lv-line);vertical-align:-1px;margin-inline-end:4px}
 .popover{font-family:var(--ff-ui);border:1px solid var(--lv-line);border-radius:var(--r-md);box-shadow:var(--e-3);max-width:360px;font-size:var(--fs-sm)}
 .popover.fx-pop .popover-header{background:var(--lv-tint);color:var(--lv-brand-ink);font-weight:700;font-size:var(--fs-sm);border-bottom-color:var(--lv-soft);
   border-radius:var(--r-md) var(--r-md) 0 0}
