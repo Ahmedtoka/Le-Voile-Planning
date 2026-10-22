@@ -43,4 +43,11 @@ return [
     'avg_sales_window_days' => 30,
 
     'currency' => 'ج.م',
+
+    /*
+    | الدخول التجريبي السريع من شاشة اللوجين (زرار لكل دور، من غير كلمة مرور).
+    | بيشتغل تلقائيًا لما APP_ENV=local، أو لما LV_DEMO_LOGIN=true في .env.
+    | ⚠ على سيرفر حقيقي سيبه false — أي حد يفتح الصفحة يقدر يدخل بأي دور.
+    */
+    'demo_login' => (bool) env('LV_DEMO_LOGIN', false),
 ];

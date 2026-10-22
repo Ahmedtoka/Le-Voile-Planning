@@ -35,6 +35,8 @@ use Illuminate\Support\Facades\Route;
 // ── الدخول ───────────────────────────────────────────────────────
 Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+// دخول تجريبي سريع بدور معين — متاح بس على local أو لما LV_DEMO_LOGIN=true (AuthController::demoLoginEnabled)
+Route::post('/login/as/{user:username}', [AuthController::class, 'loginAs'])->name('login.as');
 Route::post('/logout',[AuthController::class, 'logout'])->name('logout');
 
 Route::middleware('auth.user')->group(function () {

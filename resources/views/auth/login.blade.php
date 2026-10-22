@@ -43,6 +43,28 @@
  .btn-plum:focus-visible{box-shadow:var(--ring)}
  .alert-danger{background:#FCEFEE;border-color:#F3CDC9;color:#B5342B;border-radius:8px}
  .copy{text-align:center;margin-top:28px;font-size:.75rem;color:var(--lv-muted)}
+
+ /* ── دخول تجريبي — زرار لكل دور (local / LV_DEMO_LOGIN بس) ── */
+ .demo{width:100%;max-width:520px;margin:36px auto 0;padding-top:24px;border-top:1px dashed var(--lv-field)}
+ .demo .demo-title{display:flex;align-items:center;gap:10px;font-size:.8125rem;font-weight:600;color:var(--lv-brand-ink);margin-bottom:4px}
+ .demo .demo-title .pill{font-size:.6875rem;font-weight:600;background:var(--lv-tint);color:var(--lv-brand);border-radius:999px;padding:2px 10px}
+ .demo .demo-sub{font-size:.75rem;color:var(--lv-muted);margin-bottom:14px}
+ .demo .dept{margin-bottom:12px}
+ .demo .dept-name{font-size:.7rem;font-weight:600;letter-spacing:.02em;color:var(--lv-muted);margin-bottom:6px}
+ .demo .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .demo form{margin:0;min-width:0}
+ .demo .who{width:100%;text-align:start;background:#fff;border:1px solid var(--lv-field);border-radius:8px;padding:7px 10px;
+   display:flex;align-items:center;gap:9px;cursor:pointer;transition:border-color .12s,box-shadow .12s,background .12s}
+ .demo .who:hover,.demo .who:focus-visible{border-color:var(--lv-brand);box-shadow:var(--ring);background:#FDF9FC;outline:0}
+ .demo .who .av{flex:0 0 30px;width:30px;height:30px;border-radius:50%;background:var(--lv-soft);color:var(--lv-brand-deep);
+   font-family:'Reem Kufi',sans-serif;font-weight:600;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+ .demo .who.factory .av{background:#E3EEE6;color:#1F5B35}
+ .demo .who .t{min-width:0}
+ .demo .who .n{font-size:.8125rem;font-weight:600;color:var(--lv-ink);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .demo .who .j{font-size:.6875rem;color:var(--lv-muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .demo .who .j b{font-weight:600;color:#1F5B35}
+ .demo .demo-foot{font-size:.6875rem;color:var(--lv-muted);margin-top:8px}
+ @media (max-width:420px){ .demo .grid{grid-template-columns:1fr} }
  @media (max-width:860px){
    .side{display:none}
    .box .mobile-logo{display:block}
@@ -63,7 +85,8 @@
   </aside>
 
   <main class="form-side">
-    <form class="box" method="post" action="{{ route('login.post') }}">
+   <div style="width:100%;max-width:520px">
+    <form class="box" style="margin:0 auto" method="post" action="{{ route('login.post') }}">
       @csrf
       <img class="mobile-logo" src="{{ asset('assets/logo.png') }}" alt="Le Voile">
       <h2>أهلًا بيك</h2>
@@ -88,8 +111,44 @@
         <label class="form-check-label small" for="r">افتكرني</label>
       </div>
       <button class="btn btn-plum w-100">دخول</button>
-      <div class="copy">Le Voile · نظام تخطيط الإنتاج</div>
+      @if(($demoUsers ?? collect())->isEmpty())
+        <div class="copy">Le Voile · نظام تخطيط الإنتاج</div>
+      @endif
     </form>
+
+    {{-- دخول تجريبي: بيظهر بس لما config('app.env') === 'local' أو config('lvplanning.demo_login') --}}
+    @if(($demoUsers ?? collect())->isNotEmpty())
+      <section class="demo" aria-labelledby="demo-h">
+        <div class="demo-title" id="demo-h">دخول تجريبي — اختار الدور <span class="pill">بيئة تجريبية</span></div>
+        <div class="demo-sub">اضغط على أي اسم وهتدخل بدوره على طول من غير كلمة مرور. كل الحسابات كلمة مرورها <code dir="ltr">123456</code>.</div>
+
+        @foreach($demoUsers as $dept => $users)
+          <div class="dept">
+            <div class="dept-name">{{ $dept }}</div>
+            <div class="grid">
+              @foreach($users as $u)
+                @php $factory = $u->employerFactory; @endphp
+                <form method="post" action="{{ route('login.as', $u->username) }}">
+                  @csrf
+                  <button type="submit" class="who {{ $factory ? 'factory' : '' }}"
+                          title="{{ $u->name }} — {{ $u->job_title }}{{ $factory ? ' — مصنع ' . $factory->name : '' }} (اسم الدخول: {{ $u->username }})">
+                    <span class="av" aria-hidden="true">{{ mb_substr(trim($u->name), 0, 1) }}</span>
+                    <span class="t">
+                      <span class="n d-block">{{ $u->name }}</span>
+                      <span class="j d-block">{{ $u->job_title }}@if($factory) · <b>مصنع {{ $factory->name }}</b>@endif</span>
+                    </span>
+                  </button>
+                </form>
+              @endforeach
+            </div>
+          </div>
+        @endforeach
+
+        <div class="demo-foot">القسم ده مش بيظهر على السيرفر الحقيقي (بيتفعّل بـ <code dir="ltr">LV_DEMO_LOGIN=true</code> أو <code dir="ltr">APP_ENV=local</code>).</div>
+        <div class="copy">Le Voile · نظام تخطيط الإنتاج</div>
+      </section>
+    @endif
+   </div>
   </main>
 </div>
 </body>

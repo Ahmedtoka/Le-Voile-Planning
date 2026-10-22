@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Services\ActivityLogger;
+use Database\Seeders\UserSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,7 +19,40 @@ class AuthController extends Controller
 
         $request->session()->put(self::PROBE, 1);
 
-        return view('auth.login');
+        return view('auth.login', [
+            // زراير الدخول التجريبي — بتظهر بس لما الدخول التجريبي شغّال
+            'demoUsers' => self::demoLoginEnabled() ? UserSeeder::demoUsers() : collect(),
+        ]);
+    }
+
+    /**
+     * الدخول التجريبي السريع شغّال؟
+     * على local تلقائيًا، أو بـ LV_DEMO_LOGIN=true في .env (config/lvplanning.php).
+     */
+    public static function demoLoginEnabled(): bool
+    {
+        return config('app.env') === 'local' || (bool) config('lvplanning.demo_login');
+    }
+
+    /**
+     * دخول تجريبي بدور معين من زرار في شاشة اللوجين — من غير كلمة مرور.
+     * مسموح بس لحسابات الديمو اللي في UserSeeder، ولما الدخول التجريبي شغّال.
+     */
+    public function loginAs(Request $request, User $user)
+    {
+        abort_unless(self::demoLoginEnabled(), 404);
+
+        $demo = array_column(UserSeeder::USERS, 0);
+        abort_unless($user->is_active && in_array($user->username, $demo, true), 403, 'الحساب ده مش من حسابات الديمو.');
+
+        if (auth()->check()) Auth::logout();
+
+        Auth::login($user);
+        $request->session()->regenerate();
+        $request->session()->forget(self::PROBE);
+        ActivityLogger::log('login', $user, 'دخول تجريبي سريع — ' . $user->name . ' (' . $user->job_title . ')');
+
+        return redirect()->route('dashboard');
     }
 
     public function login(Request $request)

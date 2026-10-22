@@ -23,8 +23,6 @@ class UserSeeder extends Seeder
      * [اسم الدخول, الاسم, المسمى الوظيفي, الأدوار, الإدارة (للتجميع في شاشة الدخول), كود المصنع]
      */
     public const USERS = [
-        ['admin',   'مدير النظام',          'مدير النظام',              ['admin'],            'الإدارة',            null],
-
         ['mostafa', 'مصطفى عبد الرحمن',     'مخطط إنتاج',               ['planner'],          'التخطيط',            null],
         ['yasmin',  'ياسمين حمدي',          'باترونست',                 ['patternist'],       'التخطيط',            null],
 
@@ -43,6 +41,7 @@ class UserSeeder extends Seeder
         ['samir',   'سمير عبد الله',        'مسؤول إنتاج — مصنع النصر', ['factory'],          'الإنتاج',            'NSR'],
 
         ['tarek',   'طارق الشناوي',         'المدير العام',             ['gm'],               'الإدارة',            null],
+        ['admin',   'مدير النظام',          'مدير النظام',              ['admin'],            'الإدارة',            null],
     ];
 
     public function run(): void
