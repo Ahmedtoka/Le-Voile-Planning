@@ -713,7 +713,7 @@ a.flow-step:hover{background:var(--lv-surface-2);color:var(--lv-ink);text-decora
 .alert.py-2{padding-block:.55rem}
 .alert b{font-weight:700}
 /* رسالة أخطاء التحقق: عنوان واضح + ليستة بلغة بسيطة */
-.lv-errors{background:var(--lv-white);border:1px solid var(--lv-danger-line);border-inline-start:4px solid var(--lv-danger-dot);
+.lv-errors{background:var(--lv-white);border:1px solid var(--lv-danger-line);
   border-radius:var(--r-md);padding:12px 16px;margin-bottom:var(--sp-4);display:flex;gap:12px;align-items:flex-start;box-shadow:var(--e-1)}
 .lv-errors .le-ico{width:34px;height:34px;flex:0 0 34px;border-radius:50%;background:var(--lv-danger-bg);color:var(--lv-danger);
   display:flex;align-items:center;justify-content:center;font-size:1.1rem}
@@ -724,7 +724,7 @@ a.flow-step:hover{background:var(--lv-surface-2);color:var(--lv-ink);text-decora
 .lv-errors li a{color:var(--lv-danger);font-weight:600}
 /* رسالة نجاح بالخطوة الجاية — بارزة */
 .flow-toast{display:flex;align-items:flex-start;gap:14px;background:var(--lv-white);border:1px solid var(--lv-ok-line);
-  border-inline-start:4px solid var(--lv-ok-dot);
+  background:linear-gradient(90deg,var(--lv-white) 0%,var(--lv-ok-bg) 100%);
   border-radius:var(--r-md);padding:14px 16px;margin-bottom:var(--sp-4);box-shadow:var(--e-2)}
 .flow-toast .ft-ico{width:36px;height:36px;flex:0 0 36px;border-radius:50%;background:var(--lv-ok-bg);color:var(--lv-ok);
   display:flex;align-items:center;justify-content:center;font-size:1.2rem}
