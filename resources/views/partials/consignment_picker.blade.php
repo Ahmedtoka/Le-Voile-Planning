@@ -11,6 +11,8 @@
       'id'     => (int) $c->id,
       'no'     => $c->consignment_no,
       'label'  => $c->consignment_no . ' — ' . ($c->fabricType?->name ?? '') . ' · ' . ($c->color?->label ?? $c->color?->code ?? ''),
+      'fabric' => $c->fabricType?->name ?? '—',
+      'color'  => ($c->color?->code ?? '') . ' — ' . ($c->color?->name ?? ''),
       'search' => mb_strtolower($c->consignment_no . ' ' . ($c->fabricType?->name ?? '') . ' ' . ($c->color?->code ?? '') . ' ' . ($c->color?->name ?? '')),
       'rem'    => (float) $c->remaining_kg,
       'rolls'  => (int) $c->rolls_count,
@@ -27,7 +29,7 @@
   <div class="position-relative cp-wrap">
     <input type="text" class="form-control form-control-sm cp-search" autocomplete="off"
            placeholder="اكتب رقم الرسالة أو الخامة أو اللون (مثال 0805 أو إنترلوك أو 001)…" value="">
-    <div class="cp-results list-group position-absolute w-100 shadow" hidden style="z-index:1050;max-height:280px;overflow:auto"></div>
+    <div class="cp-results list-group position-absolute w-100 shadow" hidden style="z-index:1050;max-height:320px;overflow:auto"></div>
   </div>
   <div class="cp-selected mt-2 p-2 rounded d-flex flex-wrap justify-content-between align-items-center gap-2" style="background:var(--lv-offwhite);border:1px solid var(--lv-line)" @if(!$cpSel) hidden @endif>
     <div>
@@ -43,6 +45,13 @@
 </div>
 
 @once
+<style>
+  .cp-row{display:grid;grid-template-columns:1.6fr 1.2fr 1.3fr 1fr .6fr .9fr 1.1fr;gap:8px;align-items:center;text-align:center;font-size:var(--fs-sm)}
+  .cp-row .cp-k{font-size:var(--fs-xs);color:var(--lv-muted)}
+  .cp-head{background:var(--lv-offwhite);position:sticky;top:0;z-index:1}
+  .cp-results mark{background:#fff2a8;padding:0 1px;border-radius:2px}
+  @media (max-width:768px){.cp-row{grid-template-columns:1fr 1fr 1fr;row-gap:2px}.cp-head{display:none}}
+</style>
 @push('scripts')
 <script>
 (function () {
@@ -71,10 +80,19 @@
       if (n.length < 2) { res.hidden = true; res.innerHTML = ''; return; }
       var hits = data.filter(d => norm(d.search).includes(n)).slice(0, 25);
       if (!hits.length) { res.innerHTML = '<div class="list-group-item small text-muted">مفيش رسالة مفرج عنها بالكود أو الخامة أو اللون ده</div>'; res.hidden = false; return; }
-      res.innerHTML = hits.map((h, i) => '<button type="button" class="list-group-item list-group-item-action py-1 small" data-i="' + i + '">'
-        + '<b class="num">' + h.no + '</b> — ' + h.label.split(' — ')[1]
-        + ' <span class="hint">· متاح ' + nf(h.rem) + ' كجم · ' + h.rolls + ' توب · ' + (h.date || '') + '</span>'
-        + (h.break ? ' <span class="badge bg-danger">فواصل</span>' : '') + '</button>').join('');
+      var cell = function (k, v, cls) { return '<div class="cp-c ' + (cls || '') + '"><div class="cp-k">' + k + '</div><div class="cp-v">' + v + '</div></div>'; };
+      var hl = function (t) { t = (t || '').toString(); var i = norm(t).indexOf(n); return i < 0 ? t : t.slice(0, i) + '<mark>' + t.slice(i, i + n.length) + '</mark>' + t.slice(i + n.length); };
+      res.innerHTML = '<div class="list-group-item py-1 cp-head"><div class="cp-row">'
+          + ['رقم الرسالة', 'الخامة', 'اللون', 'المتاح', 'الأتواب', 'وصل', ''].map(k => '<div class="cp-k">' + k + '</div>').join('') + '</div></div>'
+        + hits.map((h, i) => '<button type="button" class="list-group-item list-group-item-action py-1" data-i="' + i + '"><div class="cp-row">'
+          + '<div class="cp-v num fw-bold">' + hl(h.no) + '</div>'
+          + '<div class="cp-v">' + hl(h.fabric) + '</div>'
+          + '<div class="cp-v">' + hl(h.color) + '</div>'
+          + '<div class="cp-v num">' + nf(h.rem) + ' كجم</div>'
+          + '<div class="cp-v num">' + h.rolls + '</div>'
+          + '<div class="cp-v num hint">' + (h.date || '') + '</div>'
+          + '<div class="cp-v">' + (h.break ? '<span class="badge bg-danger">فواصل / اختلاف لون</span>' : '') + '</div>'
+          + '</div></button>').join('');
       res.hidden = false;
       res.querySelectorAll('button').forEach((b, i) => b.addEventListener('mousedown', function (e) { e.preventDefault(); choose(hits[i]); }));
     }
