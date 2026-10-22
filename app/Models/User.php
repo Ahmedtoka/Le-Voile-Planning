@@ -20,7 +20,7 @@ class User extends Authenticatable
 
     public function roles()   { return $this->belongsToMany(Role::class); }
     /** المصنع الخارجي — الاسم employerFactory عشان ما يغطّيش على HasFactory::factory() */
-    public function employerFactory() { return $this->belongsTo(Factory::class); }
+    public function employerFactory() { return $this->belongsTo(Factory::class, 'factory_id'); }
     public function supplier(){ return $this->belongsTo(Supplier::class); }
     public function notifications2() { return $this->hasMany(AppNotification::class); }
 

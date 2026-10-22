@@ -22,7 +22,7 @@ class MasterDataCommand extends Command
 
         $this->newLine();
         $this->table(['العنصر', 'العدد'], collect($stats)->map(fn ($v, $k) => [$k, $v])->values()->all());
-        $this->info('جاهز. ادخل بـ planner / 123456 وابدأ من طلبات الشراء.');
+        $this->info('جاهز. ادخل بـ mostafa / 123456 (مخطط الإنتاج) وابدأ من طلبات الشراء.');
 
         return self::SUCCESS;
     }

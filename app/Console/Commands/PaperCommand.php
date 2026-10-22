@@ -22,7 +22,7 @@ class PaperCommand extends Command
 
         $this->newLine();
         $this->table(['العنصر', 'العدد'], collect($stats)->map(fn ($v, $k) => [$k, $v])->values()->all());
-        $this->info('تمام. ادخل بـ planner / 123456 وقارن كل شاشة بالورقة اللي في إيدك.');
+        $this->info('تمام. ادخل بـ mostafa / 123456 (مخطط الإنتاج) وقارن كل شاشة بالورقة اللي في إيدك.');
 
         return self::SUCCESS;
     }
