@@ -335,7 +335,8 @@ body.nav-open .nav-scrim{opacity:1;pointer-events:auto}
   background:var(--lv-surface-2);font-weight:700}
 .table>tbody>tr>th{background:var(--lv-surface-2);color:var(--lv-ink-2);font-weight:600;
   font-size:var(--fs-sm);border-color:var(--lv-line-soft);vertical-align:middle;white-space:nowrap}
-.table-responsive{border-radius:0 0 var(--r-md) var(--r-md);-webkit-overflow-scrolling:touch}
+/* contain:paint — من غيرها الجدول العريض بيوسّع الصفحة كلها في RTL على كروم (موبايل خصوصًا) */
+.table-responsive{border-radius:0 0 var(--r-md) var(--r-md);-webkit-overflow-scrolling:touch;contain:paint;overflow-x:auto}
 .table a:not(.btn){font-weight:600}
 .table td.num,.table th.num{white-space:nowrap}
 .table .hint{line-height:1.45}
