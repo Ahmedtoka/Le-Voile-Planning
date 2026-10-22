@@ -7,6 +7,7 @@
   $mrId     = old('marker_request_id', $row->marker_request_id);
   $mr       = $mrId ? \App\Models\MarkerRequest::with(['consignment.fabricType', 'consignment.color', 'models', 'creator', 'preparationRequest'])->find($mrId) : null;
   $cn       = $mr?->consignment;
+  $widthCm  = $mr?->fabric_width_cm ?? $row->fabric_width_cm;
 @endphp
 
 @include('partials.flow_bar', ['flow' => 'prod', 'step' => 'marker'])
@@ -15,47 +16,46 @@
       action="{{ $mode==='create' ? route('markers.store') : route('markers.update',$row) }}">
   @csrf @if($mode==='edit') @method('PUT') @endif
 
-  {{-- ① اللي جاي من طلب الماركر — Labels مرتبة، كله لينكات --}}
+  {{-- ① اللي جاي من طلب الماركر — للقراءة، كله لينكات --}}
   @if($mr)
     <input type="hidden" name="marker_request_id" value="{{ $mr->id }}">
     <input type="hidden" name="fabric_width_cm" value="{{ old('fabric_width_cm', $row->fabric_width_cm ?: $mr->fabric_width_cm) }}">
-    <style>
-      .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;text-align:center;font-size:var(--fs-sm)}
-      .sum-grid .k{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.2}
-      .sum-grid .v{font-weight:600}
-    </style>
-    <div class="card mb-3" style="border-color:var(--lv-soft)">
+    <div class="card mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>طلب الماركر <a href="{{ route('markers.requests') }}" class="fw-bold num">{{ $mr->doc_no }}</a>
           <span class="hint">— ده اللي التخطيط طالبه. مفيش حاجة تتعدل هنا</span></span>
         <div class="d-flex gap-2">
           @if($mode==='edit')<span class="badge bg-{{ $row->status_color }} align-self-center">{{ $row->status_label }}</span>@endif
-          <a href="{{ route('markers.index') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
+          <a href="{{ route('markers.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right" aria-hidden="true"></i> رجوع</a>
         </div>
       </div>
-      <div class="card-body py-2">
-        <div class="sum-grid">
-          <div><div class="k">الرسالة</div>@if($cn)<a href="{{ route('consignments.show', $cn) }}" class="v num">{{ $cn->consignment_no }}</a>@else <div class="v">—</div> @endif</div>
-          <div><div class="k">الصنف · اللون</div><div class="v">{{ $cn?->fabricType?->name ?? '—' }} · {{ $cn?->color?->label ?? $cn?->color?->code ?? '—' }}</div></div>
-          <div><div class="k">أقل عرض (من الفحص)</div><div class="v num text-danger">{{ lv_num($mr->fabric_width_cm, 2) }} سم</div></div>
-          <div><div class="k">البنشر (من المعمل)</div><div class="v num">{{ $mr->avg_gsm ? lv_num($mr->avg_gsm, 2) . ' جم/م²' : '—' }}</div></div>
-          <div><div class="k">المتاح على الرسالة</div><div class="v num">{{ $cn ? lv_kg($cn->remaining_kg, false) : '—' }}</div></div>
-          <div><div class="k">نسخ مطلوبة</div><div class="v num">{{ (int) $mr->copies }}</div></div>
-          <div><div class="k">طلبه</div><div class="v">{{ $mr->creator?->name ?? '—' }}</div><div class="k num">{{ $mr->doc_date?->format('Y-m-d') }}{{ $mr->needed_by ? ' · مطلوب في ' . $mr->needed_by->format('Y-m-d') : '' }}</div></div>
-          <div><div class="k">طلب التحضير</div><div class="v num">{{ $mr->preparationRequest?->doc_no ?? '—' }}</div></div>
-        </div>
-        <div class="mt-2 p-2 rounded small" style="background:var(--lv-offwhite);border:1px solid var(--lv-line)">
-          <b>الموديلات المطلوبة في الفرشة:</b> {{ $mr->models_label ?: '—' }}
-          @if($mr->notes)<div class="hint mt-1">ملاحظات التخطيط: {{ $mr->notes }}</div>@endif
+      <div class="card-body">
+        <div class="ro-box">
+          <div class="ro-title">من طلب الماركر — للقراءة</div>
+          <div class="sum-grid">
+            <div><div class="k">الرسالة</div>@if($cn)<a href="{{ route('consignments.show', $cn) }}" class="v num">{{ $cn->consignment_no }}</a>@else <div class="v">—</div> @endif</div>
+            <div><div class="k">الصنف · اللون</div><div class="v">{{ $cn?->fabricType?->name ?? '—' }} · {{ $cn?->color?->label ?? $cn?->color?->code ?? '—' }}</div></div>
+            <div><div class="k">أقل عرض (من الفحص)</div><div class="v num text-danger">{{ lv_num($mr->fabric_width_cm, 2) }} سم</div></div>
+            <div><div class="k">البنشر (من المعمل)</div><div class="v num">{{ $mr->avg_gsm ? lv_num($mr->avg_gsm, 2) . ' جم/م²' : '—' }}</div></div>
+            <div><div class="k">المتاح على الرسالة</div><div class="v num">{{ $cn ? lv_kg($cn->remaining_kg, false) : '—' }}</div></div>
+            <div><div class="k">نسخ مطلوبة</div><div class="v num">{{ (int) $mr->copies }}</div></div>
+            <div><div class="k">طلبه</div><div class="v">{{ $mr->creator?->name ?? '—' }}</div><div class="k num">{{ $mr->doc_date?->format('Y-m-d') }}{{ $mr->needed_by ? ' · مطلوب في ' . $mr->needed_by->format('Y-m-d') : '' }}</div></div>
+            <div><div class="k">طلب التحضير</div><div class="v num">{{ $mr->preparationRequest?->doc_no ?? '—' }}</div></div>
+          </div>
+          <table class="table table-sm kv mb-0 mt-2">
+            <tr><th>الموديلات المطلوبة في الفرشة</th><td>{{ $mr->models_label ?: '—' }}</td></tr>
+            @if($mr->notes)<tr><th>ملاحظات التخطيط</th><td>{{ $mr->notes }}</td></tr>@endif
+          </table>
         </div>
         @if($cn?->has_color_break)
-          <div class="alert alert-danger py-1 mt-2 mb-0 small"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> الرسالة فيها فواصل / اختلاف لون: {{ $cn->color_break_note }} — خد بالك في التعشيق.</div>
+          <div class="alert alert-danger py-2 mt-2 mb-0"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> الرسالة فيها فواصل / اختلاف لون: {{ $cn->color_break_note }} — خد بالك في التعشيق.</div>
         @endif
       </div>
     </div>
   @else
     <div class="note-box mb-3">
-      <b>قاعدة حاكمة:</b> عرض التعشيقة لازم يكون أصغر من أو يساوي عرض القماش. لو أكبر، هنحرق الجنب ونرميه.
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      <span><b>قاعدة حاكمة:</b> عرض التعشيقة لازم يكون أصغر من أو يساوي عرض القماش. لو أكبر، هنحرق الجنب ونرميه.</span>
     </div>
   @endif
 
@@ -66,7 +66,7 @@
       @if(!$mr)
         <div class="d-flex gap-2">
           @if($mode==='edit')<span class="badge bg-{{ $row->status_color }} align-self-center">{{ $row->status_label }}</span>@endif
-          <a href="{{ route('markers.index') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
+          <a href="{{ route('markers.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right" aria-hidden="true"></i> رجوع</a>
         </div>
       @endif
     </div>
@@ -74,37 +74,46 @@
       <div class="row g-3">
         @if(!$mr)
           <div class="col-md-3"><label class="form-label">طلب الماركر</label>
-            <select name="marker_request_id" class="form-select form-select-sm" onchange="if(this.value) location='{{ route('markers.create') }}?request_id='+this.value"><option value="">— بدون طلب —</option>
+            <select name="marker_request_id" class="form-select" onchange="if(this.value) location='{{ route('markers.create') }}?request_id='+this.value"><option value="">— بدون طلب —</option>
               @foreach($requests as $k=>$v)<option value="{{ $k }}" @selected($mrId==$k)>{{ $v }}</option>@endforeach
             </select></div>
-          <div class="col-md-3"><label class="form-label req">عرض القماش (سم)</label>
-            <input type="number" step="0.01" name="fabric_width_cm" class="form-control form-control-sm" value="{{ old('fabric_width_cm',$row->fabric_width_cm) }}" required placeholder="أقل عرض من الفحص"></div>
+          <div class="col-md-3"><label class="form-label req">عرض القماش</label>
+            <div class="input-group">
+              <input type="number" step="0.01" min="0" name="fabric_width_cm" class="form-control" value="{{ old('fabric_width_cm',$row->fabric_width_cm) }}" required placeholder="مثال: 172">
+              <span class="input-group-text">سم</span>
+            </div>
+            <div class="hint">أقل عرض من الفحص</div></div>
         @endif
 
         <div class="col-md-3"><label class="form-label req">طول الفرشة</label>
-          <div class="input-group input-group-sm">
-            <input type="number" step="0.001" name="spread_length_m" class="form-control" value="{{ old('spread_length_m',$row->spread_length_m) }}" required placeholder="مثال: 3.07">
-            <span class="input-group-text">متر</span>
-          </div></div>
+          <div class="input-group">
+            <input type="number" step="0.001" min="0" name="spread_length_m" class="form-control" value="{{ old('spread_length_m',$row->spread_length_m) }}" required placeholder="مثال: 3.07">
+            <span class="input-group-text">م</span>
+          </div>
+          <div class="hint">الطول اللي المصنع هيفرش عليه</div></div>
         <div class="col-md-3"><label class="form-label">عرض التعشيقة</label>
-          <div class="input-group input-group-sm">
-            <input type="number" step="0.01" name="marker_width_cm" class="form-control" value="{{ old('marker_width_cm',$row->marker_width_cm) }}" placeholder="≤ {{ lv_num($mr?->fabric_width_cm ?? $row->fabric_width_cm, 2) }}">
+          <div class="input-group">
+            <input type="number" step="0.01" min="0" name="marker_width_cm" class="form-control" value="{{ old('marker_width_cm',$row->marker_width_cm) }}" placeholder="≤ {{ lv_num($widthCm, 2) }}">
             <span class="input-group-text">سم</span>
           </div>
-          <div class="hint">لازم ≤ عرض القماش</div></div>
+          <div class="hint">لازم ≤ عرض القماش {{ $widthCm ? lv_num($widthCm, 2) . ' سم' : '' }}</div></div>
         <div class="col-md-3"><label class="form-label">كفاءة التعشيق</label>
-          <div class="input-group input-group-sm">
-            <input type="number" step="0.01" name="efficiency_pct" class="form-control" value="{{ old('efficiency_pct',$row->efficiency_pct) }}" placeholder="مثال: 85">
+          <div class="input-group">
+            <input type="number" step="0.01" min="0" max="100" name="efficiency_pct" class="form-control" value="{{ old('efficiency_pct',$row->efficiency_pct) }}" placeholder="مثال: 85">
             <span class="input-group-text">%</span>
-          </div></div>
+          </div>
+          <div class="hint">نسبة القماش المستغل في القطع — الباقي فاقد</div></div>
         <div class="col-md-3"><label class="form-label">إجمالي قطع الفرشة</label>
-          <input type="number" name="pieces_per_spread" class="form-control form-control-sm" value="{{ old('pieces_per_spread',$row->pieces_per_spread) }}" placeholder="تلقائي من الجدول">
+          <div class="input-group">
+            <input type="number" min="0" name="pieces_per_spread" class="form-control" value="{{ old('pieces_per_spread',$row->pieces_per_spread) }}" placeholder="تلقائي من الجدول">
+            <span class="input-group-text">قطعة</span>
+          </div>
           <div class="hint">سيبه فاضي = مجموع الموديلات تحت</div></div>
 
         <div class="col-md-4"><label class="form-label">اسم الماركر</label>
-          <input name="name" class="form-control form-control-sm" value="{{ old('name',$row->name) }}" placeholder="اختياري"></div>
+          <input name="name" class="form-control" value="{{ old('name',$row->name) }}" placeholder="اختياري"></div>
         <div class="col-md-8"><label class="form-label">ملاحظات</label>
-          <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
+          <input name="notes" class="form-control" value="{{ old('notes',$row->notes) }}" placeholder="اختياري"></div>
       </div>
     </fieldset></div>
   </div>
@@ -113,12 +122,12 @@
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between">
       <span>الموديلات في الفرشة <span class="hint">— كام قطعة من كل موديل/مقاس في الرِقّة الواحدة</span></span>
-      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> موديل</button>@endif
+      @if($editable)<button type="button" class="btn btn-sm btn-outline-plum" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> موديل</button>@endif
     </div>
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
-        <thead><tr><th style="width:35px">م</th><th>الموديل</th><th style="width:150px">المقاس</th>
-          <th style="width:140px">عدد القطع في الفرشة</th><th>ملاحظات</th><th style="width:40px"></th></tr></thead>
+        <thead><tr><th style="width:35px">م</th><th class="req">الموديل</th><th style="width:150px">المقاس</th>
+          <th class="req" style="width:140px">عدد القطع في الفرشة</th><th>ملاحظات</th><th style="width:44px"><span class="visually-hidden">حذف</span></th></tr></thead>
         <tbody id="lines">
           @foreach($lines as $i=>$l) @include('markers.line',['i'=>$i,'l'=>$l]) @endforeach
           @if(!count($lines)) @include('markers.line',['i'=>0,'l'=>[]]) @endif
@@ -133,7 +142,7 @@
     <div class="card-body"><fieldset @disabled(!$editable)>
       <div class="row g-3 align-items-center">
         <div class="col-md-6">
-          <input type="file" name="marker_file" class="form-control form-control-sm" accept="image/*,.pdf">
+          <input type="file" name="marker_file" class="form-control" accept="image/*,.pdf" aria-label="ملف الماركر">
         </div>
         <div class="col-md-6">
           @if($row->file_path)
@@ -150,6 +159,9 @@
     @if($mode==='edit' && $row->isEditable())
       <button type="button" class="btn btn-success" onclick="if(confirm('الماركر هيبقى متاح لأوامر الشغل. متأكد؟')) document.getElementById('submitForm').submit()"><i class="bi bi-send" aria-hidden="true"></i> اعتمد الماركر للتشغيل</button>
     @endif
+    <div class="fa-end">
+      <a href="{{ route('markers.index') }}" class="btn btn-outline-secondary">إلغاء</a>
+    </div>
   </div>
   @endif
 </form>

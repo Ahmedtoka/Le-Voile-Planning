@@ -11,27 +11,39 @@
   <div class="card">
     <div class="card-header d-flex justify-content-between">
       <span>طلب ماركر جديد</span>
-      <a href="{{ route('markers.requests') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
+      <a href="{{ route('markers.requests') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right" aria-hidden="true"></i> رجوع</a>
     </div>
     <div class="card-body">
       <div class="note-box mb-3">
-        بتقول للباترونست: «محتاج الموديلات دي على الرسالة دي». <b>العرض (أقل عرض من الفحص) والبنشر (من المعمل)</b>
-        بينزلوا لوحدهم ومش بيتعدلوا. المصنع مش هنا — بيتحدد في أمر الشغل وممكن يتغير.
-        لو فيه ماركر قديم لنفس الموديلات على نفس العرض، السيستم هيقترحه وتقدر تستخدمه على طول.
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span>
+          بتقول للباترونست: «محتاج الموديلات دي على الرسالة دي». <b>العرض (أقل عرض من الفحص) والبنشر (من المعمل)</b>
+          بينزلوا لوحدهم ومش بيتعدلوا. المصنع مش هنا — بيتحدد في أمر الشغل وممكن يتغير.
+          لو فيه ماركر قديم لنفس الموديلات على نفس العرض، السيستم هيقترحه وتقدر تستخدمه على طول.
+        </span>
       </div>
       <div class="row g-3">
         <div class="col-md-6"><label class="form-label req">الرسالة (الحوض)</label>
           @include('partials.consignment_picker', ['name' => 'consignment_id', 'consignments' => $consignments, 'value' => old('consignment_id', $row->consignment_id), 'onchange' => 'LVM.pick()'])
           <div id="breakWarn" class="alert alert-danger py-1 mt-1 small" hidden></div>
         </div>
-        <div class="col-md-2"><label class="form-label">أقل عرض (سم)</label>
-          <div class="form-control form-control-sm num fw-bold" id="fw" style="background:var(--lv-offwhite)">—</div>
+        <div class="col-md-2"><label class="form-label">أقل عرض</label>
+          <div class="input-group">
+            <div class="form-control ro num" id="fw" aria-live="polite">—</div>
+            <span class="input-group-text">سم</span>
+          </div>
           <div class="hint">من تقرير الفحص — مقفول</div></div>
-        <div class="col-md-2"><label class="form-label">البنشر (جم/م²)</label>
-          <div class="form-control form-control-sm num fw-bold" id="fg" style="background:var(--lv-offwhite)">—</div>
+        <div class="col-md-2"><label class="form-label">البنشر</label>
+          <div class="input-group">
+            <div class="form-control ro num" id="fg" aria-live="polite">—</div>
+            <span class="input-group-text">جم/م²</span>
+          </div>
           <div class="hint">من تقرير المعمل — مقفول</div></div>
         <div class="col-md-2"><label class="form-label">نسخ الماركر المطبوعة</label>
-          <input type="number" min="0" name="copies" class="form-control form-control-sm" value="{{ old('copies', $row->copies ?? 2) }}"></div>
+          <div class="input-group">
+            <input type="number" min="0" name="copies" class="form-control" value="{{ old('copies', $row->copies ?? 2) }}" placeholder="مثال: 2">
+            <span class="input-group-text">نسخة</span>
+          </div></div>
 
         <div class="col-12">
           <label class="form-label req">الموديلات المطلوبة في الفرشة <span class="hint">— علّم كل الموديلات اللي عايز الماركر يجمعها</span></label>
@@ -40,29 +52,37 @@
           </div>
         </div>
         <div class="col-md-6"><label class="form-label">المقاسات / تفاصيل</label>
-          <input name="sizes_note" class="form-control form-control-sm" value="{{ old('sizes_note') }}" placeholder="مثال: مقاس 1 و 2 — نص بادي كات + بادي سابرينا"></div>
+          <input name="sizes_note" class="form-control" value="{{ old('sizes_note') }}" placeholder="مثال: مقاس 1 و 2 — نص بادي كات + بادي سابرينا"></div>
         <div class="col-md-3"><label class="form-label">الباترونست</label>
-          <select name="assigned_to" class="form-select form-select-sm"><option value="">— كل الباترونستات —</option>
+          <select name="assigned_to" class="form-select"><option value="">— كل الباترونستات —</option>
             @foreach($patternists as $k=>$v)<option value="{{ $k }}" @selected(old('assigned_to')==$k)>{{ $v }}</option>@endforeach
           </select></div>
         <div class="col-md-3"><label class="form-label">مطلوب في</label>
-          <input type="date" name="needed_by" class="form-control form-control-sm" value="{{ old('needed_by') }}"></div>
+          <input type="date" name="needed_by" class="form-control" value="{{ old('needed_by') }}"></div>
         <div class="col-12"><label class="form-label">ملاحظات</label>
-          <input name="notes" class="form-control form-control-sm" value="{{ old('notes') }}"></div>
+          <input name="notes" class="form-control" value="{{ old('notes') }}" placeholder="اختياري"></div>
       </div>
 
       {{-- الماركرات القديمة المقترحة --}}
       <div id="suggestBox" class="mt-3" hidden>
-        <div class="section-head"><h2 style="font-size:.95rem">ماركرات قديمة ممكن تنفع <span class="hint">— نفس الموديلات على نفس العرض أو قريب منه</span></h2></div>
+        <div class="section-head"><h2>ماركرات قديمة ممكن تنفع</h2><span class="hint">— نفس الموديلات على نفس العرض أو قريب منه</span></div>
         <div id="suggestList" class="d-flex flex-wrap gap-2"></div>
         <div class="hint mt-1">لو اخترت واحد، الطلب بيتقفل عليه على طول من غير ما يروح للباترونست. ولو عايز تعشيق أحسن، ابعت الطلب عادي.</div>
       </div>
     </div>
     <div class="card-footer form-actions m-0">
       <button class="btn btn-plum"><i class="bi bi-send" aria-hidden="true"></i> إرسال الطلب للباترونست</button>
+      <div class="fa-end">
+        <a href="{{ route('markers.requests') }}" class="btn btn-outline-secondary">إلغاء</a>
+      </div>
     </div>
   </div>
 </form>
+
+<style>
+  .mk-sug{border:1px solid var(--lv-line);border-radius:var(--r-md);background:var(--lv-white);padding:10px 12px;min-width:260px;flex:1 1 260px;max-width:360px}
+  .mk-sug .mk-code{font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+</style>
 
 @push('scripts')
 <script>
@@ -92,13 +112,13 @@ window.LVM = (function () {
       const d = await res.json();
       if (!d.length) { box.hidden = true; return; }
       list.innerHTML = d.map(m => `
-        <div class="p-2 rounded" style="border:1px solid var(--lv-line);min-width:260px;background:#fff">
-          <div class="fw-bold num">${m.code} ${m.exact ? '<span class="badge bg-success">نفس العرض</span>' : '<span class="badge bg-warning text-dark">عرض ' + m.width + '</span>'}</div>
+        <div class="mk-sug">
+          <div class="mk-code num">${m.code} ${m.exact ? '<span class="badge bg-success">نفس العرض</span>' : '<span class="badge bg-warning">عرض ' + m.width + ' سم</span>'}</div>
           <div class="hint">فرشة ${m.spread} م · ${m.pieces} قطعة${m.efficiency !== null ? ' · كفاءة ' + m.efficiency + '%' : ''}</div>
           <div class="hint">${m.models}</div>
-          <div class="d-flex gap-1 mt-1">
-            <button type="button" class="btn btn-sm btn-success py-0" onclick="LVM.use(${m.id}, '${m.code}')">استخدم الماركر ده</button>
-            <a href="${m.url}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">افتحه</a>
+          <div class="d-flex gap-1 mt-2">
+            <button type="button" class="btn btn-sm btn-success" onclick="LVM.use(${m.id}, '${m.code}')"><i class="bi bi-check2" aria-hidden="true"></i> استخدم الماركر ده</button>
+            <a href="${m.url}" target="_blank" class="btn btn-sm btn-outline-secondary">افتحه</a>
           </div>
         </div>`).join('');
       box.hidden = false;

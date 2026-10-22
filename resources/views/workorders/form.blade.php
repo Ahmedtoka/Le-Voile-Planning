@@ -10,12 +10,14 @@
 
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
-  المنتج ممكن يتعمل من <b>أكتر من خامة</b> (طرحة تل + بونيه رباط مياي). كل خامة ليها
-  رسالتها وطول فرشتها وعرضها وعدد قطعها في الفرشة، وبتتحسب بطريقة مختلفة:
-  <b>بالوزن</b> (محتاجة عرض وبنشر) أو <b>بالطول</b> (الطول وحده كفاية).
-  <br>
-  <b>الخامة اللي بتدي أقل قطع هي اللي بتحكم الإنتاج</b> — والفرق بينها وبين الباقي
-  هو أهم رقم هنا، لأنه على الورق بيبقى مخفي تمامًا.
+  <span>
+    المنتج ممكن يتعمل من <b>أكتر من خامة</b> (طرحة تل + بونيه رباط مياي). كل خامة ليها
+    رسالتها وطول فرشتها وعرضها وعدد قطعها في الفرشة، وبتتحسب بطريقة مختلفة:
+    <b>بالوزن</b> (محتاجة عرض وبنشر) أو <b>بالطول</b> (الطول وحده كفاية).
+    <br>
+    <b>الخامة اللي بتدي أقل قطع هي اللي بتحكم الإنتاج</b> — والفرق بينها وبين الباقي
+    هو أهم رقم هنا، لأنه على الورق بيبقى مخفي تمامًا. اضغط ⓘ جنب أي رقم تشوف حسبته.
+  </span>
 </div>
 
 <form method="post" action="{{ $mode==='create' ? route('work-orders.store') : route('work-orders.update',$row) }}">
@@ -25,46 +27,49 @@
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between">
       <span>{{ $mode==='create' ? 'أمر شغل جديد' : 'أمر الشغل ' . $row->wo_no }}</span>
-      <a href="{{ route('work-orders.index') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
+      <a href="{{ route('work-orders.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right" aria-hidden="true"></i> رجوع</a>
     </div>
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-5"><label class="form-label req">اسم المنتج</label>
-          <input name="product_title" class="form-control form-control-sm"
+          <input name="product_title" class="form-control"
                  value="{{ old('product_title',$row->product_title) }}" required
-                 placeholder="طرحة تل + بونيه رباط مياي (بيج 241)"></div>
+                 placeholder="مثال: طرحة تل + بونيه رباط مياي (بيج 241)"></div>
         <div class="col-md-2"><label class="form-label">كود المنتج</label>
-          <input name="product_code" class="form-control form-control-sm" value="{{ old('product_code',$row->product_code) }}"></div>
+          <input name="product_code" class="form-control" value="{{ old('product_code',$row->product_code) }}" placeholder="مثال: P-1014"></div>
         <div class="col-md-2"><label class="form-label">كود Q.B</label>
-          <input name="qb_code" class="form-control form-control-sm" value="{{ old('qb_code',$row->qb_code) }}" placeholder="O1014"></div>
+          <input name="qb_code" class="form-control" value="{{ old('qb_code',$row->qb_code) }}" placeholder="مثال: O1014"></div>
         <div class="col-md-3"><label class="form-label req">تشغيل مصنع</label>
-          <select name="factory_id" class="form-select form-select-sm" required><option value="">—</option>
+          <select name="factory_id" class="form-select" required><option value="">— اختر المصنع —</option>
             @foreach($factories as $k=>$v)<option value="{{ $k }}" @selected(old('factory_id',$row->factory_id)==$k)>{{ $v }}</option>@endforeach
           </select></div>
 
         <div class="col-md-2"><label class="form-label req">التاريخ</label>
-          <input type="date" name="wo_date" class="form-control form-control-sm"
+          <input type="date" name="wo_date" class="form-control"
                  value="{{ old('wo_date',$row->wo_date?->format('Y-m-d') ?? $row->wo_date) }}" required></div>
         <div class="col-md-2"><label class="form-label">تاريخ الاستلام</label>
-          <input type="date" name="receive_date" class="form-control form-control-sm"
+          <input type="date" name="receive_date" class="form-control"
                  value="{{ old('receive_date',$row->receive_date?->format('Y-m-d')) }}"></div>
         <div class="col-md-2"><label class="form-label">تاريخ التسليم</label>
-          <input type="date" name="due_date" class="form-control form-control-sm"
+          <input type="date" name="due_date" class="form-control"
                  value="{{ old('due_date',$row->due_date?->format('Y-m-d')) }}"></div>
         <div class="col-md-2"><label class="form-label">نسخ الماركر</label>
-          <input type="number" name="marker_copies" class="form-control form-control-sm"
-                 value="{{ old('marker_copies',$row->marker_copies ?? 2) }}"></div>
+          <div class="input-group">
+            <input type="number" min="0" name="marker_copies" class="form-control"
+                   value="{{ old('marker_copies',$row->marker_copies ?? 2) }}" placeholder="مثال: 2">
+            <span class="input-group-text">نسخة</span>
+          </div></div>
         <div class="col-md-2"><label class="form-label">باركود التكويد</label>
-          <input name="barcode" class="form-control form-control-sm" value="{{ old('barcode',$row->barcode) }}"></div>
+          <input name="barcode" class="form-control" value="{{ old('barcode',$row->barcode) }}" placeholder="اختياري"></div>
         <div class="col-md-2"><label class="form-label">إدارة التخطيط</label>
-          <select name="planner_id" class="form-select form-select-sm"><option value="">—</option>
+          <select name="planner_id" class="form-select"><option value="">—</option>
             @foreach($planners as $k=>$v)<option value="{{ $k }}" @selected(old('planner_id',$row->planner_id ?? auth()->id())==$k)>{{ $v }}</option>@endforeach
           </select></div>
 
         <div class="col-md-6"><label class="form-label">ملاحظات خاصة بقسم القص</label>
-          <textarea name="cutting_notes" rows="2" class="form-control form-control-sm">{{ old('cutting_notes',$row->cutting_notes) }}</textarea></div>
+          <textarea name="cutting_notes" rows="2" class="form-control" placeholder="مثال: الفرشة على وش القماش — خد بالك من اتجاه النقشة">{{ old('cutting_notes',$row->cutting_notes) }}</textarea></div>
         <div class="col-md-6"><label class="form-label">ملاحظات عامة</label>
-          <textarea name="notes" rows="2" class="form-control form-control-sm">{{ old('notes',$row->notes) }}</textarea></div>
+          <textarea name="notes" rows="2" class="form-control" placeholder="اختياري">{{ old('notes',$row->notes) }}</textarea></div>
       </div>
     </div>
   </div>
@@ -73,10 +78,10 @@
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
       <span>الخامات وحسبة كل واحدة</span>
-      <div class="d-flex gap-2 align-items-center">
-        <input class="form-control form-control-sm" style="width:260px" placeholder="فلتر الرسايل: كود / خامة / لون (مثال 0805)"
-               oninput="LVF.filter(this.value)" title="بيفلتر قايمة الرسايل في كل السطور — مرتبة بالأقدم أولًا">
-        <button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('fabTpl','fabrics'); LVF.calc()">
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <input class="form-control form-control-sm w-wide" placeholder="فلتر الرسايل: كود / خامة / لون (مثال 0805)"
+               aria-label="فلتر الرسايل" oninput="LVF.filter(this.value)" title="بيفلتر قايمة الرسايل في كل السطور — مرتبة بالأقدم أولًا">
+        <button type="button" class="btn btn-sm btn-outline-plum" onclick="LV.add('fabTpl','fabrics'); LVF.calc()">
           <i class="bi bi-plus-lg" aria-hidden="true"></i> خامة
         </button>
       </div>
@@ -95,10 +100,10 @@
           <th>الحساب</th>
           <th>الوحدة</th>
           <th class="req">الكمية</th>
-          <th class="req">طول الفرشة</th>
-          <th>بالأمان</th>
+          <th class="req">طول الفرشة (م)</th>
+          <th>بالأمان (م)</th>
           <th>العرض (م)</th>
-          <th>البنشر كجم/م²</th>
+          <th>البنشر (كجم/م²)</th>
           <th class="req">قطع الفرشة</th>
           <th>حسبة السيستم</th>
           <th>الرقات</th>
@@ -142,7 +147,7 @@
           <th style="width:35px">م</th><th>الموديل</th>
           <th style="width:150px">المقاس</th>
           <th style="width:120px">قطعه في الفرشة</th>
-          <th style="width:130px">الكمية</th><th style="width:40px"></th>
+          <th style="width:130px">الكمية (قطعة)</th><th style="width:44px"><span class="visually-hidden">حذف</span></th>
         </tr></thead>
         <tbody id="products">
           @foreach($prods as $i => $l) @include('workorders.product_row', ['i'=>$i,'l'=>$l]) @endforeach
@@ -157,14 +162,27 @@
     <div class="card-body">
       <div class="row g-3 align-items-end">
         <div class="col-md-3">
+          <div class="ro-box h-100">
+            <div class="ro-title">من حسبة الخامات — للقراءة</div>
+            <div class="hint">الحاكمة (أقل خامة)</div>
+            <div class="d-flex align-items-center gap-1">
+              <b class="num" id="govQty" style="font-size:var(--fs-lg)">—</b>
+              <span id="govQtyFx"></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
           <label class="form-label">الكمية المعتمدة</label>
-          <input type="number" name="approved_qty" class="form-control form-control-sm"
-                 value="{{ old('approved_qty',$row->approved_qty) }}" placeholder="سيبها فاضية = الحاكمة">
+          <div class="input-group">
+            <input type="number" min="0" name="approved_qty" class="form-control"
+                   value="{{ old('approved_qty',$row->approved_qty) }}" placeholder="فاضية = الحاكمة">
+            <span class="input-group-text">قطعة</span>
+          </div>
           <div class="hint">فاضية معناها السيستم هياخد أقل خامة</div>
         </div>
-        <div class="col-md-9">
+        <div class="col-md-6">
           <label class="form-label">سبب اختلافها عن الحاكمة</label>
-          <input name="approved_qty_reason" class="form-control form-control-sm"
+          <input name="approved_qty_reason" class="form-control"
                  value="{{ old('approved_qty_reason',$row->approved_qty_reason) }}"
                  placeholder="مثال: هيوصل تل إضافي الأسبوع الجاي يغطي الفرق">
         </div>
@@ -188,11 +206,13 @@
 .wo-fab-wrap{contain:paint} /* من غيرها الجدول العريض بيوسّع الصفحة كلها في RTL */
 .wo-fab td,.wo-fab th{overflow:hidden}
 .wo-fab td.f-out{white-space:normal;font-size:var(--fs-xs);line-height:1.5;overflow:visible}
+.wo-fab td.f-out .fx{margin-inline-start:2px}
 .wo-fab tr > :nth-child(1),.wo-fab tr > :nth-child(2){position:sticky;z-index:2;background:var(--lv-white)}
 .wo-fab thead tr > :nth-child(1),.wo-fab thead tr > :nth-child(2){background:var(--lv-surface-2);z-index:3}
 .wo-fab tr > :nth-child(1){inset-inline-start:0}
 .wo-fab tr > :nth-child(2){inset-inline-start:36px;box-shadow:inset 1px 0 0 var(--lv-line)}
 .wo-fab .f-target{font-size:var(--fs-xs)!important;min-height:28px!important}
+@media (max-width:600px){ .wo-fab{width:1400px} }
 </style>
 
 <template id="fabTpl">@include('workorders.fabric_row', ['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
@@ -333,15 +353,37 @@ const LVF = (function () {
     const d = await res.json();
 
     const rows = document.querySelectorAll('#fabrics tr');
+    const names = [];
     d.fabrics.forEach((f, i) => {
       const cell = rows[i]?.querySelector('.f-out');
       if (!cell) return;
       if (!f.ok) { cell.innerHTML = '<span class="text-danger">ناقص بيانات</span>'; return; }
+
+      /* الحسبة بأرقام السطر نفسه — نفس اللي السيرفر حسب بيه */
+      const inRow = fabrics[i] || {};
+      const unit  = f.unit || (inRow.calc_mode === 'length' ? 'متر' : 'كجم');
+      const sp    = nf(f.spread_used_m ?? (Number(inRow.spread_length_safe_m) || Number(inRow.spread_length_m)));
+      const wd    = nf(inRow.fabric_width_m), g = nf(inRow.gsm_kg_m2);
+      const pps   = nf(inRow.pieces_per_spread), avail = nf(inRow.available);
+      const ply   = nf(f.ply_weight_kg), cons = nf(f.consumption_per_piece);
+      const plies = nf(f.plies), expected = nf(f.expected_pieces);
+      const lines = f.ply_weight_kg !== null
+        ? ['وزن الرِقّة = ' + sp + ' م × ' + wd + ' م × ' + g + ' كجم/م² = ' + ply + ' كجم',
+           'استهلاك القطعة = ' + ply + ' ÷ ' + pps + ' = ' + cons + ' كجم',
+           'الرِقّات = ' + avail + ' ÷ ' + ply + ' = ' + plies + ' (مقطوع لأقل صحيح)',
+           'القطع = ' + plies + ' × ' + pps + ' = ' + expected + ' قطعة']
+        : ['استهلاك القطعة = ' + sp + ' م ÷ ' + pps + ' = ' + cons + ' م',
+           'الرِقّات = ' + avail + ' ÷ ' + sp + ' = ' + plies + ' (مقطوع لأقل صحيح)',
+           'القطع = ' + plies + ' × ' + pps + ' = ' + expected + ' قطعة'];
+
       cell.innerHTML =
-        (f.ply_weight_kg !== null ? 'راق ' + nf(f.ply_weight_kg) + ' كجم<br>' : '') +
-        'استهلاك ' + nf(f.consumption_per_piece) + '<br>' +
-        '<b>' + nf(f.plies) + ' رقة → ' + nf(f.expected_pieces) + ' قطعة</b>' +
+        (f.ply_weight_kg !== null ? 'راق ' + ply + ' كجم<br>' : '') +
+        'استهلاك ' + cons + ' ' + unit + '<br>' +
+        '<b>' + plies + ' رقة → ' + expected + ' قطعة</b>' +
+        LVX.fx('حسبة الخامة', lines, f.leftover !== undefined && f.leftover !== null ? 'المتبقي بعد آخر رِقّة: ' + nf(f.leftover) + ' ' + unit : null) +
         (f.is_governing ? ' <span class="badge bg-warning">حاكمة</span>' : '');
+      LVX.popovers(cell);
+      names.push((f.label || inRow.label || 'خامة') + ' ' + expected);
 
       const pl = rows[i].querySelector('.f-plies'), ex = rows[i].querySelector('.f-exp');
       if (pl) pl.placeholder = f.plies;
@@ -349,16 +391,30 @@ const LVF = (function () {
     });
 
     const s = document.getElementById('fabSummary');
-    let html = '<b>الكمية الحاكمة: ' + nf(d.governing_qty) + ' قطعة</b>';
+    let html = '<b>الكمية الحاكمة: ' + nf(d.governing_qty) + ' قطعة</b>'
+             + LVX.fx('الحاكمة', ['الحاكمة = أقل قطع بين الخامات', 'الخامات: ' + (names.join(' · ') || '—') + ' ← أقلهم ' + nf(d.governing_qty)],
+                      'أول خامة تخلص بتوقف الإنتاج حتى لو الباقي موجود');
     if (d.max_qty > d.governing_qty) {
       html += ' · أعلى خامة تدي ' + nf(d.max_qty) +
-              ' · <span class="text-danger">فرق ' + nf(d.max_qty - d.governing_qty) + ' قطعة</span>';
+              ' · <span class="text-danger">فرق ' + nf(d.max_qty - d.governing_qty) + ' قطعة</span>' +
+              LVX.fx('فرق الخامات', ['فرق الخامات = أعلى − الحاكمة', nf(d.max_qty) + ' − ' + nf(d.governing_qty) + ' = ' + nf(d.max_qty - d.governing_qty) + ' قطعة',
+                     'نسبة الفرق = ' + nf(d.max_qty - d.governing_qty) + ' ÷ ' + nf(d.max_qty) + ' × 100 = ' + nf(Math.round(((d.max_qty - d.governing_qty) / d.max_qty) * 1000) / 10) + '%'],
+                     'فوق 10% = الخامات مش متوازنة');
     }
     (d.warnings || []).forEach(w => {
       html += '<div class="alert alert-' + (w.level === 'danger' ? 'danger' : 'warning') +
               ' py-2 mt-2 mb-0 small">' + w.text + '</div>';
     });
     s.innerHTML = html;
+    LVX.popovers(s);
+
+    /* الحاكمة جنب خانة الكمية المعتمدة — عشان اللي بيعتمد يشوف هو بيختلف عن إيه */
+    const gq = document.getElementById('govQty'), gf = document.getElementById('govQtyFx');
+    if (gq) gq.textContent = d.governing_qty ? nf(d.governing_qty) + ' قطعة' : '—';
+    if (gf) {
+      gf.innerHTML = d.governing_qty ? LVX.fx('الحاكمة', ['الحاكمة = أقل قطع بين الخامات', (names.join(' · ') || '—') + ' ← ' + nf(d.governing_qty)]) : '';
+      LVX.popovers(gf);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => setTimeout(run, 200));
