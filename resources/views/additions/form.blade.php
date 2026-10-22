@@ -17,30 +17,20 @@
     $remTot  = max(0, $ordTot - $recTot);   // الباقي = المطلوب − المستلم، زي ما هو
     $unitLbl = $po->lines->first()?->unit ?? '';
   @endphp
-  <div class="card mb-3" style="border-color:var(--lv-soft)">
-    <div class="card-body py-3 d-flex justify-content-between flex-wrap gap-3 align-items-center">
-      <div>
-        <div class="fw-bold num" style="font-size:1.3rem;color:var(--lv-brand-ink)">{{ $po->po_no }}</div>
-        <div class="hint mt-1">
-          <b>المورد:</b> {{ $po->supplier?->name ?? '—' }}
-          &nbsp;·&nbsp; <b>توريد متوقع:</b> <span class="num">{{ $po->delivery_date?->format('Y-m-d') ?? '—' }}</span>
-        </div>
-      </div>
-      <div class="d-flex gap-4 text-center flex-wrap">
-        <div>
-          <div class="hint">المطلوب إجمالي</div>
-          <div class="num fw-bold" style="font-size:1.1rem">{{ rtrim(rtrim(number_format($ordTot,3),'0'),'.') }} {{ $unitLbl }}</div>
-        </div>
-        <div>
-          <div class="hint">استلمنا قبل كده</div>
-          <div class="num fw-bold" style="font-size:1.1rem">{{ rtrim(rtrim(number_format($recTot,3),'0'),'.') }}</div>
-        </div>
-        <div>
-          <div class="hint">الباقي</div>
-          <div class="num fw-bold" style="font-size:1.1rem;color:{{ $remTot > 0 ? 'var(--lv-danger)' : 'var(--lv-ok)' }}">
-            {{ $remTot > 0 ? rtrim(rtrim(number_format($remTot,3),'0'),'.') . ' ' . $unitLbl : 'اكتمل ✓' }}
-          </div>
-        </div>
+  <div class="ro-box mb-3">
+    <div class="ro-title">من طلب الشراء — للقراءة</div>
+    <div class="sum-sec">
+      <div class="t"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> <span class="num">{{ $po->po_no }}</span></div>
+      <div class="sum-grid">
+        <div><div class="k">المورد</div><div class="v">{{ $po->supplier?->name ?? '—' }}</div></div>
+        <div><div class="k">توريد متوقع</div><div class="v num">{{ $po->delivery_date?->format('Y-m-d') ?? '—' }}</div></div>
+        <div><div class="k">المطلوب إجمالي</div><div class="v num">{{ lv_qty($ordTot, $unitLbl) }}</div></div>
+        <div><div class="k">استلمنا قبل كده</div><div class="v num">{{ lv_qty($recTot, $unitLbl) }}</div></div>
+        <div><div class="k">الباقي</div>
+          <div class="v num {{ $remTot > 0 ? 'text-danger' : 'text-success' }}">
+            {{ $remTot > 0 ? lv_qty($remTot, $unitLbl) : 'اكتمل ✓' }}
+            @include('partials.fx', ['t' => 'الباقي على الطلب', 'f' => 'المطلوب ' . lv_qty($ordTot, $unitLbl) . ' − المستلم قبل كده ' . lv_qty($recTot, $unitLbl) . ' = ' . lv_qty($remTot, $unitLbl), 'why' => 'مجموع كل أصناف الطلب'])
+          </div></div>
       </div>
     </div>
   </div>
@@ -48,17 +38,19 @@
 
 @if(old('receipt_type', $row->receipt_type ?? 'normal') === 'container')
   <div class="note-box mb-3">
-    <b>استلام حاويات — بدون دورة فحص.</b>
+    <i class="bi bi-info-circle" aria-hidden="true"></i>
+    <span><b>استلام حاويات — بدون دورة فحص.</b>
     الإذن ده هو الاستلام النهائي: البضاعة بتدخل المخزن <b>مُفرَج عنها ومتاحة للتشغيل فورًا</b>.
-    لو محتاجين بيانات العرض والبنشر، الجودة تقدر تفحص 5-6 أتواب استدلاليًا — مش للرفض.
+    لو محتاجين بيانات العرض والبنشر، الجودة تقدر تفحص 5-6 أتواب استدلاليًا — مش للرفض.</span>
   </div>
 @else
   <div class="note-box mb-3">
-    <b>ده أول مستند في دورة القماش.</b>
+    <i class="bi bi-info-circle" aria-hidden="true"></i>
+    <span><b>ده أول مستند في دورة القماش.</b>
     <b>الحفظ</b> بيولّد <b>رسالة (حوض) لكل لون</b> وبينزّل القماش طابور الفحص فورًا —
     مفيش خطوة «إرسال» بعد كده. الكمية بتدخل المخزن <b>محجوزة</b>،
     والإفراج بيحصل من شاشة استلام الخام بعد ما الفحص والمعمل يخلّصوا.
-    <br><b>مهم:</b> اكتب عدد الأتواب صح — الفحص هيجرد عليه.
+    <br><b>مهم:</b> اكتب عدد الأتواب صح — الفحص هيجرد عليه.</span>
   </div>
 @endif
 
@@ -66,14 +58,15 @@
   @csrf @if($mode==='edit') @method('PUT') @endif
 
   <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <span>{{ $mode==='create' ? 'إذن إضافة جديد' : 'إذن إضافة ' . $row->doc_no }}</span>
-      <div class="d-flex gap-2">
+    <div class="card-header">
+      <span>{{ $mode==='create' ? 'إذن إضافة جديد' : 'إذن إضافة ' . $row->doc_no }}
+        @if($mode==='edit')<span class="badge bg-{{ $row->status_color }}">{{ $row->status_label }}</span>@endif
+      </span>
+      <div class="d-flex gap-2 ms-auto">
         @if($mode==='edit')
-          <span class="badge bg-{{ $row->status_color }} align-self-center">{{ $row->status_label }}</span>
-          <a href="{{ route('stock-additions.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0" aria-label="طباعة" title="طباعة"><i class="bi bi-printer" aria-hidden="true"></i></a>
+          <a href="{{ route('stock-additions.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary btn-icon" aria-label="طباعة" title="طباعة"><i class="bi bi-printer" aria-hidden="true"></i></a>
         @endif
-        <a href="{{ route('stock-additions.index') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
+        <a href="{{ route('stock-additions.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right" aria-hidden="true"></i> رجوع</a>
       </div>
     </div>
     <div class="card-body"><fieldset @disabled(!$editable)>
@@ -87,41 +80,58 @@
         @php $rt = $po->inspection_exempt ? 'container' : 'normal'; @endphp
         <input type="hidden" name="receipt_type" value="{{ $rt }}">
         {{-- Labels فوق — للقراءة --}}
-        <div class="row g-3 p-2 mb-2 rounded" style="background:var(--lv-offwhite);border:1px solid var(--lv-line)">
-          <div class="col-md-6"><div class="hint">رقم الرسالة</div>
-            <b class="num">{{ $row->consignment_no ?: ($consignmentPreview ?? 'بيتولّد تلقائيًا عند الاعتماد') }}</b>
-            <div class="hint">بيتكتب أوتوماتيك — {{ $row->consignment_no ? 'اتولّد' : 'بيتأكد عند الاعتماد' }} · رسالة لكل لون</div></div>
-          <div class="col-md-6"><div class="hint">نوع الاستلام</div>
-            <b>{{ $rt === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</b>
-            <div class="hint">متحدد من طلب الشراء (قرار التخطيط)</div></div>
+        <div class="ro-box mb-3">
+          <div class="ro-title">بيتسجل لوحده — للقراءة</div>
+          <div class="sum-grid">
+            <div><div class="k">رقم الرسالة</div>
+              <div class="v num">{{ $row->consignment_no ?: ($consignmentPreview ?? 'بيتولّد تلقائيًا عند الاعتماد') }}</div>
+              <div class="k">{{ $row->consignment_no ? 'اتولّد' : 'بيتأكد عند الاعتماد' }} · رسالة لكل لون</div></div>
+            <div><div class="k">نوع الاستلام</div>
+              <div class="v">{{ $rt === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</div>
+              <div class="k">متحدد من طلب الشراء (قرار التخطيط)</div></div>
+            <div><div class="k">تاريخ الإذن</div><div class="v num">{{ old('doc_date', $row->doc_date?->format('Y-m-d') ?? now()->toDateString()) }}</div></div>
+            <div><div class="k">استلمه</div><div class="v">{{ $row->creator?->name ?? auth()->user()?->name }}</div></div>
+          </div>
         </div>
         {{-- اللي بتكتبه --}}
         <div class="row g-3">
-          <div class="col-md-6"><label class="form-label req">مسلسل إذن الإضافة (الورقي)</label>
-            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" required placeholder="41456"></div>
-          <div class="col-md-6"><label class="form-label req">رقم إذن المورد</label>
-            <input name="supplier_doc_no" class="form-control form-control-sm" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
+          <div class="col-md-4"><label class="form-label req" for="paper_serial">مسلسل إذن الإضافة (الورقي)</label>
+            <input name="paper_serial" id="paper_serial" class="form-control w-short" value="{{ old('paper_serial',$row->paper_serial) }}" required placeholder="مثال: 41456" inputmode="numeric"></div>
+          <div class="col-md-4"><label class="form-label req" for="supplier_doc_no">رقم إذن المورد</label>
+            <input name="supplier_doc_no" id="supplier_doc_no" class="form-control w-mid" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
                    required placeholder="الرقم اللي على ورقة المورد">
             <div class="hint">بيتربط بالفحص والمعمل والاستلام</div></div>
-          <div class="col-12"><label class="form-label">ملاحظات</label>
-            <textarea name="notes" rows="2" class="form-control form-control-sm">{{ old('notes',$row->notes) }}</textarea></div>
+          <div class="col-12"><label class="form-label" for="notes">ملاحظات <span class="hint">(اختياري)</span></label>
+            <textarea name="notes" id="notes" rows="2" class="form-control" placeholder="مثال: وصلت على عربيتين — التانية الصبح">{{ old('notes',$row->notes) }}</textarea></div>
         </div>
       @else
         <div class="row g-3">
-          <div class="col-md-2"><label class="form-label req">التاريخ</label>
-            <input type="date" name="doc_date" class="form-control form-control-sm" value="{{ old('doc_date',$row->doc_date?->format('Y-m-d') ?? $row->doc_date) }}" required></div>
-          <div class="col-md-2"><label class="form-label req">مسلسل إذن الإضافة (الورقي)</label>
-            <input name="paper_serial" class="form-control form-control-sm" value="{{ old('paper_serial',$row->paper_serial) }}" required placeholder="41456"></div>
-          <div class="col-md-3"><label class="form-label req">اسم المورد</label>
-            <select name="supplier_id" class="form-select form-select-sm" required><option value="">—</option>
+          <div class="col-md-3"><label class="form-label req" for="doc_date">التاريخ</label>
+            <input type="date" name="doc_date" id="doc_date" class="form-control w-date" value="{{ old('doc_date',$row->doc_date?->format('Y-m-d') ?? $row->doc_date) }}" required></div>
+          <div class="col-md-3"><label class="form-label req" for="paper_serial">مسلسل إذن الإضافة (الورقي)</label>
+            <input name="paper_serial" id="paper_serial" class="form-control w-short" value="{{ old('paper_serial',$row->paper_serial) }}" required placeholder="مثال: 41456" inputmode="numeric"></div>
+          <div class="col-md-3"><label class="form-label req" for="supplier_id">اسم المورد</label>
+            <select name="supplier_id" id="supplier_id" class="form-select" required><option value="">—</option>
               @foreach($suppliers as $k=>$v)<option value="{{ $k }}" @selected(old('supplier_id',$row->supplier_id)==$k)>{{ $v }}</option>@endforeach
             </select></div>
-          <div class="col-md-3"><label class="form-label req">المخزن</label>
-            <select name="warehouse_id" class="form-select form-select-sm" required><option value="">—</option>
+          <div class="col-md-3"><label class="form-label req" for="warehouse_id">المخزن</label>
+            <select name="warehouse_id" id="warehouse_id" class="form-select" required><option value="">—</option>
               @foreach($warehouses as $k=>$v)<option value="{{ $k }}" @selected(old('warehouse_id',$row->warehouse_id)==$k)>{{ $v }}</option>@endforeach
             </select></div>
-          <div class="col-md-4"><label class="form-label">طلب الشراء</label>
-            <select name="purchase_order_id" class="form-select form-select-sm"
+          <div class="col-md-3"><label class="form-label req" for="supplier_doc_no">رقم إذن المورد</label>
+            <input name="supplier_doc_no" id="supplier_doc_no" class="form-control" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
+                   required placeholder="الرقم اللي على ورقة المورد">
+            <div class="hint">بيتربط بالفحص والمعمل والاستلام</div></div>
+          <div class="col-md-3"><label class="form-label" for="receipt_type">نوع الاستلام</label>
+            <select name="receipt_type" id="receipt_type" class="form-select"
+                    @if($mode==='create')
+                      onchange="var po=document.querySelector('[name=purchase_order_id]')?.value; location='{{ route('stock-additions.create') }}?type='+this.value+(po?'&purchase_order_id='+po:'')"
+                    @endif>
+              <option value="normal" @selected(old('receipt_type',$row->receipt_type ?? 'normal')==='normal')>عادي — يدخل الفحص</option>
+              <option value="container" @selected(old('receipt_type',$row->receipt_type ?? 'normal')==='container')>حاويات — بدون فحص</option>
+            </select></div>
+          <div class="col-md-3"><label class="form-label" for="purchase_order_id">طلب الشراء</label>
+            <select name="purchase_order_id" id="purchase_order_id" class="form-select"
                     @if($mode==='create')
                       onchange="if(this.value) location='{{ route('stock-additions.create') }}?purchase_order_id='+this.value+'&type='+(document.querySelector('[name=receipt_type]')?.value||'normal')"
                     @endif>
@@ -130,34 +140,23 @@
             </select>
             @if($mode==='create')<div class="hint">اختار الطلب والشاشة هتتظبط لوحدها</div>@endif
           </div>
-          <div class="col-md-3"><label class="form-label">رقم الرسالة</label>
-            <input name="consignment_no" class="form-control form-control-sm" value="{{ old('consignment_no',$row->consignment_no) }}"
+          <div class="col-md-3"><label class="form-label" for="consignment_no">رقم الرسالة</label>
+            <input name="consignment_no" id="consignment_no" class="form-control" value="{{ old('consignment_no',$row->consignment_no) }}"
                    placeholder="سيبه فاضي والسيستم هيولّده">
             <div class="hint">النمط: BUPL-090826-043-00</div></div>
-          <div class="col-md-3"><label class="form-label req">رقم إذن المورد</label>
-            <input name="supplier_doc_no" class="form-control form-control-sm" value="{{ old('supplier_doc_no',$row->supplier_doc_no) }}"
-                   required placeholder="الرقم اللي على ورقة المورد">
-            <div class="hint">بيتربط بالفحص والمعمل والاستلام</div></div>
-          <div class="col-md-3"><label class="form-label">نوع الاستلام</label>
-            <select name="receipt_type" class="form-select form-select-sm"
-                    @if($mode==='create')
-                      onchange="var po=document.querySelector('[name=purchase_order_id]')?.value; location='{{ route('stock-additions.create') }}?type='+this.value+(po?'&purchase_order_id='+po:'')"
-                    @endif>
-              <option value="normal" @selected(old('receipt_type',$row->receipt_type ?? 'normal')==='normal')>عادي — يدخل الفحص</option>
-              <option value="container" @selected(old('receipt_type',$row->receipt_type ?? 'normal')==='container')>حاويات — بدون فحص</option>
-            </select></div>
-          <div class="col-md-6"><label class="form-label">ملاحظات</label>
-            <input name="notes" class="form-control form-control-sm" value="{{ old('notes',$row->notes) }}"></div>
+          <div class="col-12"><label class="form-label" for="notes">ملاحظات <span class="hint">(اختياري)</span></label>
+            <input name="notes" id="notes" class="form-control" value="{{ old('notes',$row->notes) }}" placeholder="مثال: وصلت على عربيتين — التانية الصبح"></div>
         </div>
       @endif
     </fieldset></div>
   </div>
 
   <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between">
-      <span>الأصناف {{ $po ? '— من الطلب ' . $po->po_no . ' (البيانات ثابتة، اكتب المستلم بس)' : '' }}</span>
+    <div class="card-header">
+      <span>الأصناف {{ $po ? '— من الطلب ' . $po->po_no : '' }}
+        @if($po)<span class="hint">(البيانات ثابتة، اكتب المستلم بس)</span>@endif</span>
       @if($editable && !$po)
-        <button type="button" class="btn btn-sm btn-outline-plum py-0" onclick="LV.add('lineTpl','lines')">
+        <button type="button" class="btn btn-sm btn-outline-plum ms-auto" onclick="LV.add('lineTpl','lines')">
           <i class="bi bi-plus-lg" aria-hidden="true"></i> سطر</button>
       @endif
     </div>
@@ -169,19 +168,19 @@
             <th>الصنف</th>
             <th style="width:120px">اللون المطلوب</th>
             <th style="width:190px">اللون الواصل</th>
-            <th style="width:80px">ع. أتواب</th>
-            <th style="width:100px">المطلوب</th>
-            <th style="width:110px">المستلم</th>
-            <th style="width:110px">الباقي</th>
+            <th style="width:90px">الأتواب (توب)</th>
+            <th style="width:110px">المطلوب</th>
+            <th style="width:120px">المستلم ({{ $unitLbl ?: 'بوحدة الطلب' }})</th>
+            <th style="width:130px">الباقي</th>
             <th style="width:170px">الباقي هيوصل إمتى؟</th>
-            <th style="width:40px"></th>
+            <th style="width:44px"></th>
           </tr></thead>
         @else
           <thead><tr>
             <th style="width:35px">م</th><th style="width:95px">كود الصنف</th><th>اسم الصنف</th>
             <th style="width:160px">الخامة</th><th style="width:170px">اللون</th>
-            <th style="width:90px">ع. أتواب</th><th style="width:110px">الكمية</th>
-            <th style="width:96px">الوحدة</th><th style="width:40px"></th>
+            <th style="width:90px">الأتواب (توب)</th><th style="width:110px">الكمية</th>
+            <th class="req" style="width:96px">الوحدة</th><th style="width:44px"></th>
           </tr></thead>
         @endif
         <tbody id="lines" class="{{ $editable ? '' : 'lines-locked' }}">
@@ -219,6 +218,7 @@
       الحفظ بيخلّص الإذن على طول — بيتولّد حوض لكل لون
       {{ ($row->receipt_type ?? 'normal') === 'container' ? 'ويدخل المخزن مباشرة' : 'وينزل طابور الفحص' }}.
     </span>
+    <div class="fa-end"><a href="{{ route('stock-additions.index') }}" class="btn btn-outline-secondary">إلغاء</a></div>
   </div>
   @endif
 </form>
@@ -234,27 +234,31 @@
     <div class="card-header">
       {{ $saConsignments->count() > 1 ? 'الرسايل اللي اتولّدت — رسالة لكل لون' : 'الرسالة اللي اتولّدت' }}
     </div>
-    <table class="table table-sm mb-0">
-      <thead><tr><th>رقم الرسالة</th><th>الصنف</th><th>اللون</th><th>الكمية</th><th>الأتواب</th><th>الحالة</th><th></th></tr></thead>
-      <tbody>
-      @foreach($saConsignments as $c)
-        <tr>
-          <td class="num fw-bold"><a href="{{ route('consignments.show', $c) }}">{{ $c->consignment_no }}</a></td>
-          <td>{{ $c->fabricType?->name ?? '—' }}</td>
-          <td>{{ $c->color?->label ?? $c->color?->code ?? '—' }}</td>
-          <td class="num">{{ rtrim(rtrim(number_format((float)$c->total_kg,1),'0'),'.') }} كجم</td>
-          <td class="num">{{ (int) $c->rolls_count }}</td>
-          <td><span class="badge bg-{{ $c->status_color }}">{{ $c->status_name }}</span></td>
-          <td>
-            @if($c->status === 'under_inspection')
-              <a href="{{ route('inspections.create', ['consignment_id'=>$c->id]) }}"
-                 class="btn btn-sm btn-plum py-0">افحص</a>
-            @endif
-          </td>
-        </tr>
-      @endforeach
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>رقم الرسالة</th><th>الصنف</th><th>اللون</th><th>الكمية (كجم)</th><th>الأتواب (توب)</th><th>الحالة</th><th></th></tr></thead>
+        <tbody>
+        @foreach($saConsignments as $c)
+          <tr>
+            <td class="num fw-bold"><a href="{{ route('consignments.show', $c) }}">{{ $c->consignment_no }}</a></td>
+            <td>{{ $c->fabricType?->name ?? '—' }}</td>
+            <td>{{ $c->color?->label ?? $c->color?->code ?? '—' }}</td>
+            <td class="num">{{ lv_num($c->total_kg, 1) }}</td>
+            <td class="num">{{ (int) $c->rolls_count }}</td>
+            <td><span class="badge bg-{{ $c->status_color }}">{{ $c->status_name }}</span></td>
+            <td class="text-end">
+              @if($c->status === 'under_inspection')
+                <div class="row-actions">
+                  <a href="{{ route('inspections.create', ['consignment_id'=>$c->id]) }}"
+                     class="btn btn-sm btn-outline-plum">افحص</a>
+                </div>
+              @endif
+            </td>
+          </tr>
+        @endforeach
+        </tbody>
+      </table>
+    </div>
   </div>
 @endif
 
@@ -294,6 +298,12 @@
   </div></div>
 </div>
 
+<style>
+  /* زرار اختيار القرار في البوب أب: نص متعدد الأسطر */
+  #colorModal .btn.text-start{display:block;white-space:normal;text-align:start}
+  #colorModal .btn.text-start .hint{white-space:normal}
+</style>
+
 @include('partials.lines_js',['startIndex'=>max(count($lines),1)])
 {{-- السكريبت في ستاك السكريبتات عشان يتنفذ بعد تحميل بوتستراب — وإلا الموديل مش هيشتغل --}}
 @push('scripts')
@@ -321,6 +331,12 @@
     var recvLine = '<div class="hint">المستلم دلوقتي: <b class="num">' + (rolls ? rolls + ' توب · ' : '') + nf(now) + ' ' + unit + '</b></div>';
     var left     = ordered - received - now;          // للعرض
     var leftMin  = Math.max(0, minQty - received - now);  // للإقفال
+    // ⓘ المعادلة بالأرقام الفعلية للسطر
+    var fx = function (title) {
+      return (window.LVX && LVX.fx) ? LVX.fx(title, [
+        'المطلوب ' + nf(ordered) + ' ' + unit + ' − المستلم قبل كده ' + nf(received) + ' − المستلم دلوقتي ' + nf(now) + ' = ' + nf(left) + ' ' + unit
+      ], 'الباقي = المطلوب − اللي وصل كله') : '';
+    };
     // خانة «هيوصل إمتى» بتظهر بس لما يبقى فيه باقي على السطر ده
     var eta = tr.querySelector('.r-eta');
     var showEta = function (on) {
@@ -331,15 +347,16 @@
 
     if (!now) { out.innerHTML = '<span class="hint">—</span>'; showEta(false); return Math.max(0, minQty - received); }
     if (leftMin > 0.0005) {
-      out.innerHTML = recvLine + '<span class="pill pill-warn">باقي ' + nf(left) + ' ' + unit + '</span>';
+      out.innerHTML = recvLine + '<span class="pill pill-warn">باقي ' + nf(left) + ' ' + unit + '</span>' + fx('الباقي على السطر');
       showEta(true);
     } else if (left < -0.0005) {
-      out.innerHTML = recvLine + '<span class="pill pill-danger">زيادة ' + nf(-left) + ' ' + unit + '</span>';
+      out.innerHTML = recvLine + '<span class="pill pill-danger">زيادة ' + nf(-left) + ' ' + unit + '</span>' + fx('الزيادة على السطر');
       showEta(false);
     } else {
-      out.innerHTML = recvLine + '<span class="pill pill-ok">اكتمل ✓</span>';
+      out.innerHTML = recvLine + '<span class="pill pill-ok">اكتمل ✓</span>' + fx('اكتمل');
       showEta(false);
     }
+    if (window.LVX && LVX.popovers) LVX.popovers(out);
     return leftMin;
   }
 

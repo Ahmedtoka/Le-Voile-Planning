@@ -19,14 +19,15 @@
     <i class="bi bi-inbox ico" aria-hidden="true"></i>
     <div class="t">مفيش رسالة محددة.</div>
     <div class="hint">ادخل من شاشة استلام الخام واختار رسالة خلّصت فحص ومعمل.</div>
-    <a href="{{ route('goods-receipts.index') }}" class="btn btn-plum btn-sm mt-2">رجوع للقايمة</a>
+    <a href="{{ route('goods-receipts.index') }}" class="btn btn-plum mt-2">رجوع للقايمة</a>
   </div>
 @else
 
 <div class="note-box mb-3">
-  <b>دي مراجعة أخيرة قبل ما القماش يدخل مخزنك.</b>
+  <i class="bi bi-info-circle" aria-hidden="true"></i>
+  <span><b>دي مراجعة أخيرة قبل ما القماش يدخل مخزنك.</b>
   كل الأرقام تحت جاية من إذن الإضافة والفحص والمعمل — <b>مفيش حاجة تكتبها</b>.
-  بص عليها، ولو تمام دوس «استلم» والقماش يبقى متاح لأوامر الشغل على طول.
+  بص عليها، ولو تمام دوس «استلم» والقماش يبقى متاح لأوامر الشغل على طول.</span>
 </div>
 
 {{-- ① السامري — جدول عريض في النص: الرسالة | إذن الإضافة | طلب الشراء | الفحص | المعمل. كله Labels وكله لينكات --}}
@@ -35,38 +36,30 @@
   $over = $st ? (float) $st['received'] - (float) $st['ordered'] : 0;
   $est = $insp?->weightEstimate();
 @endphp
-<style>
-  .sum-sec{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start;padding:10px 0;border-bottom:1px dashed var(--lv-line)}
-  .sum-sec:last-child{border-bottom:0}
-  .sum-sec .t{font-weight:700;color:var(--lv-brand-ink);padding-top:4px;font-size:var(--fs-sm)}
-  .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;text-align:center;font-size:var(--fs-sm)}
-  .sum-grid .k{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.2}
-  .sum-grid .v{font-weight:600;font-size:var(--fs-sm)}
-  .sum-grid a.v{font-size:var(--fs-sm)}
-  @media (max-width:768px){.sum-sec{grid-template-columns:1fr}}
-</style>
 
 {{-- الأرقام اللي هتدخل المخزن — كبيرة في الأول --}}
 <div class="card mb-3">
-  <div class="card-body py-3">
+  <div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
       <div>
         <div class="hint">الرسالة</div>
-        <a href="{{ route('consignments.show', $c) }}" class="fw-bold num" style="font-size:1.35rem;color:var(--lv-brand-ink)">{{ $c->consignment_no }}</a>
+        <a href="{{ route('consignments.show', $c) }}" class="num fw-bold" style="font-size:var(--fs-xl)">{{ $c->consignment_no }}</a>
         <div class="hint">{{ $c->fabricType?->name ?? '—' }} · {{ $c->color?->label ?? $c->color?->code ?? '—' }}</div>
       </div>
-      <div class="d-flex gap-4 flex-wrap text-center">
-        <div><div class="hint">الكمية اللي هتدخل</div><b class="num" style="font-size:1.25rem">{{ lv_kg($c->total_kg) }}</b></div>
-        <div><div class="hint">الأتواب</div><b class="num" style="font-size:1.25rem">{{ (int) $c->rolls_count }}</b></div>
-        <div><div class="hint">أقل عرض</div><b class="num text-danger" style="font-size:1.25rem">{{ $c->min_width_cm ? lv_num($c->min_width_cm, 2) . ' سم' : '—' }}</b></div>
-        <div><div class="hint">البنشر</div><b class="num" style="font-size:1.25rem">{{ $c->avg_gsm ? lv_num($c->avg_gsm, 2) : '—' }} <span class="hint">جم/م²</span></b></div>
+      <div class="big-nums">
+        <div><div class="hint">الكمية اللي هتدخل</div><div class="bn-v num">{{ lv_kg($c->total_kg) }}</div></div>
+        <div><div class="hint">الأتواب</div><div class="bn-v num">{{ (int) $c->rolls_count }} <span class="hint">توب</span></div></div>
+        <div><div class="hint">أقل عرض</div><div class="bn-v num text-danger">{{ $c->min_width_cm ? lv_num($c->min_width_cm, 2) . ' سم' : '—' }}</div>
+          @if($c->min_width_cm && $insp)<div class="hint">أضيق توب مقاس في الفحص — الماركر بيتبني عليه</div>@endif</div>
+        <div><div class="hint">البنشر</div><div class="bn-v num">{{ $c->avg_gsm ? lv_num($c->avg_gsm, 2) : '—' }} <span class="hint">جم/م²</span></div>
+          @if($c->avg_gsm && $lab)<div class="hint">متوسط قراءات المعمل {{ $lab->doc_no }}</div>@endif</div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="card mb-3" style="border-color:var(--lv-soft)">
-  <div class="card-body py-1">
+<div class="ro-box mb-3">
+  <div class="ro-title">من المستندات السابقة — للقراءة</div>
 
     <div class="sum-sec">
       <div class="t"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> إذن الإضافة</div>
@@ -93,16 +86,21 @@
           <div><div class="k">استلمه (إذن الإضافة)</div><div class="v">{{ $sa?->creator?->name ?? '—' }}</div><div class="k num">{{ $sa?->doc_date?->format('Y-m-d') }}</div></div>
         </div>
         @if($st)
-          <div class="mt-2 p-1 rounded text-center d-flex flex-wrap justify-content-center gap-3 align-items-center small"
-               style="background:{{ $st['left'] > 0.0001 ? 'var(--lv-warn-bg)' : ($over > 0.0001 ? 'var(--lv-danger-bg)' : 'var(--lv-ok-bg)') }}">
+          @php $stTone = $st['left'] > 0.0001 ? 'warning' : ($over > 0.0001 ? 'danger' : 'success'); @endphp
+          <div class="alert alert-{{ $stTone }} py-1 px-2 mt-2 mb-0 text-center d-flex flex-wrap justify-content-center gap-3 align-items-center small">
             <span class="hint">الصنف ده على الطلب:</span>
             <span>مطلوب <b class="num">{{ lv_qty($st['ordered'], $st['unit']) }}</b></span>
             @if($st['left'] > 0.0001)
               <span>وصل لحد دلوقتي <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
-              <span class="text-danger">باقي <b class="num">{{ lv_qty($st['left'], $st['unit']) }}</b> — {{ $st['eta'] ? 'متوقع ' . $st['eta'] : 'الموعد مش محدد' }}</span>
+              <span class="text-danger">باقي <b class="num">{{ lv_qty($st['left'], $st['unit']) }}</b>
+                @include('partials.fx', ['t' => 'الباقي على الطلب', 'f' => 'المطلوب ' . lv_qty($st['ordered'], $st['unit']) . ' − الواصل ' . lv_qty($st['received'], $st['unit']) . ' = ' . lv_qty($st['left'], $st['unit'])])
+                — {{ $st['eta'] ? 'متوقع ' . $st['eta'] : 'الموعد مش محدد' }}</span>
             @elseif($over > 0.0001)
+              @php $overPct = $over / max(0.0001, (float) $st['ordered']) * 100; @endphp
               <span>وصل <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
-              <span class="text-danger fw-bold">زيادة <b class="num">{{ lv_qty($over, $st['unit']) }}</b> — جوه نسبة الزيادة {{ lv_num($st['line']->tolerance_pct, 2) }}%</span>
+              <span class="text-danger fw-bold">زيادة <b class="num">{{ lv_qty($over, $st['unit']) }}</b> ({{ lv_num($overPct, 1) }}%)
+                @include('partials.fx', ['t' => 'الزيادة على الطلب', 'f' => ['الواصل ' . lv_qty($st['received'], $st['unit']) . ' − المطلوب ' . lv_qty($st['ordered'], $st['unit']) . ' = ' . lv_qty($over, $st['unit']), 'الزيادة ' . lv_num($over, 3) . ' ÷ المطلوب ' . lv_num($st['ordered'], 3) . ' × 100 = ' . lv_num($overPct, 1) . '%'], 'why' => 'المسموح لحد نسبة الزيادة ' . lv_num($st['line']->tolerance_pct, 2) . '%'])
+                — جوه نسبة الزيادة {{ lv_num($st['line']->tolerance_pct, 2) }}%</span>
             @else
               <span>وصل <b class="num">{{ lv_qty($st['received'], $st['unit']) }}</b></span>
               <span class="text-success fw-bold"><i class="bi bi-check2-circle" aria-hidden="true"></i> الصنف اكتمل على الطلب بالكامل</span>
@@ -118,10 +116,16 @@
         <div><div class="k">تقرير الفحص</div>@if($insp)<a href="{{ route('inspections.edit', $insp) }}" class="v num">{{ $insp->doc_no }}</a>@else <div class="v text-danger">ناقص</div> @endif</div>
         <div><div class="k">المسلسل الورقي</div>@if($insp?->paper_serial)<a href="{{ route('inspections.print', $insp) }}" target="_blank" class="v num">{{ $insp->paper_serial }}</a>@else <div class="v">—</div> @endif</div>
         <div><div class="k">النتيجة</div><div class="v">@if($insp)<span class="badge bg-{{ $insp->result === 'accepted' ? 'success' : 'warning' }}">{{ $insp->result_name }}</span>@else — @endif</div></div>
-        <div><div class="k">الجرد</div><div class="v num {{ $insp && $insp->rolls_variance != 0 ? 'text-danger' : '' }}">{{ $insp ? $insp->counted_rolls . '/' . $insp->declared_rolls : '—' }}</div><div class="k">{{ $insp?->rolls_variance_label }}</div></div>
-        <div><div class="k">العيّنة · العيوب</div><div class="v num">{{ $insp ? lv_num($insp->sample_pct, 1) . '% · ' . lv_num($insp->defect_pct, 2) . '%' : '—' }}</div></div>
+        <div><div class="k">الجرد</div><div class="v num {{ $insp && $insp->rolls_variance != 0 ? 'text-danger' : '' }}">{{ $insp ? $insp->counted_rolls . '/' . $insp->declared_rolls : '—' }}
+            @if($insp)@include('partials.fx', ['t' => 'فرق الجرد', 'f' => 'المجرود ' . (int) $insp->counted_rolls . ' − حسب الإذن ' . (int) $insp->declared_rolls . ' = ' . ($insp->rolls_variance > 0 ? '+' : '') . (int) $insp->rolls_variance . ' توب'])@endif
+          </div><div class="k">{{ $insp?->rolls_variance_label }}</div></div>
+        <div><div class="k">العيّنة · العيوب</div><div class="v num">{{ $insp ? lv_num($insp->sample_pct, 1) . '% · ' . lv_num($insp->defect_pct, 2) . '%' : '—' }}
+            @if($insp)@include('partials.fx', ['t' => 'نسبة العيّنة ونسبة العيوب', 'f' => ['العيّنة: المقاسة ' . (int) $insp->sampled_rolls . ' ÷ إجمالي الأتواب ' . (int) $insp->total_rolls . ' × 100 = ' . lv_num($insp->sample_pct, 2) . '%', 'العيوب: عدد العيوب ' . (int) $insp->total_defects . ' ÷ الطول المقاس ' . lv_num($insp->total_length_m, 2) . ' م × 100 = ' . lv_num($insp->defect_pct, 2) . '%'], 'why' => 'نسبة العيوب يعني عيب لكل 100 متر'])@endif
+          </div></div>
         <div><div class="k">الوزن المتوقع من العيّنة</div>
-          @if($est)<div class="v num {{ $est['level'] === 'danger' ? 'text-danger' : ($est['level'] === 'warn' ? 'text-warning' : '') }}">{{ lv_kg($est['expected'], false) }}</div>
+          @if($est)<div class="v num {{ $est['level'] === 'danger' ? 'text-danger' : ($est['level'] === 'warn' ? 'text-warning' : '') }}">{{ lv_kg($est['expected'], false) }}
+              @include('partials.fx', ['t' => 'الوزن المتوقع من العيّنة', 'f' => ['متوسط وزن التوب ' . lv_num($est['avg'], 3) . ' كجم × ' . (int) ($insp->counted_rolls ?: $insp->total_rolls) . ' توب = ' . lv_num($est['expected'], 3) . ' كجم', '(المتوقع ' . lv_num($est['expected'], 3) . ' − وزن الإذن ' . lv_num($est['declared'], 3) . ') ÷ ' . lv_num($est['declared'], 3) . ' × 100 = ' . lv_num($est['diff_pct'], 1) . '%'], 'why' => 'من عيّنة ' . $est['sample'] . ' توب موزونة — تنبيه بس'])
+            </div>
             <div class="k">{{ $est['diff_pct'] >= 0 ? '+' : '' }}{{ lv_num($est['diff_pct'], 1) }}% عن الإذن{{ $est['level'] === 'danger' ? ' — راجع الوزن' : '' }}</div>
           @else <div class="v">—</div> @endif</div>
         <div><div class="k">فحصه</div><div class="v">{{ $insp?->inspector?->name ?? '—' }}</div><div class="k num">{{ $insp?->doc_date?->format('Y-m-d') }}</div></div>
@@ -133,15 +137,27 @@
       <div class="sum-grid">
         <div><div class="k">تقرير المعمل</div>@if($lab)<a href="{{ route('lab-reports.edit', $lab) }}" class="v num">{{ $lab->doc_no }}</a>@else <div class="v text-danger">ناقص</div> @endif</div>
         <div><div class="k">المسلسل الورقي</div>@if($lab?->paper_serial)<a href="{{ route('lab-reports.print', $lab) }}" target="_blank" class="v num">{{ $lab->paper_serial }}</a>@else <div class="v">—</div> @endif</div>
-        <div><div class="k">متوسط البنشر</div><div class="v num {{ $lab?->gsm_out_of_spec ? 'text-danger' : '' }}">{{ $lab ? lv_num($lab->avg_gsm, 2) . ' جم/م²' : '—' }}</div>@if($lab?->gsm_out_of_spec)<div class="k text-danger">خارج المواصفة</div>@endif</div>
-        <div><div class="k">الانكماش طول · عرض</div><div class="v num">{{ $lab ? lv_num($lab->avg_shrink_len_pct, 2) . '% · ' . lv_num($lab->avg_shrink_width_pct, 2) . '%' : '—' }}</div></div>
+        <div><div class="k">متوسط البنشر</div><div class="v num {{ $lab?->gsm_out_of_spec ? 'text-danger' : '' }}">{{ $lab ? lv_num($lab->avg_gsm, 2) . ' جم/م²' : '—' }}
+            @if($lab && $lab->avg_gsm !== null)@include('partials.fx', ['t' => 'متوسط البنشر', 'f' => 'متوسط قراءات الأتواب في المعمل (أقل ' . lv_num($lab->min_gsm, 2) . ' – أعلى ' . lv_num($lab->max_gsm, 2) . ') = ' . lv_num($lab->avg_gsm, 2) . ' جم/م²', 'why' => 'مجموع القراءات ÷ عددها'])@endif
+          </div>@if($lab?->gsm_out_of_spec)<div class="k text-danger">خارج المواصفة</div>@endif</div>
+        <div><div class="k">الانكماش طول · عرض</div><div class="v num">{{ $lab ? lv_num($lab->avg_shrink_len_pct, 2) . '% · ' . lv_num($lab->avg_shrink_width_pct, 2) . '%' : '—' }}
+            @if($lab && ($lab->avg_shrink_len_pct !== null || $lab->avg_shrink_width_pct !== null))
+              @php
+                $shL = collect([$lab->s1_shrink_len_pct, $lab->s2_shrink_len_pct, $lab->s3_shrink_len_pct, $lab->s4_shrink_len_pct])->filter(fn ($v) => $v !== null && $v !== '');
+                $shW = collect([$lab->s1_shrink_width_pct, $lab->s2_shrink_width_pct, $lab->s3_shrink_width_pct, $lab->s4_shrink_width_pct])->filter(fn ($v) => $v !== null && $v !== '');
+              @endphp
+              @include('partials.fx', ['t' => 'متوسط الانكماش', 'f' => array_values(array_filter([
+                $shL->count() ? 'طول: (' . $shL->map(fn ($v) => lv_num($v, 2))->implode(' + ') . ') ÷ ' . $shL->count() . ' = ' . lv_num($lab->avg_shrink_len_pct, 2) . '%' : null,
+                $shW->count() ? 'عرض: (' . $shW->map(fn ($v) => lv_num($v, 2))->implode(' + ') . ') ÷ ' . $shW->count() . ' = ' . lv_num($lab->avg_shrink_width_pct, 2) . '%' : null,
+              ]))])
+            @endif
+          </div></div>
         <div><div class="k">مطابقة اللون</div><div class="v">@if($lab)<span class="badge bg-{{ $lab->color_match_ok ? 'success' : 'danger' }}">{{ $lab->color_match_ok ? 'مطابق' : 'مش مطابق' }}</span>@else — @endif</div></div>
         <div><div class="k">فواصل / اختلاف لون</div><div class="v">@if($lab?->has_color_break)<span class="badge bg-danger">نعم</span><div class="k">{{ $lab->color_break_roll_no ? 'أتواب ' . $lab->color_break_roll_no : '' }} {{ $lab->color_break_note }}</div>@elseif($lab)<span class="text-success">لا</span>@else — @endif</div></div>
         <div><div class="k">سجّله</div><div class="v">{{ $lab?->technician?->name ?? '—' }}</div><div class="k num">{{ $lab?->doc_date?->format('Y-m-d') }}</div></div>
       </div>
     </div>
 
-  </div>
 </div>
 
 <form method="post" action="{{ $mode==='create' ? route('goods-receipts.store') : route('goods-receipts.update',$row) }}">
@@ -158,23 +174,24 @@
 
   {{-- ③ الأصناف المستلمة — Labels + قيم مخفية --}}
   <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <span>الأصناف اللي هتدخل المخزن</span>
-      <div class="d-flex gap-2">
+    <div class="card-header">
+      <span>الأصناف اللي هتدخل المخزن
+        @if($mode==='edit')<span class="badge bg-{{ $row->status_color }}">{{ $row->status_label }}</span>@endif
+      </span>
+      <div class="d-flex gap-2 ms-auto">
         @if($mode==='edit')
-          <span class="badge bg-{{ $row->status_color }} align-self-center">{{ $row->status_label }}</span>
-          <a href="{{ route('goods-receipts.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0"
+          <a href="{{ route('goods-receipts.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary btn-icon"
              aria-label="طباعة" title="طباعة"><i class="bi bi-printer" aria-hidden="true"></i></a>
         @endif
-        <a href="{{ route('goods-receipts.index') }}" class="btn btn-sm btn-outline-secondary py-0">رجوع</a>
+        <a href="{{ route('goods-receipts.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right" aria-hidden="true"></i> رجوع</a>
       </div>
     </div>
     <div class="table-responsive">
       <table class="table table-sm mb-0">
         <thead><tr>
           <th style="width:35px">م</th><th style="width:100px">الكود</th><th>الصنف</th>
-          <th style="width:170px">اللون</th><th style="width:90px">العرض</th>
-          <th style="width:90px">ع.أتواب</th><th style="width:120px">الكمية</th>
+          <th style="width:170px">اللون</th><th style="width:100px">العرض (سم)</th>
+          <th style="width:100px">الأتواب (توب)</th><th style="width:140px">الكمية</th>
         </tr></thead>
         <tbody>
           @foreach($lines as $i => $l)
@@ -217,34 +234,37 @@
     $inspRej  = $insp ? \App\Models\GoodsReceiptRejection::where('fabric_inspection_id', $insp->id)->whereNull('goods_receipt_id')->get() : collect();
   @endphp
   <div class="card mb-3">
-    <div class="card-header"><i class="bi bi-x-octagon" aria-hidden="true"></i> الأتواب المرفوضة من الفحص
-      <span class="hint">— اتسجلت في تقرير الفحص واتخصمت من الرسالة ومن طلب الشراء</span></div>
+    <div class="card-header"><span><i class="bi bi-x-octagon" aria-hidden="true"></i> الأتواب المرفوضة من الفحص
+      <span class="hint">— اتسجلت في تقرير الفحص واتخصمت من الرسالة ومن طلب الشراء</span></span></div>
     @if($rejRolls->count())
       <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead><tr><th>رقم التوب</th><th>الوزن</th><th>الطول</th><th>العرض</th><th>العيب</th><th>ملاحظات</th></tr></thead>
+          <thead><tr><th>رقم التوب</th><th>الوزن (كجم)</th><th>الطول (م)</th><th>العرض (سم)</th><th>العيب</th><th>ملاحظات</th></tr></thead>
           <tbody>
           @foreach($rejRolls as $r)
             <tr class="table-danger">
               <td class="num fw-bold">{{ $r->roll_no }}</td>
-              <td class="num">{{ $r->net_kg ? lv_kg($r->net_kg, false) : '—' }}</td>
-              <td class="num">{{ (float) $r->length_m > 0 ? lv_num($r->length_m, 2) . ' م' : '—' }}</td>
-              <td class="num">{{ $r->width_cm ? lv_num($r->width_cm, 2) . ' سم' : '—' }}</td>
+              <td class="num">{{ $r->net_kg ? lv_num($r->net_kg, 3) : '—' }}</td>
+              <td class="num">{{ (float) $r->length_m > 0 ? lv_num($r->length_m, 2) : '—' }}</td>
+              <td class="num">{{ $r->width_cm ? lv_num($r->width_cm, 2) : '—' }}</td>
               <td>{{ $r->defect_desc ?: '—' }}@if($r->defects_count) <span class="hint">({{ $r->defects_count }})</span>@endif</td>
               <td class="hint">{{ $r->notes }}</td>
             </tr>
           @endforeach
-          <tr class="fw-bold">
+          </tbody>
+          <tfoot>
+          <tr>
             <td>{{ $rejRolls->count() }} توب</td>
-            <td class="num">{{ lv_kg($insp->rejected_kg, false) }}</td>
-            <td colspan="4" class="hint">
+            <td class="num">{{ lv_kg($insp->rejected_kg, false) }}
+              @include('partials.fx', ['t' => 'وزن المرفوض', 'f' => $rejRolls->map(fn ($r) => lv_num($r->net_kg, 3))->implode(' + ') . ' = ' . lv_num($insp->rejected_kg, 3) . ' كجم', 'why' => 'مجموع أوزان الأتواب المرفوضة — اتخصم من الرسالة'])</td>
+            <td colspan="4" class="hint fw-normal">
               @foreach($inspRej as $rj)
                 مطالبة على المورد: <span class="badge bg-{{ $rj->resolution === 'open' ? 'danger' : 'success' }}">{{ $rj->resolution_name }}</span>
                 <a href="{{ route('rejections.index') }}">شاشة المرفوضات</a>
               @endforeach
             </td>
           </tr>
-          </tbody>
+          </tfoot>
         </table>
       </div>
     @else
@@ -254,25 +274,27 @@
   </div>
 
   @if($editable)
-
     <div class="form-actions">
-    <button class="btn btn-plum">
-      <i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> استلم ونزّل المخزن
-    </button>
-    <span class="hint">
-      <i class="bi bi-info-circle" aria-hidden="true"></i>
-      القماش هيبقى متاح لأوامر الشغل على طول، والكمية المستلمة هتتحدّث في طلب الشراء.
-    </span>
+      <button class="btn btn-plum">
+        <i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> استلم ونزّل المخزن
+      </button>
+      <span class="hint">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        القماش هيبقى متاح لأوامر الشغل على طول، والكمية المستلمة هتتحدّث في طلب الشراء.
+      </span>
+      <div class="fa-end"><a href="{{ route('goods-receipts.index') }}" class="btn btn-outline-secondary">إلغاء</a></div>
     </div>
   @endif
 </form>
 
 @if($mode === 'edit' && $row->consignment)
-  <a href="{{ route('consignments.show', $row->consignment) }}" class="btn btn-outline-plum btn-sm mt-2">
-    <i class="bi bi-box-seam" aria-hidden="true"></i> فتح الرسالة {{ $row->consignment->consignment_no }}
-  </a>
+  <div class="doc-actions mt-3">
+    <span class="da-label">الرسالة</span>
+    <a href="{{ route('consignments.show', $row->consignment) }}" class="btn btn-sm btn-outline-plum">
+      <i class="bi bi-box-seam" aria-hidden="true"></i> فتح الرسالة {{ $row->consignment->consignment_no }}
+    </a>
+  </div>
 @endif
-
 
 @endif
 @endsection

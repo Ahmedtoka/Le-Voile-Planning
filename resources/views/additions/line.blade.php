@@ -31,7 +31,7 @@
   </td>
 
   <td>
-    <select name="lines[{{ $i }}][color_id]" class="c-actual"
+    <select name="lines[{{ $i }}][color_id]" class="c-actual" aria-label="اللون الواصل"
             data-requested="{{ $l['po_color_id'] ?? '' }}"
             data-requested-label="{{ $l['po_color_label'] ?? '' }}">
       <option value="">—</option>
@@ -51,18 +51,18 @@
     </div>
   </td>
 
-  <td><input type="number" name="lines[{{ $i }}][rolls_count]" value="{{ $l['rolls_count'] ?? '' }}" placeholder="0"></td>
+  <td class="num"><input type="number" min="0" step="1" name="lines[{{ $i }}][rolls_count]" value="{{ $l['rolls_count'] ?? '' }}" placeholder="مثال: 12" aria-label="عدد الأتواب"></td>
 
   <td class="text-center">
-    <div class="num fw-bold">{{ rtrim(rtrim(number_format((float)($l['po_ordered'] ?? 0),3),'0'),'.') }} {{ $l['unit'] ?? '' }}</div>
+    <div class="num fw-bold">{{ lv_qty($l['po_ordered'] ?? 0, $l['unit'] ?? '') }}</div>
     @if((float)($l['po_received'] ?? 0) > 0)
-      <div class="hint">استلم قبل كده {{ rtrim(rtrim(number_format((float)$l['po_received'],3),'0'),'.') }}</div>
+      <div class="hint">استلم قبل كده <span class="num">{{ lv_num($l['po_received'], 3) }}</span></div>
     @endif
   </td>
 
-  <td>
+  <td class="num">
     <input type="number" step="0.001" min="0" name="lines[{{ $i }}][qty]" class="q-recv"
-           value="{{ $l['qty'] ?? '' }}" placeholder="المستلم بالـ{{ $l['unit'] ?? '' }}">
+           value="{{ $l['qty'] ?? '' }}" placeholder="مثال: 2.5" aria-label="المستلم بالـ{{ $l['unit'] ?? '' }}">
   </td>
 
   <td class="text-center">
@@ -82,22 +82,22 @@
 @else
   {{-- ═══ سطر حر (إذن من غير طلب) ═══ --}}
   <td class="text-center row-no">{{ is_numeric($i)?$i+1:1 }}</td>
-  <td><input name="lines[{{ $i }}][item_code]" value="{{ $l['item_code'] ?? '' }}" placeholder="كود"></td>
-  <td><input name="lines[{{ $i }}][item_name]" value="{{ $l['item_name'] ?? '' }}" placeholder="اسم الصنف"></td>
-  <td><select name="lines[{{ $i }}][fabric_type_id]"><option value="">—</option>
+  <td><input name="lines[{{ $i }}][item_code]" value="{{ $l['item_code'] ?? '' }}" placeholder="مثال: F-120" aria-label="كود الصنف"></td>
+  <td><input name="lines[{{ $i }}][item_name]" value="{{ $l['item_name'] ?? '' }}" placeholder="اسم الصنف" aria-label="اسم الصنف"></td>
+  <td><select name="lines[{{ $i }}][fabric_type_id]" aria-label="الخامة"><option value="">—</option>
       @foreach($fabricTypes as $k=>$v)<option value="{{ $k }}" @selected(($l['fabric_type_id'] ?? null)==$k)>{{ $v }}</option>@endforeach
     </select></td>
   <td>
-    <select name="lines[{{ $i }}][color_id]"><option value="">—</option>
+    <select name="lines[{{ $i }}][color_id]" aria-label="اللون"><option value="">—</option>
       @foreach($colors as $k=>$v)<option value="{{ $k }}" @selected(($l['color_id'] ?? null)==$k)>{{ $v }}</option>@endforeach
     </select>
   </td>
-  <td><input type="number" name="lines[{{ $i }}][rolls_count]" value="{{ $l['rolls_count'] ?? '' }}" placeholder="0"></td>
-  <td><input type="number" step="0.001" name="lines[{{ $i }}][qty]" value="{{ $l['qty'] ?? '' }}"></td>
-  <td><select name="lines[{{ $i }}][unit]">
+  <td class="num"><input type="number" min="0" step="1" name="lines[{{ $i }}][rolls_count]" value="{{ $l['rolls_count'] ?? '' }}" placeholder="مثال: 12" aria-label="عدد الأتواب"></td>
+  <td class="num"><input type="number" step="0.001" min="0" name="lines[{{ $i }}][qty]" value="{{ $l['qty'] ?? '' }}" placeholder="مثال: 2300" aria-label="الكمية"></td>
+  <td><select name="lines[{{ $i }}][unit]" aria-label="الوحدة">
       @foreach(['كجم','قطعة','متر','كرتونة'] as $u)<option value="{{ $u }}" @selected(($l['unit'] ?? 'كجم')===$u)>{{ $u }}</option>@endforeach
     </select></td>
 @endif
 
-  <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0" aria-label="حذف السطر" onclick="LV.remove(this,'lines')"><i class="bi bi-x" aria-hidden="true"></i></button></td>
+  <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-icon" title="حذف السطر" aria-label="حذف السطر" onclick="LV.remove(this,'lines')"><i class="bi bi-x-lg" aria-hidden="true"></i></button></td>
 @if(!$tpl)</tr>@endif
