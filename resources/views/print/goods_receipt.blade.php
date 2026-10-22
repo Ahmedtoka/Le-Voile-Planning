@@ -1,49 +1,47 @@
 @extends('layouts.print')
+@section('doc_title', 'إذن استلام خام')
+@section('doc_serial', $gr->paper_serial ?: $gr->doc_no)
+@section('doc_serial_note', $gr->warehouse?->name ?? '')
 @section('doc')
-<div class="doc-head">
-  <div class="logo"><img src="{{ asset('assets/logo.png') }}" alt="Le Voile"><small>FASHION FORWARD</small></div>
-  <div class="doc-title">اذن استلام خام</div>
-  <div style="width:170px;text-align:left">
-    <span class="serial">{{ $gr->paper_serial ?: $gr->doc_no }}</span>
-    <div style="font-size:11px">{{ $gr->warehouse?->name }}</div>
-  </div>
-</div>
 
-<table class="meta" style="width:100%">
+<table class="meta">
   <tr>
-    <td class="k">التاريخ</td><td style="width:130px">{{ $gr->doc_date?->format('d / n / Y') }}</td>
-    <td class="k">وارد من</td><td>{{ $gr->supplier?->name }}</td>
-    <td class="k">كود المورد</td><td style="width:90px">{{ $gr->supplier?->code }}</td>
-    <td class="k">أمر المشتريات</td><td style="width:110px">{{ $gr->purchaseOrder?->po_no ?: '—' }}</td>
+    <th>التاريخ</th><td class="v-num num">{{ $gr->doc_date?->format('d / n / Y') }}</td>
+    <th>وارد من</th><td>{{ $gr->supplier?->name }}</td>
+    <th>كود المورد</th><td class="code v-sm">{{ $gr->supplier?->code }}</td>
+    <th>أمر المشتريات</th><td class="code v-md">{{ $gr->purchaseOrder?->po_no ?: '—' }}</td>
   </tr>
 </table>
 
 <table class="grid">
+  <colgroup>
+    <col style="width:90px"><col><col style="width:95px"><col style="width:55px">
+    <col style="width:55px"><col style="width:60px"><col style="width:80px"><col style="width:150px">
+  </colgroup>
   <thead><tr>
-    <th style="width:90px">الكود</th><th>الصنـــف</th><th style="width:100px">اللون</th>
-    <th style="width:60px">الوحدة</th><th style="width:60px">العرض</th><th style="width:65px">ع.أتواب</th>
-    <th style="width:80px">الكمية</th><th style="width:160px">رقم الرسالة</th>
+    <th>الكود</th><th>الصنف</th><th>اللون</th><th>الوحدة</th>
+    <th>العرض</th><th>ع. أتواب</th><th>الكمية</th><th>رقم الرسالة</th>
   </tr></thead>
   <tbody>
     @foreach($gr->lines as $l)
       <tr>
-        <td>{{ $l->item_code }}</td>
+        <td class="code">{{ $l->item_code }}</td>
         <td class="r">{{ $l->fabricType?->name }}</td>
         <td>{{ $l->color?->name ?? $l->color?->code }}</td>
         <td>{{ $l->unit }}</td>
-        <td>{{ $l->width_cm ? rtrim(rtrim(number_format((float)$l->width_cm,2),'0'),'.') : '' }}</td>
-        <td>{{ $l->rolls_count }}</td>
-        <td>{{ rtrim(rtrim(number_format((float)$l->qty, 3), '0'), '.') }}</td>
-        <td>{{ $l->consignment_no }}</td>
+        <td class="num">{{ $l->width_cm ? rtrim(rtrim(number_format((float)$l->width_cm,2),'0'),'.') : '' }}</td>
+        <td class="num">{{ $l->rolls_count }}</td>
+        <td class="num">{{ rtrim(rtrim(number_format((float)$l->qty, 3), '0'), '.') }}</td>
+        <td class="code">{{ $l->consignment_no }}</td>
       </tr>
     @endforeach
     @for($i = $gr->lines->count(); $i < 12; $i++)
-      <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr class="blank"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
     @endfor
-    <tr>
-      <td colspan="5"><b>الإجمالي</b></td>
-      <td><b>{{ $gr->total_rolls }}</b></td>
-      <td><b>{{ rtrim(rtrim(number_format((float)$gr->total_qty, 3), '0'), '.') }}</b></td>
+    <tr class="total">
+      <td colspan="5" class="r">الإجمالي</td>
+      <td class="num">{{ $gr->total_rolls }}</td>
+      <td class="num">{{ rtrim(rtrim(number_format((float)$gr->total_qty, 3), '0'), '.') }}</td>
       <td></td>
     </tr>
   </tbody>
@@ -51,13 +49,16 @@
 
 @php $rej = $gr->consignment?->rejections()->where('goods_receipt_id', $gr->id)->get() ?? collect(); @endphp
 @if($rej->count())
-  <div class="terms" style="border:1px solid #000;padding:8px;margin-top:8px">
+  <div class="box warn">
     @foreach($rej as $r)
-      ✱ تم {{ $r->kind === 'on_hold' ? 'تعليق' : 'رفض' }}
-      {{ $r->lot_label ?: ('كود ' . ($r->color_code ?: $r->color?->code)) }}
-      عدد {{ $r->rolls_count }} توب بوزن
-      {{ rtrim(rtrim(number_format((float) $r->qty, 3), '0'), '.') }} {{ $r->unit }}
-      — {{ $r->party_name }}{{ $r->reason ? ' (' . $r->reason . ')' : '' }}<br>
+      <div>
+        <span class="mark">✱</span>
+        تم {{ $r->kind === 'on_hold' ? 'تعليق' : 'رفض' }}
+        {{ $r->lot_label ?: ('كود ' . ($r->color_code ?: $r->color?->code)) }}
+        عدد <span class="num">{{ $r->rolls_count }}</span> توب بوزن
+        <span class="num">{{ rtrim(rtrim(number_format((float) $r->qty, 3), '0'), '.') }}</span> {{ $r->unit }}
+        — {{ $r->party_name }}{{ $r->reason ? ' (' . $r->reason . ')' : '' }}
+      </div>
     @endforeach
   </div>
 @endif

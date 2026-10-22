@@ -1,56 +1,55 @@
 @extends('layouts.print')
+@section('doc_tagline', 'IN LOVE OF HIJAB')
+@section('doc_title', 'إذن صرف خام')
+@section('doc_serial', $mi->paper_serial ?: $mi->doc_no)
+@section('doc_serial_note', $mi->warehouse?->name ?? '')
 @section('doc')
-<div class="doc-head">
-  <div class="logo"><img src="{{ asset('assets/logo.png') }}" alt="Le Voile"><small>IN LOVE OF HIJAB</small></div>
-  <div class="doc-title">اذن صرف خام</div>
-  <div style="width:170px;text-align:left">
-    <span class="serial">{{ $mi->paper_serial ?: $mi->doc_no }}</span>
-    <div style="font-size:11px">{{ $mi->warehouse?->name }}</div>
-  </div>
-</div>
 
-<table class="meta" style="width:100%">
+<table class="meta">
   <tr>
-    <td class="k">التاريخ</td><td style="width:150px">{{ $mi->doc_date?->format('Y / n / j') }}</td>
-    <td class="k">منصرف إلى</td><td>{{ $mi->issued_to ?: $mi->factory?->name }}</td>
-    <td class="k">رقم أمر الشغل</td>
-    <td style="width:150px">{{ $mi->lines->pluck('workOrder.wo_no')->filter()->unique()->implode('، ') ?: '—' }}</td>
+    <th>التاريخ</th><td class="v-num num">{{ $mi->doc_date?->format('Y / n / j') }}</td>
+    <th>منصرف إلى</th><td>{{ $mi->issued_to ?: $mi->factory?->name }}</td>
+    <th>رقم أمر الشغل</th>
+    <td class="code v-lg">{{ $mi->lines->pluck('workOrder.wo_no')->filter()->unique()->implode('، ') ?: '—' }}</td>
   </tr>
 </table>
 
 <table class="grid">
+  <colgroup>
+    <col style="width:90px"><col><col style="width:70px"><col style="width:52px"><col style="width:52px">
+    <col style="width:58px"><col style="width:75px"><col style="width:150px"><col style="width:70px">
+  </colgroup>
   <thead><tr>
-    <th style="width:95px">الكود</th><th>الصنــف</th><th style="width:80px">اللون</th>
-    <th style="width:60px">الوحدة</th><th style="width:60px">العرض</th><th style="width:60px">ع.أتواب</th>
-    <th style="width:80px">الكمية</th><th style="width:180px">رقم الرسالة</th><th style="width:70px">أمر الشغل</th>
+    <th>الكود</th><th>الصنف</th><th>اللون</th><th>الوحدة</th><th>العرض</th>
+    <th>ع. أتواب</th><th>الكمية</th><th>رقم الرسالة</th><th>أمر الشغل</th>
   </tr></thead>
   <tbody>
     @foreach($mi->lines as $l)
       <tr>
-        <td>{{ $l->item_code }}</td>
+        <td class="code">{{ $l->item_code }}</td>
         <td class="r">{{ $l->fabricType?->name }}</td>
-        <td>{{ $l->color?->code }}</td>
+        <td class="code">{{ $l->color?->code }}</td>
         <td>{{ $l->unit }}</td>
-        <td>{{ $l->width_cm ? rtrim(rtrim(number_format((float) $l->width_cm, 2), '0'), '.') : '' }}</td>
-        <td>{{ $l->rolls_count ?: '' }}</td>
-        <td>{{ rtrim(rtrim(number_format((float) $l->qty, 3), '0'), '.') }}</td>
-        <td>{{ $l->consignment_no }}</td>
-        <td>{{ $l->workOrder?->wo_no }}</td>
+        <td class="num">{{ $l->width_cm ? rtrim(rtrim(number_format((float) $l->width_cm, 2), '0'), '.') : '' }}</td>
+        <td class="num">{{ $l->rolls_count ?: '' }}</td>
+        <td class="num">{{ rtrim(rtrim(number_format((float) $l->qty, 3), '0'), '.') }}</td>
+        <td class="code">{{ $l->consignment_no }}</td>
+        <td class="code">{{ $l->workOrder?->wo_no }}</td>
       </tr>
     @endforeach
     @for($i = $mi->lines->count(); $i < 12; $i++)
-      <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr class="blank"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
     @endfor
-    <tr>
-      <td colspan="5"><b>الإجمالي</b></td>
-      <td><b>{{ $mi->total_rolls }}</b></td>
-      <td><b>{{ rtrim(rtrim(number_format((float) $mi->total_qty, 3), '0'), '.') }}</b></td>
+    <tr class="total">
+      <td colspan="5" class="r">الإجمالي</td>
+      <td class="num">{{ $mi->total_rolls }}</td>
+      <td class="num">{{ rtrim(rtrim(number_format((float) $mi->total_qty, 3), '0'), '.') }}</td>
       <td colspan="2"></td>
     </tr>
   </tbody>
 </table>
 
-@if($mi->notes)<div class="terms">ملاحظات: {{ $mi->notes }}</div>@endif
+@if($mi->notes)<div class="note"><span class="lbl">ملاحظات:</span> {{ $mi->notes }}</div>@endif
 
 <div class="sigs">
   <div class="sig">المستلم<div class="line">{{ $mi->receiver_name }}</div></div>

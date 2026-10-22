@@ -812,6 +812,8 @@ details[open]>summary::before{transform:rotate(-90deg)}
   .card-header>form.d-flex .form-control,.card-header>form.d-flex .form-select{flex:1 1 140px;width:auto!important}
   .filter-bar .fb-range input{width:auto;flex:1}
   .doc-actions .da-end{margin-inline-start:0;width:100%}
+  .flow-next>.hint{flex-basis:100%}
+  .flow-next .btn{flex:1 1 auto;margin-inline-start:0!important;min-height:38px}
   input[type=date].form-control,input[type=number].form-control{max-width:none}
   .input-group:has(>input[type=number]){max-width:none}
 
