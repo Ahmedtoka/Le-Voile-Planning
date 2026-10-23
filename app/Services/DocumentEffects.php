@@ -87,9 +87,14 @@ class DocumentEffects
                         ? $manual
                         : DocNumber::consignmentNo($prefix, $sa->doc_date, $sa->purchaseOrder?->po_no, $seq + $g);
 
-                    // السطور بوحدة الطلب (طن/كجم/متر) — الحوض بيتحاسب بالكيلو دايمًا
-                    $kg    = (float) $lines->sum(fn ($l) => self::toUnit($l->qty, $l->unit, 'كجم'));
+                    /* الكمية بوحدة الطلب: كيلو (صافي بعد خصم الكيس والمصورة) أو متر — الميتينج 37.
+                       أعمدة الرسالة اسمها kg بس بتشيل الوحدة اللي على الرسالة (unit). */
+                    $unit  = $first->unit ?: 'كجم';
+                    $meter = lv_is_meter($unit);
+                    $kg    = $meter ? (float) $lines->sum('qty') : (float) $lines->sum(fn ($l) => self::toUnit($l->qty, $l->unit, 'كجم'));
                     $rolls = (int) $lines->sum('rolls_count');
+                    $gross = $meter ? null : (float) $lines->sum(fn ($l) => (float) ($l->gross_qty ?: $l->qty));
+                    $pack  = $meter ? 0 : (float) $lines->sum('packaging_kg');
 
                     $consignment = Consignment::updateOrCreate(
                         ['consignment_no' => $no],
@@ -101,6 +106,12 @@ class DocumentEffects
                             'color_id'          => $first->color_id,
                             'warehouse_id'      => $sa->warehouse_id,
                             'total_kg'          => $kg,
+                            'unit'              => $meter ? 'متر' : 'كجم',
+                            'fabric_form'       => $first->fabric_form,
+                            'bag_g'             => $first->bag_g,
+                            'tube_g'            => $first->tube_g,
+                            'gross_kg'          => $gross,
+                            'packaging_kg'      => $pack,
                             'rolls_count'       => $rolls,
                             'hold_kg'           => $direct ? 0 : $kg,
                             'released_kg'       => $direct ? $kg : 0,
@@ -167,6 +178,13 @@ class DocumentEffects
 
                     if ($poLine) {
                         $poLine->increment('received_qty', self::toUnit($line->qty, $line->unit, $poLine->unit));
+
+                        // التسكينة (الميتينج 37): الوارد بيتحسب على تسكينة المورد كمان
+                        $srcLine = $line->po_sourcing_line_id
+                            ? \App\Models\PoSourcingLine::find($line->po_sourcing_line_id)
+                            : ($sa->po_sourcing_id ? \App\Models\PoSourcingLine::where('po_sourcing_id', $sa->po_sourcing_id)
+                                ->where('purchase_order_line_id', $poLine->id)->first() : null);
+                        if ($srcLine) $srcLine->increment('received_qty', self::toUnit($line->qty, $line->unit, $srcLine->unit));
 
                         if ($line->color_action === 'substitute'
                             && $line->color_id && $poLine->color_id != $line->color_id) {
@@ -455,6 +473,7 @@ class DocumentEffects
 
         $payload = [
             'min_width_cm' => $insp->min_width_cm,
+            'usable_width_cm' => $insp->usable_width_cm,
             'avg_width_cm' => $insp->avg_width_cm,
             'max_width_cm' => $insp->max_width_cm,
             'defect_pct'   => $insp->defect_pct,

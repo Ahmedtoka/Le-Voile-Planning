@@ -76,7 +76,8 @@
           <th style="width:35px">م</th><th style="width:190px">أمر الشغل</th><th style="width:110px">الكود</th>
           <th class="req" style="width:270px">رقم الرسالة</th><th style="width:96px">الوحدة</th>
           <th style="width:90px">العرض (سم)</th><th style="width:90px">عدد الأتواب</th>
-          <th class="req" style="width:110px">الكمية</th><th>ملاحظات</th><th style="width:44px"><span class="visually-hidden">حذف</span></th>
+          <th style="width:120px">القائم على الميزان</th>
+          <th class="req" style="width:110px">الصافي / الكمية</th><th>ملاحظات</th><th style="width:44px"><span class="visually-hidden">حذف</span></th>
         </tr></thead>
         <tbody id="lines">
           @foreach($lines as $i => $l) @include('issues.line', ['i'=>$i,'l'=>$l]) @endforeach
@@ -86,7 +87,8 @@
     </div>
     <div class="card-footer bg-white hint">
       <i class="bi bi-info-circle" aria-hidden="true"></i>
-      الكمية بوحدة السطر (كجم أو متر). السيستم بيمنع الإرسال لو الكمية أكبر من المفرج عنه في الحوض.
+      بالكيلو: اكتب اللي طلع على الميزان (قائم) وعدد الأتواب — السيستم يخصم الكيس والمصورة بأوزان الرسالة نفسها ويطلّع <b>الصافي</b>، وده اللي بيتخصم من الرصيد وبيتحسب عليه الاستهلاك.
+      بالمتر: اكتب الأمتار على طول. السيستم بيمنع الإرسال لو الكمية أكبر من المفرج عنه في الحوض.
     </div>
   </div>
 
@@ -116,6 +118,26 @@
 @push('scripts')
 <script>
 window.LVI = {
+  /* الصافي = القائم − (كيس + مصورة) × الأتواب ÷ 1000 — بأوزان الرسالة المسجلة في إذن الإضافة */
+  net(el) {
+    const tr = el.closest('tr'), o = tr.querySelector('.i-cn')?.selectedOptions[0];
+    const gross = Number(tr.querySelector('.i-gross')?.value) || 0, rolls = Number(tr.querySelector('.i-rolls')?.value) || 0;
+    const netIn = tr.querySelector('.i-net'), pk = tr.querySelector('.i-pk'), gIn = tr.querySelector('.i-gross');
+    if (!o || !o.value) return;
+    const meter = o.dataset.meter === '1';
+    if (gIn) { gIn.disabled = meter; gIn.placeholder = meter ? 'بالمتر — مفيش وزن' : 'على الميزان'; }
+    if (meter) { if (pk) pk.textContent = ''; return; }
+    if (!gross) { if (pk) pk.textContent = ''; return; }
+    const pack = Math.round((Number(o.dataset.bag) + Number(o.dataset.tube)) * rolls) / 1000;
+    const n = Math.max(0, Math.round((gross - pack) * 1000) / 1000);
+    if (netIn) netIn.value = n;
+    if (pk) pk.textContent = pack > 0 ? '− ' + pack + ' كيس ومصورة' : 'الرسالة من غير أوزان كيس/مصورة';
+  },
+  manual(el) {
+    /* كتب الصافي بإيده؟ القائم بيتشال عشان ما يبقاش في رقمين متناقضين */
+    const tr = el.closest('tr'), g = tr.querySelector('.i-gross');
+    if (g && g.value && Math.abs(Number(g.value) - Number(el.value)) > 0.0005 && document.activeElement === el) { g.value = ''; const pk = tr.querySelector('.i-pk'); if (pk) pk.textContent = 'صافي مكتوب يدوي'; }
+  },
   onWo(sel) {
     /* لما تختار أمر شغل، مفيش ربط تلقائي بخامة معينة —
        السيستم بيربط بالرسالة اللي تختارها في نفس السطر. */

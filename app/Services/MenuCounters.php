@@ -42,7 +42,9 @@ class MenuCounters
 
         // ── المشتريات: الطلبات اللي نزلت من التخطيط ومستنية تسعير ──
         if ($can('po.source')) {
-            $c['purchasing.queue'] = PurchaseOrder::where('stage', 'purchasing')->count();
+            $c['purchasing.queue'] = PurchaseOrder::whereNotIn('stage', ['closed', 'cancelled'])
+                ->where(fn ($q) => $q->where('stage', 'purchasing')
+                    ->orWhereHas('lines', fn ($l) => $l->whereColumn('qty', '>', 'sourced_qty')))->count();
         }
 
         // الحسابات متابعة بس — مفيش أكشن مطلوب فمفيش كاونتر.

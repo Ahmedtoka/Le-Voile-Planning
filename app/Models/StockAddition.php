@@ -36,6 +36,7 @@ class StockAddition extends Model
 
     public function supplier()      { return $this->belongsTo(Supplier::class); }
     public function warehouse()     { return $this->belongsTo(Warehouse::class); }
+    public function sourcing()      { return $this->belongsTo(PoSourcing::class, 'po_sourcing_id'); }
     public function purchaseOrder() { return $this->belongsTo(PurchaseOrder::class); }
     public function consignment()   { return $this->belongsTo(Consignment::class); }
     public function goodsReceipts() { return $this->hasMany(GoodsReceipt::class); }

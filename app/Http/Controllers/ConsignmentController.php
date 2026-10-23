@@ -26,6 +26,10 @@ class ConsignmentController extends Controller
         if ($c = $request->get('color_id')) $q->where('color_id', $c);
         if ($f = $request->get('fabric_type_id')) $q->where('fabric_type_id', $f);
         if ($request->boolean('ready'))     $q->readyForProduction();
+        /* الرسايل اللي خلصت رصيدها ما تظهرش في الرصيد إلا لو طلبت (الميتينج 37): «الشركة هتكبر — 70، 80 حوض» */
+        if (!$request->boolean('all') && !$request->get('status') && !$request->get('q')) {
+            $q->where(fn ($w) => $w->where('remaining_kg', '>', 0)->orWhereIn('status', ['under_inspection', 'inspected', 'lab_done', 'rejected']));
+        }
         if ($term = trim((string) $request->get('q'))) $q->where('consignment_no', 'like', "%{$term}%");
 
         if ($from = $request->get('from')) $q->whereDate('arrival_date', '>=', $from);

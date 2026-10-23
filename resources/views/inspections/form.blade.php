@@ -15,6 +15,7 @@
 @endphp
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'inspection'])
+@php $meter = (bool) ($c?->is_meter ?? false); @endphp
 
 {{-- ① سامري الرسالة — جدول عريض في النص، تلات مجموعات: الرسالة | إذن الإضافة | طلب الشراء --}}
 @if($c)
@@ -125,7 +126,10 @@
             <div class="ro-title">من إذن الإضافة — للقراءة</div>
             <table class="table table-sm kv mb-0">
               <tr><th>أتواب حسب الإذن</th><td class="num">{{ (int) ($row->declared_rolls ?? $c?->rolls_count) }} توب</td></tr>
-              <tr><th>الوزن حسب الإذن</th><td class="num">{{ $c ? lv_kg($c->total_kg) : '—' }}</td></tr>
+              <tr><th>{{ $meter ? 'الأمتار حسب الإذن' : 'الوزن حسب الإذن (صافي)' }}</th><td class="num">{{ $c ? ($meter ? lv_num($c->total_kg, 2) . ' م' : lv_kg($c->total_kg)) : '—' }}</td></tr>
+              @if($c && !$meter && (float) $c->packaging_kg > 0)
+                <tr><th>القائم على الإذن</th><td class="num hint">{{ lv_kg($c->gross_kg, false) }} − كيس ومصورة {{ lv_num($c->packaging_kg) }}</td></tr>
+              @endif
               <tr><th>فحصه</th><td>{{ $mode === 'edit' && $row->status === 'approved' ? ($row->inspector?->name ?? '—') : '— لسه (' . auth()->user()?->name . ')' }}
                 <span class="hint num">{{ $mode === 'edit' && $row->status === 'approved' ? $row->doc_date?->format('Y-m-d') : '' }}</span></td></tr>
             </table>
@@ -141,12 +145,12 @@
                 @if($editable)<button type="button" class="btn btn-outline-plum" id="buildRows"><i class="bi bi-check2" aria-hidden="true"></i> تم</button>@endif
               </div>
               <div class="hint">اكتب العدد ودوس «تم» — سطر لكل توب</div></div>
-            <div class="col-md-4"><label class="form-label" for="counted_kg">الوزن المجرود</label>
+            <div class="col-md-4"><label class="form-label" for="counted_kg">{{ $meter ? 'الأمتار المجرودة' : 'الوزن المجرود' }}</label>
               <div class="input-group">
                 <input type="number" step="0.001" min="0" name="counted_kg" id="counted_kg" class="form-control" value="{{ old('counted_kg', $row->counted_kg !== null ? lv_num($row->counted_kg) : '') }}" placeholder="{{ $c ? 'مثال: ' . lv_num($c->total_kg) : 'مثال: 7600' }}">
-                <span class="input-group-text">كجم</span>
+                <span class="input-group-text">{{ $meter ? 'م' : 'كجم' }}</span>
               </div>
-              <div class="hint">اختياري — لو سيبته فاضي بنقارن بوزن الإذن</div></div>
+              <div class="hint">{{ $meter ? 'اختياري — مجموع الأمتار المكتوبة على الأتواب' : 'اختياري — الفحص ما بيوزنش؛ لو سيبته فاضي بنقارن بوزن الإذن' }}</div></div>
             <div class="col-md-4"><label class="form-label" for="paper_serial">المسلسل الورقي للفحص</label>
               <input name="paper_serial" id="paper_serial" class="form-control w-short" value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="مثال: 04619" inputmode="numeric"></div>
           </div>
@@ -216,17 +220,24 @@
   <div class="card mb-3">
     <div class="card-header">
       <span>② قياس الأتواب
-        <span class="hint">— طول وعرض كل توب (أقل عرض هو اللي الماركر هيتبني عليه) + وزن البنشر لكل توب للمعمل — <b>بيتحسب لوحده</b> من وزن التوب ÷ (الطول × العرض)، ولو المعمل قاسه بالبانشر اكتب رقمه مكانه. التوب البايظ علّمه <b>مرفوض</b> واكتب وزنه.</span>
+        @if($meter)
+          <span class="hint">— الرسالة <b>بالمتر</b>: اكتب الأمتار المكتوبة على كل توب والعرض والحالة. مفيش وزن ولا بنشر. التوب البايظ علّمه <b>مرفوض</b> — أمتاره بتتخصم من الرسالة والطلب. العيّنة على الأقل {{ lv_num(lv_setting('min_inspection_sample_pct', 10), 0) }}% من الأتواب.</span>
+        @else
+          <span class="hint">— طول وعرض كل توب (أقل عرض هو اللي الماركر هيتبني عليه) + وزن البنشر لكل توب للمعمل — <b>بيتحسب لوحده</b> من وزن التوب ÷ (الطول × العرض)، ولو المعمل قاسه بالبانشر اكتب رقمه مكانه. التوب البايظ علّمه <b>مرفوض</b> واكتب وزنه. العيّنة على الأقل {{ lv_num(lv_setting('min_inspection_sample_pct', 10), 0) }}% من الأتواب.</span>
+        @endif
       </span>
       @if($editable)<button type="button" class="btn btn-sm btn-outline-plum ms-auto" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> توب</button>@endif
     </div>
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
         <thead><tr>
-          <th style="width:35px">م</th><th style="width:90px">رقم التوب</th><th style="width:120px">الطول (م)</th>
-          <th style="width:120px">العرض (سم)</th><th style="width:95px">الحالة</th><th style="width:125px">وزن التوب (كجم)</th>
+          <th style="width:35px">م</th><th style="width:90px">رقم التوب</th><th style="width:130px">{{ $meter ? 'الأمتار المكتوبة' : 'الطول (م)' }}</th>
+          <th style="width:120px">العرض (سم)</th><th style="width:95px">الحالة</th>
+          @unless($meter)
+          <th style="width:125px">وزن التوب (كجم)</th>
           <th style="width:125px">البنشر (جم/م²)
             @include('partials.fx', ['t' => 'البنشر للتوب', 'f' => 'مثال: وزن التوب 19 كجم × 1000 ÷ (الطول 50 م × العرض 1.75 م) = 217.1 جم/م²', 'why' => 'بيتحسب لوحده لكل توب من الطول والعرض والوزن — لو المعمل قاسه بالبانشر اكتب رقمه مكانه'])</th>
+          @endunless
           <th style="width:130px">العيب</th><th style="width:240px">تفاصيل العيب</th>
           <th>ملاحظات</th><th style="width:44px"></th>
         </tr></thead>
@@ -240,7 +251,7 @@
     <div class="card-footer bg-white" id="estWrap" hidden
          data-declared="{{ (float) ($row->counted_kg ?: $c?->total_kg ?: 0) }}"
          data-warn="{{ config('lvplanning.weight_estimate.warn_pct', 5) }}" data-danger="{{ config('lvplanning.weight_estimate.danger_pct', 10) }}"
-         data-minsample="{{ config('lvplanning.min_inspection_sample_pct', 15) }}">
+         data-minsample="{{ lv_setting('min_inspection_sample_pct', 10) }}" data-meter="{{ $meter ? 1 : 0 }}">
       <div id="estText" class="small"></div>
     </div>
   </div>

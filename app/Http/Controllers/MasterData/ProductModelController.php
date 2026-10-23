@@ -70,6 +70,7 @@ class ProductModelController extends BaseCrudController
             'sizes',
             'boms' => fn ($q) => $q->orderBy('id', 'desc'),
             'boms.accessory', 'boms.size',
+            'fabrics.fabricType', 'fabrics.color',
         ])->findOrFail($id);
 
         return view('crud.model_sizes', [
@@ -77,6 +78,8 @@ class ProductModelController extends BaseCrudController
             'model'       => $model,
             'allSizes'    => Size::ordered()->where('is_active', true)->get(),
             'accessories' => \App\Models\Accessory::where('is_active', true)->orderBy('name')->get(),
+            'fabricTypes' => FabricType::where('is_active', true)->orderBy('name')->get(),
+            'colors'      => \App\Models\Color::usable()->orderBy('code')->get(),
         ]);
     }
 
@@ -106,6 +109,77 @@ class ProductModelController extends BaseCrudController
         );
 
         return back()->with('success', 'تمت إضافة الإكسسوار للموديل.');
+    }
+
+    /** خامة من خامات الموديل (الميتينج 37) */
+    public function addFabric(Request $request, $id)
+    {
+        $data = $request->validate([
+            'fabric_type_id'        => ['required', 'exists:fabric_types,id'],
+            'color_id'              => ['nullable', 'exists:colors,id'],
+            'consumption_per_piece' => ['nullable', 'numeric', 'min:0'],
+            'unit'                  => ['required', 'in:كجم,متر'],
+            'notes'                 => ['nullable', 'string'],
+        ], [], ['fabric_type_id' => 'الخامة', 'consumption_per_piece' => 'الاستهلاك للقطعة']);
+
+        \App\Models\ModelFabric::updateOrCreate(
+            ['product_model_id' => $id, 'fabric_type_id' => $data['fabric_type_id'], 'color_id' => $data['color_id'] ?? null],
+            $data + ['product_model_id' => $id]
+        );
+
+        return back()->with('success', 'اتضافت الخامة للموديل — طلب الشراء هيطلّعها لوحده.');
+    }
+
+    public function deleteFabric($id, $fid)
+    {
+        \App\Models\ModelFabric::where('product_model_id', $id)->findOrFail($fid)->delete();
+        return back()->with('success', 'تم الحذف.');
+    }
+
+    /**
+     * خامات مجموعة موديلات — لطلب الشراء: ?ids[]=12&ids[]=14
+     * بيرجع كل (خامة + لون) مرة واحدة مع مجموع الاستهلاك للقطعة من الموديلات اللي بتستخدمها.
+     */
+    public function fabricsOf(Request $request)
+    {
+        $ids = array_filter(array_map('intval', (array) $request->get('ids', [])));
+        if (!$ids) return response()->json([]);
+
+        $rows = \App\Models\ModelFabric::with(['fabricType', 'color', 'productModel'])
+            ->whereIn('product_model_id', $ids)->get();
+
+        // الموديل اللي ملوش خامات مسجلة لكن ليه خامة أساسية في كارته — بنعتبرها خامته
+        $models = ProductModel::whereIn('id', $ids)->whereNotNull('fabric_type_id')->with('fabricType')->get();
+        foreach ($models as $m) {
+            if ($rows->contains(fn ($r) => $r->product_model_id == $m->id)) continue;
+            $mf = new \App\Models\ModelFabric([
+                'product_model_id' => $m->id, 'fabric_type_id' => $m->fabric_type_id, 'color_id' => null,
+                'consumption_per_piece' => $m->std_consumption_kg, 'unit' => 'كجم',
+            ]);
+            $mf->setRelation('productModel', $m);
+            $mf->setRelation('fabricType', $m->fabricType);
+            $rows->push($mf);
+        }
+
+        $out = [];
+        foreach ($rows as $r) {
+            $key = $r->fabric_type_id . '|' . (int) $r->color_id;
+            if (!isset($out[$key])) {
+                $out[$key] = [
+                    'fabric_type_id' => (int) $r->fabric_type_id,
+                    'fabric_name'    => $r->fabricType?->name,
+                    'color_id'       => $r->color_id ? (int) $r->color_id : null,
+                    'color_label'    => $r->color?->label,
+                    'unit'           => $r->unit ?: 'كجم',
+                    'consumption'    => 0.0,
+                    'models'         => [],
+                ];
+            }
+            $out[$key]['consumption'] += (float) $r->consumption_per_piece;
+            $out[$key]['models'][] = $r->productModel?->name;
+        }
+
+        return response()->json(array_values($out));
     }
 
     public function deleteBom($id, $bomId)

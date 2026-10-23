@@ -27,12 +27,12 @@
           @include('partials.consignment_picker', ['name' => 'consignment_id', 'consignments' => $consignments, 'value' => old('consignment_id', $row->consignment_id), 'onchange' => 'LVM.pick()'])
           <div id="breakWarn" class="alert alert-danger py-1 mt-1 small" hidden></div>
         </div>
-        <div class="col-md-2"><label class="form-label">أقل عرض</label>
+        <div class="col-md-2"><label class="form-label">عرض التشغيل</label>
           <div class="input-group">
             <div class="form-control ro num" id="fw" aria-live="polite">—</div>
             <span class="input-group-text">سم</span>
           </div>
-          <div class="hint">من تقرير الفحص — مقفول</div></div>
+          <div class="hint">أقل عرض من الفحص − {{ lv_num(lv_setting('width_margin_cm_per_side', 2.5), 2) }} سم من كل جانب — مقفول</div></div>
         <div class="col-md-2"><label class="form-label">البنشر</label>
           <div class="input-group">
             <div class="form-control ro num" id="fg" aria-live="polite">—</div>

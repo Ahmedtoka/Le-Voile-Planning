@@ -17,7 +17,8 @@
       'rem'    => (float) $c->remaining_kg,
       'rolls'  => (int) $c->rolls_count,
       'date'   => $c->arrival_date?->format('Y-m-d'),
-      'w'      => $c->min_width_cm,
+      'w'      => $c->usable_width,       // عرض التشغيل — اللي الماركر بيتبني عليه
+      'wfull'  => $c->min_width_cm,       // أقل عرض مقاس
       'g'      => $c->avg_gsm,
       'break'  => $c->has_color_break ? 1 : 0,
       'note'   => $c->color_break_note,

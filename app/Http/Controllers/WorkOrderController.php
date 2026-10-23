@@ -96,7 +96,7 @@ class WorkOrderController extends Controller
                     'calc_mode'       => 'weight',
                     'unit'            => 'كجم',
                     'planned_qty'     => $c->remaining_kg,
-                    'fabric_width_m'  => $c->min_width_cm ? round((float) $c->min_width_cm / 100, 3) : null,
+                    'fabric_width_m'  => $c->usable_width ? round((float) $c->usable_width / 100, 3) : null,
                     'gsm_kg_m2'       => $c->avg_gsm ? round((float) $c->avg_gsm / 1000, 4) : null,
                 ];
             }
@@ -115,7 +115,7 @@ class WorkOrderController extends Controller
                     'calc_mode'              => 'weight',
                     'unit'                   => 'كجم',
                     'planned_qty'            => $pr->qty_for_work_order,
-                    'fabric_width_m'         => $c->min_width_cm ? round((float) $c->min_width_cm / 100, 3) : null,
+                    'fabric_width_m'         => $c->usable_width ? round((float) $c->usable_width / 100, 3) : null,
                     'gsm_kg_m2'              => $c->avg_gsm ? round((float) $c->avg_gsm / 1000, 4) : null,
                     'marker_id'              => $mk?->status === 'approved' ? $mk->id : null,
                     'spread_length_m'        => $mk?->spread_length_m,
@@ -456,7 +456,7 @@ class WorkOrderController extends Controller
             // الأقدم أولًا (FIFO) — القديم يخرج الأول (الميتينج)
             'consignments' => Consignment::with(['color', 'fabricType'])->readyForProduction()
                                 ->orderBy('arrival_date')->orderBy('id')->get(),
-            'safetyCm'     => (float) config('lvplanning.safety_margin_cm', 5),
+            'safetyCm'     => (float) lv_setting('safety_margin_cm', 5),
             'products'     => [],
             'markers'      => Marker::where('status', 'approved')->where('is_active', true)->latest('id')->get(),
             'factories'    => Factory::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
@@ -489,6 +489,7 @@ class WorkOrderController extends Controller
             // ── الخامات ──
             'fabrics'                        => ['required', 'array', 'min:1'],
             'fabrics.*.consignment_id'       => ['required', 'exists:consignments,id'],
+            'fabrics.*.width_basis'          => ['nullable', 'in:usable,full'],
             'fabrics.*.preparation_request_id' => ['nullable', 'exists:preparation_requests,id'],
             'fabrics.*.marker_id'            => ['nullable', 'exists:markers,id'],
             'fabrics.*.role'                 => ['nullable', 'string', 'max:20'],
@@ -539,7 +540,7 @@ class WorkOrderController extends Controller
 
             // طول الأمان: 5 سم ثابتة بتتضاف تلقائيًا على طول الفرشة لو المخطط ما كتبش (الميتينج)
             if (empty($f['spread_length_safe_m']) && !empty($f['spread_length_m'])) {
-                $f['spread_length_safe_m'] = round((float) $f['spread_length_m'] + (float) config('lvplanning.safety_margin_cm', 5) / 100, 3);
+                $f['spread_length_safe_m'] = round((float) $f['spread_length_m'] + (float) lv_setting('safety_margin_cm', 5) / 100, 3);
             }
 
             // طلب التحضير اللي الأمر اتعمل عليه — بيتعلّم «دخل أمر شغل» وحجزه بيتحول لتخصيص الأمر
@@ -562,6 +563,7 @@ class WorkOrderController extends Controller
             WorkOrderFabric::create([
                 'work_order_id'        => $wo->id,
                 'line_no'              => $i + 1,
+                'width_basis'          => $f['width_basis'] ?? 'usable',
                 'consignment_id'       => $c?->id,
                 'preparation_request_id' => $f['preparation_request_id'] ?? null,
                 'fabric_type_id'       => $c?->fabric_type_id,

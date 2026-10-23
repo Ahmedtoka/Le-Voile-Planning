@@ -42,6 +42,10 @@
         <input class="form-check-input" type="checkbox" name="ready" value="1" id="rdy" @checked(request('ready')) onchange="this.form.submit()">
         <label class="form-check-label" for="rdy">الجاهز للتشغيل بس</label>
       </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="all" value="1" id="allc" @checked(request('all')) onchange="this.form.submit()">
+        <label class="form-check-label" for="allc" title="الرسايل اللي رصيدها صفر مخفية افتراضيًا">اعرض اللي خلصت كمان</label>
+      </div>
       <div class="fb-range">
         <label class="hint" for="f-from">وصلت من</label>
         <input type="date" id="f-from" name="from" value="{{ request('from') }}" class="form-control">

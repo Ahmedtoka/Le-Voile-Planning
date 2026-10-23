@@ -27,11 +27,11 @@
 </div>
 
 {{-- زرار الدور اللي عليه الدور --}}
-@if($row->stage === 'purchasing' && $u->can2('po.source'))
+@if($row->purchasingEditable() && $u->can2('po.source'))
   <div class="alert alert-warning d-flex align-items-center gap-2 flex-wrap">
     <i class="bi bi-hand-index-thumb" aria-hidden="true"></i>
-    <span>الطلب مستني تسعير منك.</span>
-    <a href="{{ route('purchasing.source', $row) }}" class="btn btn-sm btn-plum ms-auto">سعّر الطلب</a>
+    <span>{{ $row->sourcings->count() ? 'لسه فيه كمية من غير مورد — سكّن الباقي.' : 'الطلب مستني تسعير منك.' }}</span>
+    <a href="{{ route('purchasing.source', $row) }}" class="btn btn-sm btn-plum ms-auto">{{ $row->sourcings->count() ? 'سكّن الباقي' : 'سعّر الطلب' }}</a>
   </div>
 @elseif($row->needsFinanceAck() && $u->can2('po.finance'))
   <div class="alert alert-info d-flex align-items-center gap-2 flex-wrap">
@@ -113,6 +113,40 @@
   </div>
 
   <div class="col-lg-5">
+    @if($row->sourcings->count())
+      <div class="card mb-3">
+        <div class="card-header"><span>التسكينات <span class="pill pill-muted num">{{ $row->sourcings->count() }}</span>
+          <span class="hint">— كل مورد بكميته وسعره وتاريخه</span></span>
+          @if($row->purchasingEditable() && $u->can2('po.source'))
+            <a href="{{ route('purchasing.source', $row) }}" class="btn btn-sm btn-plum ms-auto">سكّن الباقي</a>
+          @endif
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>#</th><th>المورد</th><th>توريد</th><th>الأصناف</th><th>الإجمالي ({{ $cur }})</th></tr></thead>
+            <tbody>
+            @foreach($row->sourcings as $s)
+              <tr>
+                <td class="num">{{ $s->seq }}</td>
+                <td>{{ $s->supplier?->name }}<div class="hint">{{ $s->payment_method }}</div></td>
+                <td class="num">{{ $s->delivery_date?->format('Y-m-d') }}</td>
+                <td class="hint">
+                  @foreach($s->lines as $sl)
+                    <div>{{ $sl->poLine?->fabricType?->name }} {{ $sl->poLine?->color?->code }}: <b class="num">{{ lv_num($sl->qty, 3) }} {{ $sl->unit }}</b> × {{ number_format((float) $sl->unit_price, 2) }}
+                      @if($sl->received_qty > 0)<span class="pill pill-ok">وصل {{ lv_num($sl->received_qty, 3) }}</span>@endif</div>
+                  @endforeach
+                </td>
+                <td class="num fw-bold">{{ number_format((float) $s->total, 2) }}</td>
+              </tr>
+            @endforeach
+            </tbody>
+          </table>
+        </div>
+        @if($row->hasUnsourcedQty())
+          <div class="card-footer bg-white hint text-warning fw-bold">لسه فيه {{ lv_num($row->lines->sum(fn ($l) => $l->unsourced_qty), 3) }} من غير مورد — الطلب فاضل في «مستنية تسعير».</div>
+        @endif
+      </div>
+    @endif
     <div class="card mb-3">
       <div class="card-header">مسار الطلب</div>
       <div class="table-responsive">

@@ -81,17 +81,26 @@ class StockAdditionController extends Controller
             // «استلام حاويات» = بدون دورة فحص — الإذن نفسه هو النهائي
             'receipt_type' => $request->get('type') === 'container' ? 'container' : 'normal',
         ]);
-        $preset = [];
-        $po     = null;
+        $preset   = [];
+        $po       = null;
+        $sourcing = null;
+        $sourcings = collect();
 
         if ($poId = $request->get('purchase_order_id')) {
-            $po = PurchaseOrder::with(['lines.color', 'lines.fabricType', 'supplier'])->find($poId);
+            $po = PurchaseOrder::with(['lines.color', 'lines.fabricType', 'supplier', 'sourcings.supplier', 'sourcings.lines'])->find($poId);
         }
 
         if ($po) {
+            /* التسكينات (الميتينج 37): الاستلام بيتم على تسكينة (مورد + كمية).
+               لو فيه أكتر من تسكينة عليها باقي، المخزن يختار؛ ولو واحدة بتتاخد لوحدها. */
+            $sourcings = $po->sourcings->filter(fn ($s) => $s->outstanding_qty > 0.0005)->values();
+            if ($sid = (int) $request->get('po_sourcing_id')) $sourcing = $po->sourcings->firstWhere('id', $sid);
+            if (!$sourcing) $sourcing = $sourcings->first() ?: $po->sourcings->last();
+
             $row->purchase_order_id = $po->id;
-            $row->supplier_id       = $po->supplier_id;
-            $row->warehouse_id      = $po->warehouse_id
+            $row->po_sourcing_id    = $sourcing?->id;
+            $row->supplier_id       = $sourcing?->supplier_id ?: $po->supplier_id;
+            $row->warehouse_id      = ($sourcing?->warehouse_id ?: $po->warehouse_id)
                 ?: Warehouse::where('type', 'fabric')->value('id');
 
             // نوع الاستلام قرار صاحب الطلب — مش المخزن
@@ -102,9 +111,14 @@ class StockAdditionController extends Controller
                 // البند اللي اتقفل (اكتمل) ما بيظهرش تاني في الإذن
                 if ($l->is_closed || $remaining <= 0) continue;
 
-                /* البيانات الجاية من الطلب ثابتة زي ما هي:
-                   طلبت طن؟ بتستلم بالطن — مفيش تحويل ولا تعديل على الطلب. */
+                $srcLine = $sourcing?->lines->firstWhere('purchase_order_line_id', $l->id);
+                // الطلب متسكّن على تسكينات؟ يظهر بس اللي على التسكينة دي وليه باقي
+                if ($po->sourcings->isNotEmpty() && (!$srcLine || $srcLine->outstanding_qty <= 0.0005)) continue;
+
                 $preset[] = $this->poLineArray($l) + [
+                    'po_sourcing_line_id' => $srcLine?->id,
+                    'src_qty'             => $srcLine ? (float) $srcLine->qty : null,
+                    'src_received'        => $srcLine ? (float) $srcLine->received_qty : null,
                     'rolls_count'  => '',
                     'qty'          => '',        // أمين المخزن بيكتب المستلم فعلًا
                     'color_id'     => $l->color_id,
@@ -114,10 +128,12 @@ class StockAdditionController extends Controller
         }
 
         return view('additions.form', $this->formData([
-            'row'    => $row,
-            'mode'   => 'create',
-            'preset' => $preset,
-            'poInfo' => $po,
+            'row'       => $row,
+            'mode'      => 'create',
+            'preset'    => $preset,
+            'poInfo'    => $po,
+            'sourcing'  => $sourcing,
+            'sourcings' => $sourcings,
             'consignmentPreview' => $po ? $this->consignmentPreview($po) : null,
         ]));
     }
@@ -153,16 +169,18 @@ class StockAdditionController extends Controller
         // نفس شكل بيانات الإنشاء — عشان الشاشة ترسم السطور المرتبطة بالطلب صح
         $saved = $stock_addition->lines->map(function ($l) {
             $base = $l->only(['id', 'item_code', 'item_name', 'fabric_type_id', 'color_id',
-                              'po_color_id', 'po_line_id', 'color_action', 'rolls_count', 'qty', 'unit',
+                              'po_color_id', 'po_line_id', 'po_sourcing_line_id', 'color_action', 'rolls_count', 'qty', 'unit',
+                              'fabric_form', 'bag_g', 'tube_g', 'gross_qty', 'packaging_kg',
                               'remainder_note']);
             $base['remainder_eta'] = $l->remainder_eta?->format('Y-m-d');
             return $l->poLine ? $this->poLineArray($l->poLine) + $base : $base;
         })->all();
 
         return view('additions.form', $this->formData([
-            'row'    => $stock_addition,
-            'mode'   => 'edit',
-            'preset' => $saved,
+            'row'      => $stock_addition,
+            'mode'     => 'edit',
+            'preset'   => $saved,
+            'sourcing' => $stock_addition->sourcing,
             'consignmentPreview' => !$stock_addition->consignment_no && $stock_addition->purchaseOrder
                 ? $this->consignmentPreview($stock_addition->purchaseOrder) : null,
         ]));
@@ -191,7 +209,7 @@ class StockAdditionController extends Controller
             'po_ordered'     => (float) $l->qty,
             'po_min'         => (float) $l->min_allowed_qty,   // حد الإقفال — الكمية ناقص نسبة الزيادة
             'po_received'    => (float) $l->received_qty,
-            'unit'           => $l->unit,     // طلبت طن ⇒ الوحدة طن — ثابتة
+            'unit'           => $l->unit,     // الوحدة من الطلب — كيلو أو متر (الميتينج 37)
         ];
     }
 
@@ -419,6 +437,7 @@ class StockAdditionController extends Controller
             'supplier_id'       => ['required', 'exists:suppliers,id'],
             'warehouse_id'      => ['required', 'exists:warehouses,id'],
             'purchase_order_id' => ['nullable', 'exists:purchase_orders,id'],
+            'po_sourcing_id'    => ['nullable', 'exists:po_sourcings,id'],
             'consignment_no'    => ['nullable', 'string', 'max:60'],
             // إجباري: بيتربط بالفحص والمعمل والاستلام وبيظهر كلينك في كل الشاشات
             'supplier_doc_no'   => ['required', 'string', 'max:60'],
@@ -437,7 +456,13 @@ class StockAdditionController extends Controller
             'lines.*.po_line_id'     => ['nullable',
                 \Illuminate\Validation\Rule::exists('purchase_order_lines', 'id')
                     ->where('purchase_order_id', (int) $request->input('purchase_order_id'))],
+            'lines.*.po_sourcing_line_id' => ['nullable', 'exists:po_sourcing_lines,id'],
             'lines.*.color_action'   => ['nullable', 'in:substitute,new_po'],
+            // الصافي والقائم (الميتينج 37) — للكيلو بس
+            'lines.*.fabric_form'    => ['nullable', 'in:open,closed'],
+            'lines.*.bag_g'          => ['nullable', 'numeric', 'min:0', 'max:5000'],
+            'lines.*.tube_g'         => ['nullable', 'numeric', 'min:0', 'max:5000'],
+            'lines.*.gross_qty'      => ['nullable', 'numeric', 'min:0'],
             'lines.*.remainder_eta'  => ['nullable', 'date'],
             'lines.*.remainder_note' => ['nullable', 'string', 'max:191'],
             'lines.*.accessory_id'   => ['nullable', 'exists:accessories,id'],
@@ -454,6 +479,25 @@ class StockAdditionController extends Controller
             'lines.*.qty'         => 'الكمية',
             'lines.*.rolls_count' => 'عدد الأتواب',
         ]);
+
+        /* الصافي من القائم (الميتينج 37): للكيلو — الصافي = القائم − (كيس + مصورة) × الأتواب ÷ 1000.
+           بالمتر مفيش وزن ولا كيس ولا مصورة. السيرفر هو اللي بيحسب — مش الشاشة. */
+        foreach ($v['lines'] as &$l) {
+            if (lv_is_meter($l['unit'] ?? 'كجم')) {
+                $l['fabric_form'] = null; $l['bag_g'] = null; $l['tube_g'] = null; $l['gross_qty'] = null; $l['packaging_kg'] = 0;
+                continue;
+            }
+            $gross = (float) ($l['gross_qty'] ?? 0);
+            if ($gross > 0) {
+                if (($l['fabric_form'] ?? '') !== 'open') $l['tube_g'] = null;   // المقفول كيس بس
+                $pack = lv_packaging_kg((float) ($l['bag_g'] ?? 0), (float) ($l['tube_g'] ?? 0), (int) ($l['rolls_count'] ?? 0));
+                $l['packaging_kg'] = $pack;
+                $l['qty'] = round(max(0, $gross - $pack), 3);
+            } else {
+                $l['packaging_kg'] = 0;
+            }
+        }
+        unset($l);
 
         // اللي ما اتكتبلوش كمية = ما وصلش المرة دي — بيتشال من الإذن
         $lines = array_values(array_filter($v['lines'], fn ($l) => (float) ($l['qty'] ?? 0) > 0));

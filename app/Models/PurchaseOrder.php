@@ -82,10 +82,11 @@ class PurchaseOrder extends Model
         return self::STAGE_COLORS[$this->stage] ?? 'secondary';
     }
 
-    /** المورد والأسعار والتوريد — المشتريات */
+    /** المورد والأسعار والتوريد — المشتريات: طول ما فيه كمية لسه ما اتسكّنتش */
     public function purchasingEditable(): bool
     {
-        return $this->stage === 'purchasing';
+        return $this->stage === 'purchasing'
+            || (in_array($this->stage, ['approved', 'receiving'], true) && $this->hasUnsourcedQty());
     }
 
     /** اتسعّر ونزل للحسابات ولسه ما سجّلتش علمها بيه */
@@ -120,6 +121,22 @@ class PurchaseOrder extends Model
     public function stockAdditions() { return $this->hasMany(StockAddition::class); }
     public function creator()   { return $this->belongsTo(User::class, 'created_by'); }
     public function lines()     { return $this->hasMany(PurchaseOrderLine::class)->orderBy('line_no'); }
+    /** التسكينات: الطلب ممكن يتسعّر على أكتر من مورد وأكتر من مرة (الميتينج 37) */
+    public function sourcings() { return $this->hasMany(PoSourcing::class)->orderBy('seq'); }
+
+    /** لسه فيه كمية ما اتسكّنتش مع مورد؟ */
+    public function hasUnsourcedQty(): bool
+    {
+        $this->loadMissing('lines');
+        return $this->lines->contains(fn ($l) => (float) $l->qty - (float) $l->sourced_qty > 0.0005);
+    }
+
+    /** الكمية المسكّنة إجمالي (بوحدة كل بند) */
+    public function getSourcedQtyAttribute(): float
+    {
+        $this->loadMissing('lines');
+        return (float) $this->lines->sum('sourced_qty');
+    }
     public function receipts()  { return $this->hasMany(GoodsReceipt::class); }
     public function consignments() { return $this->hasMany(Consignment::class); }
 
@@ -165,6 +182,19 @@ class PurchaseOrder extends Model
     public function recalcTotals(): void
     {
         $this->loadMissing('lines');
+
+        /* التسكينات موجودة؟ الإجماليات مجموعها — كل تسكينة بخصمها وضريبتها (الميتينج 37) */
+        $src = $this->sourcings()->get();
+        if ($src->isNotEmpty()) {
+            $sub = (float) $src->sum('subtotal'); $tot = (float) $src->sum('total');
+            $disc = (float) $src->sum(fn ($s) => round((float) $s->subtotal * (float) $s->discount_pct / 100, 2));
+            $this->forceFill([
+                'subtotal' => $sub, 'discount_value' => $disc, 'tax_value' => $tot - $sub + $disc,
+                'total' => $tot, 'total_qty' => (float) $this->lines->sum('qty'),
+            ])->saveQuietly();
+            return;
+        }
+
         $subtotal = 0; $qty = 0;
         foreach ($this->lines as $l) {
             $subtotal += (float) $l->line_total;

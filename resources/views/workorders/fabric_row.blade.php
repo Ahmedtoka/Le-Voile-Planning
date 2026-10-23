@@ -11,7 +11,7 @@
       <option value="">— اختر رسالة —</option>
       @foreach($consignments as $c)
         <option value="{{ $c->id }}"
-                data-w="{{ $c->min_width_cm }}" data-g="{{ $c->avg_gsm }}"
+                data-w="{{ $c->usable_width }}" data-wf="{{ $c->min_width_cm }}" data-g="{{ $c->avg_gsm }}"
                 data-rem="{{ $c->remaining_kg }}" data-name="{{ $c->fabricType?->name }}"
                 data-break="{{ $c->has_color_break ? 1 : 0 }}" data-breaknote="{{ $c->color_break_note }}"
                 data-search="{{ strtolower($c->consignment_no . ' ' . ($c->fabricType?->name ?? '') . ' ' . ($c->color?->code ?? '') . ' ' . ($c->color?->name ?? '')) }}"
@@ -49,7 +49,8 @@
              value="{{ $l['spread_length_safe_m'] ?? '' }}" oninput="this.dataset.auto='0'; LVF.calc()" placeholder="+{{ $safetyCm }} سم تلقائي" aria-label="طول الفرشة بالأمان"></td>
 
   <td class="num"><input type="number" step="0.001" min="0" name="fabrics[{{ $i }}][fabric_width_m]" class="f-wd"
-             value="{{ $l['fabric_width_m'] ?? '' }}" oninput="LVF.calc()" placeholder="مثال: 1.72" aria-label="العرض بالمتر"></td>
+             value="{{ $l['fabric_width_m'] ?? '' }}" oninput="LVF.calc()" placeholder="مثال: 1.72" aria-label="العرض بالمتر">
+    <input type="hidden" name="fabrics[{{ $i }}][width_basis]" class="f-wb" value="{{ $l['width_basis'] ?? 'usable' }}"></td>
 
   <td class="num"><input type="number" step="0.0001" min="0" name="fabrics[{{ $i }}][gsm_kg_m2]" class="f-gsm"
              value="{{ $l['gsm_kg_m2'] ?? '' }}" oninput="LVF.calc()" placeholder="مثال: 0.192" aria-label="البنشر كجم لكل متر مربع"></td>

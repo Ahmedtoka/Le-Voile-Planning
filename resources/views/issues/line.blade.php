@@ -14,10 +14,11 @@
   </td>
   <td><input name="lines[{{ $i }}][item_code]" value="{{ $l['item_code'] ?? '' }}" placeholder="مثال: 14810091" aria-label="الكود"></td>
   <td>
-    <select name="lines[{{ $i }}][consignment_id]" required aria-label="رقم الرسالة">
+    <select name="lines[{{ $i }}][consignment_id]" class="i-cn" required aria-label="رقم الرسالة" onchange="LVI.net(this)">
       <option value="">— اختر رسالة —</option>
       @foreach($consignments as $c)
-        <option value="{{ $c->id }}" @selected(($l['consignment_id'] ?? null)==$c->id)>
+        <option value="{{ $c->id }}" data-bag="{{ $c->bag_g ?? 0 }}" data-tube="{{ $c->tube_g ?? 0 }}" data-meter="{{ $c->is_meter ? 1 : 0 }}" data-rem="{{ $c->remaining_kg }}"
+                @selected(($l['consignment_id'] ?? null)==$c->id)>
           {{ $c->consignment_no }} — {{ $c->fabricType?->name }} · {{ $c->color?->code }}
           (متاح {{ rtrim(rtrim(number_format((float)$c->remaining_kg,2),'0'),'.') }})
         </option>
@@ -30,8 +31,10 @@
     </select>
   </td>
   <td class="num"><input type="number" step="0.01" min="0" name="lines[{{ $i }}][width_cm]" value="{{ $l['width_cm'] ?? '' }}" placeholder="مثال: 172" aria-label="العرض بالسنتيمتر"></td>
-  <td class="num"><input type="number" min="0" name="lines[{{ $i }}][rolls_count]" value="{{ $l['rolls_count'] ?? '' }}" placeholder="مثال: 4" aria-label="عدد الأتواب"></td>
-  <td class="num"><input type="number" step="0.001" min="0" name="lines[{{ $i }}][qty]" value="{{ $l['qty'] ?? '' }}" required placeholder="مثال: 152.9" aria-label="الكمية"></td>
+  <td class="num"><input type="number" min="0" name="lines[{{ $i }}][rolls_count]" class="i-rolls" value="{{ $l['rolls_count'] ?? '' }}" placeholder="مثال: 4" aria-label="عدد الأتواب" oninput="LVI.net(this)"></td>
+  <td class="num"><input type="number" step="0.001" min="0" name="lines[{{ $i }}][gross_qty]" class="i-gross" value="{{ $l['gross_qty'] ?? '' }}" placeholder="على الميزان" aria-label="الوزن القائم على الميزان" oninput="LVI.net(this)">
+    <div class="hint i-pk"></div></td>
+  <td class="num"><input type="number" step="0.001" min="0" name="lines[{{ $i }}][qty]" class="i-net" value="{{ $l['qty'] ?? '' }}" required placeholder="مثال: 152.9" aria-label="الصافي" oninput="LVI.manual(this)"></td>
   <td><input name="lines[{{ $i }}][notes]" value="{{ $l['notes'] ?? '' }}" placeholder="اختياري" aria-label="ملاحظات"></td>
   <td class="text-end"><div class="row-actions">
     <button type="button" class="btn btn-sm btn-outline-danger btn-icon" aria-label="حذف السطر" title="حذف السطر"

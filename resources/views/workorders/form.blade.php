@@ -102,7 +102,11 @@
           <th class="req">الكمية</th>
           <th class="req">طول الفرشة (م)</th>
           <th>بالأمان (م)</th>
-          <th>العرض (م)</th>
+          <th>العرض (م)
+            <select class="form-select form-select-sm mt-1" id="widthBasis" aria-label="احسب الاستهلاك على أنهي عرض" onchange="LVF.basis(this.value)" style="min-width:150px">
+              <option value="usable">عرض التشغيل (− تأمين)</option>
+              <option value="full">العرض الكامل المقاس</option>
+            </select></th>
           <th>البنشر (كجم/م²)</th>
           <th class="req">قطع الفرشة</th>
           <th>حسبة السيستم</th>
@@ -316,7 +320,10 @@ const LVF = (function () {
     const bw = row.querySelector('.f-break');
     if (bw) { bw.hidden = o.dataset.break !== '1'; bw.title = o.dataset.breaknote || ''; }
     const wd = row.querySelector('.f-wd'), gsm = row.querySelector('.f-gsm'), qty = row.querySelector('.f-qty');
-    if (wd && !wd.value && o.dataset.w) wd.value = (Number(o.dataset.w) / 100).toFixed(3);
+    const basis = document.getElementById('widthBasis')?.value || 'usable';
+    const wSrc = basis === 'full' ? (o.dataset.wf || o.dataset.w) : (o.dataset.w || o.dataset.wf);
+    if (wd && !wd.value && wSrc) wd.value = (Number(wSrc) / 100).toFixed(3);
+    const wb = row.querySelector('.f-wb'); if (wb) wb.value = basis;
     if (gsm && !gsm.value && o.dataset.g) gsm.value = (Number(o.dataset.g) / 1000).toFixed(4);
     if (qty && !qty.value && o.dataset.rem) qty.value = Number(o.dataset.rem).toFixed(3);
     calc();
@@ -420,7 +427,18 @@ const LVF = (function () {
   }
 
   document.addEventListener('DOMContentLoaded', () => setTimeout(run, 200));
-  return {pick, calc, target, filter, safety};
+  /* احسب الاستهلاك على عرض التشغيل (الافتراضي) ولا العرض الكامل — بيتطبق على كل السطور */
+  function basis(v) {
+    document.querySelectorAll('#fabrics tr').forEach(r => {
+      const o = r.querySelector('.f-cn')?.selectedOptions[0], wd = r.querySelector('.f-wd'), wb = r.querySelector('.f-wb');
+      if (!o || !o.value || !wd) return;
+      const src = v === 'full' ? (o.dataset.wf || o.dataset.w) : (o.dataset.w || o.dataset.wf);
+      if (src) wd.value = (Number(src) / 100).toFixed(3);
+      if (wb) wb.value = v;
+    });
+    calc();
+  }
+  return {pick, calc, target, filter, safety, basis};
 })();
 </script>
 @endpush

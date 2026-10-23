@@ -52,7 +52,8 @@
       <tbody>
       @forelse($rows as $r)
         <tr class="{{ $r->status === 'open' ? 'table-warning' : '' }}">
-          <td class="num fw-bold">{{ $r->doc_no }}<div class="hint">{{ $r->requester?->name }}</div></td>
+          <td class="num fw-bold">{{ $r->doc_no }}<div class="hint">{{ $r->requester?->name }}</div>
+            @if($r->batch_key)<div class="hint"><i class="bi bi-collection" aria-hidden="true"></i> مع {{ $r->batch_key }}</div>@endif</td>
           <td class="num">{{ $r->doc_date?->format('Y-m-d') }}</td>
           <td class="num">
             @if($r->consignment)
@@ -63,8 +64,9 @@
           </td>
           <td class="hint">{{ Str::limit($r->models_label, 50) ?: '—' }}</td>
           <td>{{ $r->factory?->name ?? '— يتحدد في أمر الشغل' }}</td>
-          <td class="num">{{ $r->is_remainder ? 'الباقي كله' : lv_num($r->requested_qty) . ' كجم' }}</td>
-          <td class="num fw-bold">{{ $r->actual_qty !== null ? lv_num($r->actual_qty) . ' كجم' : '—' }}
+          <td class="num">{{ $r->is_remainder ? 'الباقي كله' : lv_num($r->requested_qty) . ' ' . ($r->consignment?->unit_label ?? 'كجم') }}</td>
+          <td class="num fw-bold">{{ $r->actual_qty !== null ? lv_num($r->actual_qty) . ' ' . ($r->consignment?->unit_label ?? 'كجم') : '—' }}
+            @if($r->actual_gross_qty)<div class="hint">قائم {{ lv_num($r->actual_gross_qty) }} − كيس ومصورة {{ lv_num($r->packaging_kg) }}</div>@endif
             @if($r->actual_rolls)<div class="hint">{{ $r->actual_rolls }} توب</div>@endif
             @if($r->store_note)<div class="hint">{{ $r->store_note }}</div>@endif</td>
           <td class="num">
@@ -148,7 +150,7 @@
                 <div class="hint">المطلوب تحضيره</div>
                 <div class="fw-bold num" style="font-size:2rem;color:var(--lv-brand-ink);line-height:1.2">
                   {{ $r->is_remainder ? 'الباقي كله' : lv_kg($r->requested_qty, false) }}</div>
-                <div class="hint">{{ $r->is_remainder ? 'آخر تقسيمة — من غير وزن' : 'تقريبي — اوزن أتواب قريبة من الرقم ده واكتب الفعلي' }}</div>
+                <div class="hint">{{ $r->is_remainder ? 'آخر تقسيمة — من غير وزن' : 'تقريبي — اوزن أتواب قريبة من الرقم ده واكتب اللي طلع على الميزان، والسيستم يخصم الكيس والمصورة' }}</div>
               </div>
               <table class="table table-sm kv mb-3">
                 <tbody>
@@ -164,15 +166,25 @@
               @if($r->is_remainder)
                 <div class="alert alert-info py-2 small">بتاخد الباقي الفعلي على الرسالة من غير وزن. أكّد وبس.</div>
               @else
-                <label class="form-label req" for="w{{ $r->id }}-qty">الوزن الفعلي للأتواب اللي اتفصلت</label>
-                <div class="input-group mb-2">
-                  <input type="number" step="0.001" min="0" name="actual_qty" id="w{{ $r->id }}-qty" class="form-control" required placeholder="مثال: 195">
-                  <span class="input-group-text">كجم</span>
-                </div>
+                @if($cc?->is_meter)
+                  <label class="form-label req" for="w{{ $r->id }}-qty">الأمتار اللي اتفصلت</label>
+                  <div class="input-group mb-2">
+                    <input type="number" step="0.001" min="0" name="actual_qty" id="w{{ $r->id }}-qty" class="form-control" required placeholder="مثال: 195">
+                    <span class="input-group-text">م</span>
+                  </div>
+                @else
+                  <label class="form-label req" for="w{{ $r->id }}-qty">اللي طلع على الميزان (قائم بالكيس والمصورة)</label>
+                  <div class="input-group mb-2">
+                    <input type="number" step="0.001" min="0" name="actual_gross_qty" id="w{{ $r->id }}-qty" class="form-control" required placeholder="مثال: 300"
+                           data-bag="{{ $cc?->bag_g ?? 0 }}" data-tube="{{ $cc?->tube_g ?? 0 }}" oninput="LVPW.net({{ $r->id }})">
+                    <span class="input-group-text">كجم</span>
+                  </div>
+                  <div class="alert alert-success py-2 small mb-2" id="w{{ $r->id }}-net" hidden></div>
+                @endif
               @endif
               <div class="row g-2">
-                <div class="col-4"><label class="form-label" for="w{{ $r->id }}-rolls">عدد الأتواب</label>
-                  <input type="number" min="0" name="actual_rolls" id="w{{ $r->id }}-rolls" class="form-control"></div>
+                <div class="col-4"><label class="form-label {{ $cc?->is_meter ? '' : 'req' }}" for="w{{ $r->id }}-rolls">عدد الأتواب</label>
+                  <input type="number" min="0" name="actual_rolls" id="w{{ $r->id }}-rolls" class="form-control" @unless($cc?->is_meter || $r->is_remainder) required @endunless oninput="LVPW.net({{ $r->id }})"></div>
                 <div class="col-8"><label class="form-label" for="w{{ $r->id }}-note">ملاحظة المخزن</label>
                   <input name="store_note" id="w{{ $r->id }}-note" class="form-control" placeholder="مثال: أتواب 3 لـ 8"></div>
               </div>
@@ -185,5 +197,20 @@
         </div></div></div>
         @endif
 @endforeach
+
+@push('scripts')
+<script>
+/* الصافي من القائم: (كيس + مصورة) × الأتواب ÷ 1000 — بأوزان الرسالة من إذن الإضافة (الميتينج 37) */
+window.LVPW = { net: function (id) {
+  var g = document.getElementById('w' + id + '-qty'), r = document.getElementById('w' + id + '-rolls'), out = document.getElementById('w' + id + '-net');
+  if (!g || !out) return;
+  var gross = Number(g.value) || 0, rolls = Number(r?.value) || 0, pack = Math.round((Number(g.dataset.bag) + Number(g.dataset.tube)) * rolls) / 1000;
+  if (!gross) { out.hidden = true; return; }
+  var n = Math.max(0, Math.round((gross - pack) * 1000) / 1000);
+  out.hidden = false;
+  out.innerHTML = '<b>الصافي اللي هيدخل أمر الشغل: ' + n.toLocaleString('en-US') + ' كجم</b>' + (pack > 0 ? ' — القائم ' + gross + ' − كيس ومصورة ' + pack + ' (' + rolls + ' توب)' : (rolls ? ' — الرسالة من غير أوزان كيس/مصورة مسجلة' : ' — اكتب عدد الأتواب عشان يتخصم الكيس والمصورة'));
+}};
+</script>
+@endpush
 
 @endsection

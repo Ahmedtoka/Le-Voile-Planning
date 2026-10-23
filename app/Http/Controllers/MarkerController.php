@@ -77,7 +77,7 @@ class MarkerController extends Controller
         if (!$c || !$c->min_width_cm) return response()->json([]);
 
         $tol   = (float) config('lvplanning.marker_suggest_width_tolerance_cm', 2);
-        $width = (float) $c->min_width_cm;
+        $width = (float) ($c->usable_width ?? $c->min_width_cm);   // الاقتراح على عرض التشغيل
 
         $q = Marker::with(['lines.productModel', 'lines.size'])
             ->where('status', 'approved')->where('is_active', true)
@@ -142,7 +142,7 @@ class MarkerController extends Controller
                 'doc_date'               => $data['doc_date'],
                 'consignment_id'         => $c->id,
                 'preparation_request_id' => $data['preparation_request_id'] ?? null,
-                'fabric_width_cm'        => $c->min_width_cm,
+                'fabric_width_cm'        => $c->usable_width ?? $c->min_width_cm,   // عرض التشغيل (الميتينج 37)
                 'avg_gsm'                => $c->avg_gsm,
                 'requested_models'       => $names . (!empty($data['sizes_note']) ? ' — ' . $data['sizes_note'] : ''),
                 'sizes_note'             => $data['sizes_note'] ?? null,

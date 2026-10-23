@@ -72,7 +72,8 @@
       <tbody>
       @forelse($rows as $r)
         @php
-          $pending = $r->stage === 'purchasing';
+          $pending = $r->stage === 'purchasing' || $r->hasUnsourcedQty();
+          $partial = $r->stage !== 'purchasing' && $r->hasUnsourcedQty();
           $days    = (int) ($r->requested_at?->diffInDays(now(), true) ?? 0);
           $fxTotal = ['مجموع البنود = ' . number_format((float) $r->subtotal, 2)];
           if ((float) $r->discount_value > 0) $fxTotal[] = '− خصم ' . lv_num($r->discount_pct, 2) . '% = ' . number_format((float) $r->discount_value, 2);
@@ -85,6 +86,7 @@
           </td>
           <td>
             <span class="badge bg-{{ $r->stage_color }}">{{ $r->stage_name }}</span>
+            @if($partial)<div class="hint text-warning fw-bold">مسكّن جزئي — باقي {{ lv_num($r->lines->sum(fn ($l) => $l->unsourced_qty), 3) }} من غير مورد</div>@endif
             @if($pending && $days > 0)
               <div class="hint {{ $days > 3 ? 'text-danger fw-bold' : '' }}">مستني {{ $days }} يوم</div>
             @endif
@@ -101,7 +103,7 @@
             @endforeach
             @if($r->lines->count() > 2) … +{{ $r->lines->count() - 2 }} @endif
           </td>
-          <td>{{ $r->supplier?->name ?? '—' }}</td>
+          <td>{{ $r->sourcings->count() > 1 ? $r->sourcings->pluck('supplier.name')->filter()->unique()->implode(' + ') : ($r->supplier?->name ?? '—') }}</td>
           <td class="num">
             @if($r->delivery_date)
               {{ $r->delivery_date->format('Y-m-d') }}
@@ -121,7 +123,7 @@
             @if($pending)
               <a href="{{ route('purchasing.source',$r) }}" class="btn btn-sm btn-plum"
                  title="حدد المورد والسعر وتاريخ التوريد" aria-label="سعّر الطلب {{ $r->po_no }}">
-                <i class="bi bi-tag" aria-hidden="true"></i> سعّر
+                <i class="bi bi-tag" aria-hidden="true"></i> {{ $partial ? 'سكّن الباقي' : 'سعّر' }}
               </a>
             @else
               <a href="{{ route('purchase-orders.edit',$r) }}" class="btn btn-sm btn-outline-plum btn-icon"

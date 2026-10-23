@@ -46,10 +46,18 @@
                  placeholder="مثال: تغطية فوركاست الربع الأول — الأساسيات">
         </div>
 
-        <div class="col-12">
-          <label class="form-label">الخامة دي لأنهي موديلات؟ <span class="hint">(اختياري — علّم كل الموديلات اللي بتستخدمها)</span></label>
-          @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', []), 'allowNew' => true])
-          <div class="hint">بيظهر للمشتريات والحسابات وبيتحط على طلب الماركر بعدين</div>
+        <div class="col-md-8">
+          <label class="form-label">الخامة دي لأنهي موديلات؟ <span class="hint">(اختار الموديلات وخاماتها هتنزل في الأصناف لوحدها)</span></label>
+          @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', []), 'allowNew' => true, 'onchange' => 'LVPO.models()'])
+          <div class="hint">خامات كل موديل من كارت الموديل (البيانات الأساسية ← الموديلات ← خاماته). بتظهر للمشتريات وبتتحط على طلب الماركر بعدين</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="target_pieces">عايز تنتج كام قطعة؟ <span class="hint">(اختياري)</span></label>
+          <div class="input-group">
+            <input type="number" min="0" step="1" name="target_pieces" id="target_pieces" class="form-control" value="{{ old('target_pieces') }}" placeholder="مثال: 1300" oninput="LVPO.target()">
+            <span class="input-group-text">قطعة</span>
+          </div>
+          <div class="hint">السيستم يضربها في استهلاك الموديل ويقترح الكمية — وتقدر تزود أو تقلل</div>
         </div>
       </div>
 
@@ -83,6 +91,75 @@
 <template id="lineTpl">@include('po.line', ['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
 @include('partials.lines_js', ['startIndex' => max(count(old('lines', [])), 1)])
 <script>
+/* الموديلات ⇐ خاماتها لوحدها (الميتينج 37) + حاسبة الكمية من عدد القطع */
+window.LVPO = (function () {
+  var body = document.getElementById('lines');
+  var nf = function (v, d) { return Number(v).toLocaleString('en-US', {maximumFractionDigits: d === undefined ? 3 : d}); };
+  function target() { return Number(document.getElementById('target_pieces')?.value) || 0; }
+  function rows() { return [...body.querySelectorAll('tr')]; }
+  function rowKey(tr) {
+    return (tr.querySelector('select[name$="[fabric_type_id]"]')?.value || '') + '|' + (tr.querySelector('select[name$="[color_id]"]')?.value || '');
+  }
+  function emptyRow(tr) {
+    return !tr.querySelector('select[name$="[fabric_type_id]"]')?.value && !(Number(tr.querySelector('.po-qty')?.value) > 0);
+  }
+  /* الهنت تحت الكمية: الكمية دي تكفي كام قطعة — من الاستهلاك اللي جاي مع الخامة */
+  function hint(inp) {
+    if (!inp) return;
+    var tr = inp.closest('tr'), h = tr.querySelector('.po-hint'), c = Number(inp.dataset.consumption) || 0, q = Number(inp.value) || 0;
+    var models = inp.dataset.models || '';
+    var unit = tr.querySelector('.po-unit')?.value || '';
+    var parts = [];
+    if (models) parts.push('موديلات: ' + models);
+    if (c > 0 && q > 0) {
+      var pcs = Math.floor(q / c), t = target();
+      parts.push('تكفي ' + nf(pcs, 0) + ' قطعة' + (t ? (pcs >= t ? ' ✓' : ' — أقل من المستهدف ' + nf(t, 0)) : '') + ' (استهلاك ' + nf(c, 4) + ' ' + unit + '/قطعة)');
+    }
+    if (h) h.textContent = parts.join(' · ');
+  }
+  /* عدد القطع اتغير ⇐ الكميات الفاضية (أو اللي السيستم حطها) تتحسب تاني */
+  function target_() {
+    var t = target();
+    rows().forEach(function (tr) {
+      var q = tr.querySelector('.po-qty'), c = Number(q?.dataset.consumption) || 0;
+      if (!q || !c) return;
+      if (!q.value || q.dataset.auto === '1') { q.value = t ? Math.ceil(t * c * 1000) / 1000 : ''; q.dataset.auto = '1'; }
+      hint(q);
+    });
+  }
+  async function models() {
+    var ids = [...document.querySelectorAll('input[name="product_model_ids[]"]')].map(function (x) { return x.value; });
+    if (!ids.length) return;
+    var url = '{{ route('product-models.fabrics-of') }}?' + ids.map(function (i) { return 'ids[]=' + i; }).join('&');
+    var r = await fetch(url, {headers: {'Accept': 'application/json'}}); if (!r.ok) return;
+    var list = await r.json();
+    var have = {}; rows().forEach(function (tr) { have[rowKey(tr)] = tr; });
+    list.forEach(function (f) {
+      var key = f.fabric_type_id + '|' + (f.color_id || '');
+      var tr = have[key];
+      if (!tr) {
+        // لو فيه سطر فاضي استخدمه، وإلا ضيف سطر جديد
+        tr = rows().find(emptyRow);
+        if (!tr) { LV.add('lineTpl', 'lines'); tr = rows().slice(-1)[0]; }
+        var ft = tr.querySelector('select[name$="[fabric_type_id]"]'), co = tr.querySelector('select[name$="[color_id]"]');
+        if (ft) ft.value = f.fabric_type_id;
+        if (co && f.color_id) co.value = f.color_id;
+        var un = tr.querySelector('.po-unit'); if (un && f.unit) un.value = f.unit;
+        have[key] = tr;
+      }
+      var q = tr.querySelector('.po-qty');
+      if (q) {
+        q.dataset.consumption = f.consumption || '';
+        q.dataset.models = (f.models || []).filter(Boolean).join('، ');
+        if (!q.value && f.consumption && target()) { q.value = Math.ceil(target() * f.consumption * 1000) / 1000; q.dataset.auto = '1'; }
+        hint(q);
+      }
+    });
+    body.dispatchEvent(new Event('change'));
+  }
+  body.addEventListener('input', function (e) { if (e.target.classList.contains('po-qty')) e.target.dataset.auto = '0'; });
+  return {models: models, target: target_, hint: hint};
+})();
   // علامة التكرار: نفس الصنف بنفس اللون في سطرين — بيتعلّموا بالأصفر وبيسألك قبل الإرسال
   (function () {
     var body = document.getElementById('lines');

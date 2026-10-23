@@ -35,7 +35,8 @@
           <div class="sum-grid">
             <div><div class="k">الرسالة</div>@if($cn)<a href="{{ route('consignments.show', $cn) }}" class="v num">{{ $cn->consignment_no }}</a>@else <div class="v">—</div> @endif</div>
             <div><div class="k">الصنف · اللون</div><div class="v">{{ $cn?->fabricType?->name ?? '—' }} · {{ $cn?->color?->label ?? $cn?->color?->code ?? '—' }}</div></div>
-            <div><div class="k">أقل عرض (من الفحص)</div><div class="v num text-danger">{{ lv_num($mr->fabric_width_cm, 2) }} سم</div></div>
+            <div><div class="k">عرض التشغيل</div><div class="v num text-danger">{{ lv_num($mr->fabric_width_cm, 2) }} سم</div>
+              @if($cn?->min_width_cm && (float) $cn->min_width_cm > (float) $mr->fabric_width_cm)<div class="k">أقل عرض مقاس {{ lv_num($cn->min_width_cm, 2) }} − تأمين {{ lv_num((float) $cn->min_width_cm - (float) $mr->fabric_width_cm, 2) }} سم</div>@endif</div>
             <div><div class="k">البنشر (من المعمل)</div><div class="v num">{{ $mr->avg_gsm ? lv_num($mr->avg_gsm, 2) . ' جم/م²' : '—' }}</div></div>
             <div><div class="k">المتاح على الرسالة</div><div class="v num">{{ $cn ? lv_kg($cn->remaining_kg, false) : '—' }}</div></div>
             <div><div class="k">نسخ مطلوبة</div><div class="v num">{{ (int) $mr->copies }}</div></div>

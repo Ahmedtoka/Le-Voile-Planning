@@ -9,9 +9,11 @@
       <option value="">—</option>
       @foreach($fabricTypes as $k=>$v)<option value="{{ $k }}" @selected(($l['fabric_type_id'] ?? null)==$k)>{{ $v }}</option>@endforeach
     </select></td>
-  <td class="num"><input type="number" step="0.001" min="0" name="lines[{{ $i }}][qty]" value="{{ $l['qty'] ?? '' }}" required placeholder="مثال: 2.5" aria-label="الكمية"></td>
-  <td><select name="lines[{{ $i }}][unit]" aria-label="الوحدة">
-      @foreach(['طن','كجم','متر'] as $u)<option value="{{ $u }}" @selected(($l['unit'] ?? 'طن')===$u)>{{ $u }}</option>@endforeach
+  <td class="num"><input type="number" step="0.001" min="0" name="lines[{{ $i }}][qty]" class="po-qty" value="{{ $l['qty'] ?? '' }}" required placeholder="مثال: 2500" aria-label="الكمية"
+             data-consumption="{{ $l['consumption'] ?? '' }}" oninput="LVPO.hint(this)">
+    <div class="hint po-hint">{{ !empty($l['models_hint']) ? 'موديلات: ' . $l['models_hint'] : '' }}</div></td>
+  <td><select name="lines[{{ $i }}][unit]" class="po-unit" aria-label="الوحدة" onchange="LVPO.hint(this.closest('tr').querySelector('.po-qty'))">
+      @foreach(['كجم','متر'] as $u)<option value="{{ $u }}" @selected(($l['unit'] ?? 'كجم')===$u)>{{ $u }}</option>@endforeach
     </select></td>
   <td class="num"><input type="number" step="0.01" min="0" max="100" name="lines[{{ $i }}][tolerance_pct]" value="{{ $l['tolerance_pct'] ?? $defaultTolerance }}" placeholder="مثال: 5" aria-label="نسبة الزيادة %"></td>
   <td><input name="lines[{{ $i }}][notes]" value="{{ $l['notes'] ?? '' }}" placeholder="مثال: وزن المقطع من 190 إلى 210 جرام" aria-label="ملاحظات"></td>

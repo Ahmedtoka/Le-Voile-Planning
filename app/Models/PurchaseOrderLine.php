@@ -11,6 +11,15 @@ class PurchaseOrderLine extends Model
     public function purchaseOrder() { return $this->belongsTo(PurchaseOrder::class); }
     public function color()         { return $this->belongsTo(Color::class); }
     public function fabricType()    { return $this->belongsTo(FabricType::class); }
+    public function sourcingLines() { return $this->hasMany(PoSourcingLine::class, 'purchase_order_line_id'); }
+
+    /** الباقي من غير تسكين مع مورد */
+    public function getUnsourcedQtyAttribute(): float
+    {
+        return max(0, (float) $this->qty - (float) $this->sourced_qty);
+    }
+
+    public function getIsMeterAttribute(): bool { return lv_is_meter($this->unit); }
 
     /** الحد الأقصى المسموح استلامه = الكمية + نسبة الزيادة المسموح بها */
     public function getMaxAllowedQtyAttribute(): float

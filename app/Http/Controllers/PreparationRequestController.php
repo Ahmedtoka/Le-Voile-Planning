@@ -65,97 +65,110 @@ class PreparationRequestController extends Controller
             'pick'         => $pick,
             'factories'    => Factory::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'models'       => ProductModel::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
-            'openOnPick'   => $pick ? PreparationRequest::with('factory')->where('consignment_id', $pick->id)->reserving()->get() : collect(),
+            'fabricTypes'  => $consignments->pluck('fabricType.name', 'fabric_type_id')->filter()->unique()->sortBy(fn ($v) => $v),
+            'colors'       => $consignments->map(fn ($c) => [$c->color_id, $c->color?->label ?? $c->color?->code])->filter(fn ($x) => $x[0])->unique(0)->sortBy(1)->mapWithKeys(fn ($x) => [$x[0] => $x[1]]),
         ]);
     }
 
+    /**
+     * طلب تحضير على رسالة أو أكتر (الميتينج 37): التخطيط يعلّم على الرسايل ويكتب كمية لكل واحدة
+     * (أو «الباقي كله»)، وكل رسالة بتنزل للمخزن كطلب لوحده يتوزن لوحده — كلهم بنفس الموديلات والمصنع.
+     */
     public function store(Request $request)
     {
         $data = $request->validate([
-            'consignment_id'      => ['required', 'exists:consignments,id'],
+            'items'               => ['required', 'array'],
+            'items.*.on'          => ['nullable', 'boolean'],
+            'items.*.qty'         => ['nullable', 'numeric', 'min:0'],
+            'items.*.rem'         => ['nullable', 'boolean'],
             'factory_id'          => ['nullable', 'exists:factories,id'],
-            'requested_qty'       => ['nullable', 'numeric', 'min:0'],
-            'is_remainder'        => ['nullable', 'boolean'],
             'product_model_ids'   => ['nullable', 'array'],
             'product_model_ids.*' => ['integer', 'exists:product_models,id'],
             'models_note'         => ['nullable', 'string'],
             'notes'               => ['nullable', 'string'],
             'also_marker'         => ['nullable', 'boolean'],
-        ], [], [
-            'consignment_id' => 'الرسالة',
-            'requested_qty'  => 'الكمية المطلوبة',
-        ]);
+        ], [], ['items' => 'الرسايل']);
 
-        $c = Consignment::findOrFail($data['consignment_id']);
-        $c->recalcRemaining();
-        $c->refresh();
-
-        $remainder = $request->boolean('is_remainder');
-        $qty = $remainder ? (float) $c->remaining_kg : (float) ($data['requested_qty'] ?? 0);
-
-        if ($qty <= 0) {
-            return back()->withInput()->withErrors(['requested_qty' => $remainder
-                ? 'مفيش باقي متاح على الرسالة دي — كله محجوز أو اتصرف.'
-                : 'اكتب الكمية التقريبية اللي محتاجها (بالكيلو).']);
-        }
-
-        // مجموع طلبات التحضير ما يتعداش رصيد الرسالة (الميتينج: 150 + 150 + 200 من 500)
-        if (!$remainder && $qty > (float) $c->remaining_kg + 0.0005) {
-            return back()->withInput()->withErrors(['requested_qty' =>
-                'المتاح على الرسالة ' . rtrim(rtrim(number_format((float) $c->remaining_kg, 3), '0'), '.')
-                . ' كجم بس (بعد خصم الطلبات والأوامر المفتوحة) — قلّل الكمية أو اختار «الباقي».']);
+        $picked = collect($data['items'])->filter(fn ($it) => !empty($it['on']));
+        if ($picked->isEmpty()) {
+            return back()->withInput()->withErrors(['items' => 'علّم على رسالة واحدة على الأقل.']);
         }
 
         $modelIds = array_values(array_unique(array_map('intval', $data['product_model_ids'] ?? [])));
 
-        $pr = DB::transaction(function () use ($data, $c, $qty, $remainder, $modelIds) {
-            $pr = PreparationRequest::create([
-                'doc_no'         => DocNumber::next('preparation_request', 'preparation_requests'),
-                'doc_date'       => now()->toDateString(),   // بياخد تاريخ اليوم
-                'consignment_id' => $c->id,
-                'factory_id'     => $data['factory_id'] ?? null,
-                'requested_qty'  => round($qty, 3),
-                'is_remainder'   => $remainder,
-                'unit'           => 'كجم',
-                'models_note'    => $data['models_note'] ?? null,
-                'status'         => 'open',
-                'notes'          => $data['notes'] ?? null,
-                'requested_by'   => auth()->id(),
-                'created_by'     => auth()->id(),
-            ]);
-            $pr->models()->sync($modelIds);
+        // تحقق قبل أي حفظ: كل رسالة ليها كمية (أو الباقي) ومش أكتر من المتاح
+        $plan = [];
+        foreach ($picked as $cid => $it) {
+            $c = Consignment::find((int) $cid);
+            if (!$c) continue;
+            $c->recalcRemaining(); $c->refresh();
+            $remainder = !empty($it['rem']);
+            $qty = $remainder ? (float) $c->remaining_kg : (float) ($it['qty'] ?? 0);
+            if ($qty <= 0) {
+                return back()->withInput()->withErrors(['items' => $remainder
+                    ? 'الرسالة ' . $c->consignment_no . ': مفيش باقي متاح — كله محجوز أو اتصرف.'
+                    : 'الرسالة ' . $c->consignment_no . ': اكتب الكمية التقريبية اللي محتاجها.']);
+            }
+            if (!$remainder && $qty > (float) $c->remaining_kg + 0.0005) {
+                return back()->withInput()->withErrors(['items' =>
+                    'الرسالة ' . $c->consignment_no . ': المتاح ' . lv_num($c->remaining_kg) . ' ' . $c->unit_label
+                    . ' بس (بعد خصم الطلبات والأوامر المفتوحة) — قلّل الكمية أو اختار «الباقي كله».']);
+            }
+            $plan[] = [$c, $qty, $remainder];
+        }
+        if (!$plan) return back()->withInput()->withErrors(['items' => 'علّم على رسالة واحدة على الأقل.']);
 
-            // الحجز الفوري على الرسالة
-            $c->recalcRemaining();
+        $created = []; $markers = []; $markerIssues = [];
+        DB::transaction(function () use ($plan, $data, $modelIds, $request, &$created, &$markers, &$markerIssues) {
+            $batch = null;
+            foreach ($plan as [$c, $qty, $remainder]) {
+                $pr = PreparationRequest::create([
+                    'doc_no'         => DocNumber::next('preparation_request', 'preparation_requests'),
+                    'doc_date'       => now()->toDateString(),   // بياخد تاريخ اليوم
+                    'consignment_id' => $c->id,
+                    'factory_id'     => $data['factory_id'] ?? null,
+                    'requested_qty'  => round($qty, 3),
+                    'is_remainder'   => $remainder,
+                    'unit'           => $c->unit ?: 'كجم',
+                    'models_note'    => $data['models_note'] ?? null,
+                    'status'         => 'open',
+                    'notes'          => $data['notes'] ?? null,
+                    'requested_by'   => auth()->id(),
+                    'created_by'     => auth()->id(),
+                ]);
+                $batch = $batch ?: $pr->doc_no;
+                if (count($plan) > 1) $pr->update(['batch_key' => $batch]);
+                $pr->models()->sync($modelIds);
+                $c->recalcRemaining();   // الحجز الفوري على الرسالة
+                $created[] = $pr;
 
-            return $pr;
+                // الطلب الموازي للباترونست — لكل رسالة (العرض والبنشر بيختلفوا من رسالة للتانية)
+                if ($request->boolean('also_marker')) {
+                    if (!$c->min_width_cm)   $markerIssues[] = $c->consignment_no . ' ملهاش أقل عرض من الفحص';
+                    elseif (!$modelIds)      $markerIssues[] = 'اختار الموديلات الأول';
+                    else                     $markers[] = $this->createMarkerRequest($pr, $c, $modelIds);
+                }
+            }
         });
 
-        $pr->load('models');
+        foreach ($created as $pr) {
+            $pr->load('models', 'consignment');
+            ActivityLogger::log('created', $pr, 'طلب تحضير ' . $pr->doc_no . ' على الرسالة ' . $pr->consignment?->consignment_no);
+        }
+        $lines = collect($created)->map(fn ($pr) => $pr->doc_no . ' — ' . $pr->consignment?->consignment_no . ' · '
+            . ($pr->is_remainder ? 'الباقي كله' : lv_num($pr->requested_qty) . ' ' . ($pr->consignment?->unit_label ?? 'كجم') . ' تقريبًا'))->implode(' | ');
         Notifier::broadcastToRole('storekeeper', 'prep_request',
-            'طلب تحضير من التخطيط — اوزن ورد',
-            $pr->doc_no . ' — الرسالة ' . $c->consignment_no . ' · '
-                . ($remainder ? 'الباقي كله' : rtrim(rtrim(number_format($qty, 3), '0'), '.') . ' كجم تقريبًا')
-                . ($pr->models_label ? ' · ' . $pr->models_label : ''),
+            count($created) > 1 ? 'طلب تحضير من التخطيط على ' . count($created) . ' رسايل — اوزن كل واحدة ورد' : 'طلب تحضير من التخطيط — اوزن ورد',
+            $lines . ($created[0]->models_label ? ' · ' . $created[0]->models_label : ''),
             route('preparation-requests.index'), 'warning');
 
-        ActivityLogger::log('created', $pr, 'طلب تحضير ' . $pr->doc_no . ' على الرسالة ' . $c->consignment_no);
+        $msg = count($created) > 1
+            ? 'اتسجل ' . count($created) . ' طلبات تحضير (' . collect($created)->pluck('doc_no')->implode('، ') . ') واتحجزت الكميات على الرسايل — المخزن هيوزن كل رسالة لوحدها ويرد.'
+            : 'اتسجل طلب التحضير ' . $created[0]->doc_no . ' واتحجزت الكمية على الرسالة — المخزن هيوزن ويرد.';
+        if ($markers)      $msg .= ' · واتعمل طلب الماركر ' . collect($markers)->pluck('doc_no')->implode('، ') . ' ونزل للباترونست.';
+        if ($markerIssues) $msg .= ' · طلب الماركر ما اتعملش: ' . implode(' / ', array_unique($markerIssues)) . '.';
 
-        // الطلب الموازي للباترونست — بيتعمل لوحده مع نفس الحفظ (الميتينج: الاتنين في نفس الوقت)
-        $markerMsg = '';
-        if ($request->boolean('also_marker')) {
-            if (!$c->min_width_cm) {
-                $markerMsg = ' · طلب الماركر ما اتعملش: الرسالة ملهاش أقل عرض من الفحص.';
-            } elseif (!$modelIds) {
-                $markerMsg = ' · طلب الماركر ما اتعملش: اختار الموديلات الأول.';
-            } else {
-                $mr = $this->createMarkerRequest($pr, $c, $modelIds);
-                $markerMsg = ' · واتعمل طلب الماركر ' . $mr->doc_no . ' ونزل للباترونست.';
-            }
-        }
-
-        return redirect()->route('preparation-requests.index')
-            ->with('success', 'اتسجل طلب التحضير ' . $pr->doc_no . ' واتحجزت الكمية على الرسالة — المخزن هيوزن ويرد.' . $markerMsg);
+        return redirect()->route('preparation-requests.index')->with('success', $msg);
     }
 
     /** طلب الماركر الموازي: نفس الرسالة والموديلات، العرض والبنشر من الجودة */
@@ -168,7 +181,7 @@ class PreparationRequestController extends Controller
             'doc_date'               => now()->toDateString(),
             'consignment_id'         => $c->id,
             'preparation_request_id' => $pr->id,
-            'fabric_width_cm'        => $c->min_width_cm,
+            'fabric_width_cm'        => $c->usable_width ?? $c->min_width_cm,   // عرض التشغيل (أقل عرض − تأمين العروض)
             'avg_gsm'                => $c->avg_gsm,
             'requested_models'       => $names,
             'copies'                 => 2,
@@ -193,13 +206,21 @@ class PreparationRequestController extends Controller
         abort_unless($preparation_request->status === 'open', 403, 'الطلب ده اتوزن قبل كده أو اتلغى.');
 
         $data = $request->validate([
-            'actual_qty'   => ['nullable', 'numeric', 'min:0'],
-            'actual_rolls' => ['nullable', 'integer', 'min:0'],
-            'store_note'   => ['nullable', 'string'],
-        ], [], ['actual_qty' => 'الوزن الفعلي', 'actual_rolls' => 'عدد الأتواب']);
+            'actual_qty'       => ['nullable', 'numeric', 'min:0'],
+            'actual_gross_qty' => ['nullable', 'numeric', 'min:0'],   // القائم على الميزان (الميتينج 37)
+            'actual_rolls'     => ['nullable', 'integer', 'min:0'],
+            'store_note'       => ['nullable', 'string'],
+        ], [], ['actual_qty' => 'الوزن الفعلي', 'actual_gross_qty' => 'الوزن على الميزان', 'actual_rolls' => 'عدد الأتواب']);
 
         $pr = $preparation_request;
         $c  = $pr->consignment;
+
+        /* بالكيلو: المخزن بيكتب القائم وعدد الأتواب، والصافي = القائم − (كيس + مصورة) × الأتواب */
+        $packaging = 0.0;
+        if (!$pr->is_remainder && !$c->is_meter && (float) ($data['actual_gross_qty'] ?? 0) > 0) {
+            $packaging = $c->packagingFor((int) ($data['actual_rolls'] ?? 0));
+            $data['actual_qty'] = round(max(0, (float) $data['actual_gross_qty'] - $packaging), 3);
+        }
 
         /* آخر تقسيمة «الباقي» ما بتتوزنش: بتاخد اللي فاضل فعلًا على الرسالة
            بعد كل الحجوزات التانية — والفرق بالزيادة أو النقص على الرسالة. */
@@ -214,10 +235,12 @@ class PreparationRequestController extends Controller
             }
         }
 
-        DB::transaction(function () use ($pr, $c, $actual, $data) {
+        DB::transaction(function () use ($pr, $c, $actual, $data, $packaging) {
             $pr->update([
-                'actual_qty'   => round($actual, 3),
-                'actual_rolls' => $data['actual_rolls'] ?? null,
+                'actual_qty'       => round($actual, 3),
+                'actual_gross_qty' => $pr->is_remainder ? null : ($data['actual_gross_qty'] ?? null),
+                'packaging_kg'     => $packaging,
+                'actual_rolls'     => $data['actual_rolls'] ?? null,
                 'store_note'   => $data['store_note'] ?? null,
                 'status'       => 'weighed',
                 'weighed_by'   => auth()->id(),

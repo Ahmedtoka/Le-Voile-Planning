@@ -110,6 +110,27 @@ class Consignment extends Model
         return self::STATUSES[$this->status] ?? $this->status;
     }
 
+    /** الرسالة بالمتر؟ (الوحدة من بند طلب الشراء — الميتينج 37) */
+    public function getIsMeterAttribute(): bool { return lv_is_meter($this->unit); }
+
+    /** تسمية الوحدة للعرض: كجم أو م */
+    public function getUnitLabelAttribute(): string { return lv_unit($this->unit); }
+
+    /** وزن الكيس والمصورة لعدد أتواب من الرسالة دي — للصرف ووزن التحضير */
+    public function packagingFor(int $rolls): float
+    {
+        if ($this->is_meter) return 0.0;
+        return lv_packaging_kg($this->bag_g, $this->tube_g, $rolls);
+    }
+
+    /** عرض التشغيل = أقل عرض − هامش من كل جانب (تأمين العروض) */
+    public function getUsableWidthAttribute(): ?float
+    {
+        if ($this->usable_width_cm) return (float) $this->usable_width_cm;
+        if (!$this->min_width_cm) return null;
+        return round((float) $this->min_width_cm - 2 * (float) lv_setting('width_margin_cm_per_side', 2.5), 2);
+    }
+
     public function getStatusColorAttribute(): string
     {
         return self::STATUS_COLORS[$this->status] ?? 'secondary';

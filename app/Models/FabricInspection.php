@@ -95,7 +95,10 @@ class FabricInspection extends Model
             'total_defects'   => $totalDefects,
             'defect_pct'      => $defectPct,
             'rejected_rolls'  => $rejRows->count(),
-            'rejected_kg'     => round((float) $rejRows->sum('net_kg'), 3),
+            // بالمتر: المرفوض بيتخصم بأمتاره (الميتينج 37)
+            'rejected_kg'     => round((float) ($this->consignment?->is_meter ? $rejRows->sum('length_m') : $rejRows->sum('net_kg')), 3),
+            // عرض التشغيل = أقل عرض − هامش من كل جانب (تأمين العروض)
+            'usable_width_cm' => $min !== null ? round($min - 2 * (float) lv_setting('width_margin_cm_per_side', 2.5), 2) : null,
             // فرق العرض الكبير بين أتواب نفس الحوض = القماش نفسه فيه مشكلة
             'width_alert'     => $spread !== null && $spread > (float) config('lvplanning.width_spread_alert_cm', 5),
         ])->saveQuietly();
@@ -108,6 +111,7 @@ class FabricInspection extends Model
      */
     public function weightEstimate(): ?array
     {
+        if ($this->consignment?->is_meter) return null;   // بالمتر مفيش وزن
         $rows = $this->relationLoaded('rolls') ? $this->rolls : $this->rolls()->get();
         $w = $rows->where('status', '!=', 'rejected')->pluck('net_kg')->filter(fn ($v) => (float) $v > 0)->map(fn ($v) => (float) $v);
         $n = (int) ($this->counted_rolls ?: $this->total_rolls);
@@ -126,6 +130,6 @@ class FabricInspection extends Model
     /** هل حجم العينة مقبول؟ */
     public function getSampleTooSmallAttribute(): bool
     {
-        return (float) $this->sample_pct < (float) config('lvplanning.min_inspection_sample_pct', 15);
+        return (float) $this->sample_pct < (float) lv_setting('min_inspection_sample_pct', 10);
     }
 }

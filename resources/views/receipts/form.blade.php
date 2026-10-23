@@ -47,10 +47,12 @@
         <div class="hint">{{ $c->fabricType?->name ?? '—' }} · {{ $c->color?->label ?? $c->color?->code ?? '—' }}</div>
       </div>
       <div class="big-nums">
-        <div><div class="hint">الكمية اللي هتدخل</div><div class="bn-v num">{{ lv_kg($c->total_kg) }}</div></div>
+        <div><div class="hint">{{ $c->is_meter ? 'الأمتار اللي هتدخل' : 'الصافي اللي هيدخل الرصيد' }}</div><div class="bn-v num">{{ $c->is_meter ? lv_num($c->total_kg, 2) . ' م' : lv_kg($c->total_kg) }}</div>
+          @if(!$c->is_meter && (float) $c->gross_kg > 0)<div class="hint">القائم {{ lv_num($c->gross_kg) }} − كيس ومصورة {{ lv_num($c->packaging_kg) }} كجم
+            @include('partials.fx', ['t' => 'الصافي', 'f' => 'القائم ' . lv_num($c->gross_kg) . ' − (كيس ' . lv_num($c->bag_g, 1) . ' جم + مصورة ' . lv_num($c->tube_g ?? 0, 1) . ' جم) × ' . (int) $c->rolls_count . ' توب ÷ 1000 = ' . lv_num($c->total_kg) . ' كجم', 'why' => 'الصافي هو اللي بيدخل الرصيد والتشغيل — القائم بيفضل على إذن الإضافة للمورد'])</div>@endif</div>
         <div><div class="hint">الأتواب</div><div class="bn-v num">{{ (int) $c->rolls_count }} <span class="hint">توب</span></div></div>
-        <div><div class="hint">أقل عرض</div><div class="bn-v num text-danger">{{ $c->min_width_cm ? lv_num($c->min_width_cm, 2) . ' سم' : '—' }}</div>
-          @if($c->min_width_cm && $insp)<div class="hint">أضيق توب مقاس في الفحص — الماركر بيتبني عليه</div>@endif</div>
+        <div><div class="hint">عرض التشغيل</div><div class="bn-v num text-danger">{{ $c->usable_width ? lv_num($c->usable_width, 2) . ' سم' : '—' }}</div>
+          @if($c->min_width_cm)<div class="hint">أقل عرض مقاس {{ lv_num($c->min_width_cm, 2) }} − تأمين {{ lv_num(2 * (float) lv_setting('width_margin_cm_per_side', 2.5), 2) }} سم — الماركر بيتبني عليه</div>@endif</div>
         <div><div class="hint">البنشر</div><div class="bn-v num">{{ $c->avg_gsm ? lv_num($c->avg_gsm, 2) : '—' }} <span class="hint">جم/م²</span></div>
           @if($c->avg_gsm && $lab)<div class="hint">متوسط قراءات المعمل {{ $lab->doc_no }}</div>@endif</div>
       </div>

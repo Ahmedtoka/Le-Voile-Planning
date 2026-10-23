@@ -233,6 +233,7 @@ class MaterialIssueController extends Controller
             'lines.*.unit'                 => ['required', 'string', 'max:20'],
             'lines.*.width_cm'             => ['nullable', 'numeric', 'min:0'],
             'lines.*.rolls_count'          => ['nullable', 'integer', 'min:0'],
+            'lines.*.gross_qty'            => ['nullable', 'numeric', 'min:0'],   // القائم على الميزان (الميتينج 37)
             'lines.*.qty'                  => ['required', 'numeric', 'min:0.001'],
             'lines.*.notes'                => ['nullable', 'string'],
         ], [], [
@@ -241,6 +242,22 @@ class MaterialIssueController extends Controller
             'lines.*.consignment_id' => 'رقم الرسالة',
             'lines.*.qty'            => 'الكمية',
         ]);
+
+        /* الصافي من القائم بأوزان الرسالة — السيرفر هو اللي بيحسب */
+        foreach ($v['lines'] as &$l) {
+            $c = Consignment::find($l['consignment_id']);
+            $gross = (float) ($l['gross_qty'] ?? 0);
+            if ($c && !$c->is_meter && $gross > 0) {
+                $pack = $c->packagingFor((int) ($l['rolls_count'] ?? 0));
+                $l['packaging_kg'] = $pack;
+                $l['qty'] = round(max(0, $gross - $pack), 3);
+                $l['unit'] = 'كجم';
+            } else {
+                $l['gross_qty'] = null; $l['packaging_kg'] = 0;
+                if ($c?->is_meter) $l['unit'] = 'متر';
+            }
+        }
+        unset($l);
 
         $lines = $v['lines'];
         unset($v['lines']);
@@ -264,6 +281,8 @@ class MaterialIssueController extends Controller
                 'unit'                 => $l['unit'],
                 'width_cm'             => $l['width_cm'] ?? null,
                 'rolls_count'          => $l['rolls_count'] ?? 0,
+                'gross_qty'            => $l['gross_qty'] ?? null,
+                'packaging_kg'         => $l['packaging_kg'] ?? 0,
                 'qty'                  => $l['qty'],
                 'consignment_no'       => $c?->consignment_no,
                 'notes'                => $l['notes'] ?? null,

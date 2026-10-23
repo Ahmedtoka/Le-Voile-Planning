@@ -343,6 +343,7 @@ class FabricInspectionController extends Controller
             'rolls'                   => ['required', 'array', 'min:1'],
             'rolls.*.roll_no'         => ['nullable', 'string', 'max:40'],
             'rolls.*.length_m'        => ['nullable', 'numeric', 'min:0'],
+            'rolls.*.labeled_length_m' => ['nullable', 'numeric', 'min:0'],   // بالمتر: الأمتار المكتوبة على التوب (الميتينج 37)
             'rolls.*.width_cm'        => ['nullable', 'numeric', 'min:0'],
             'rolls.*.status'          => ['nullable', 'in:ok,rejected'],
             'rolls.*.net_kg'          => ['nullable', 'numeric', 'min:0'],
@@ -379,22 +380,48 @@ class FabricInspectionController extends Controller
         $lab   = $v['lab'] ?? [];
         unset($v['rolls'], $v['lab'], $v['color_swatch']);
 
-        // التوب المرفوض لازم يتوزن — وزنه هو اللي بيتخصم من الرسالة والطلب
+        $meter = (bool) \App\Models\Consignment::find($v['consignment_id'])?->is_meter;
+
+        /* بالمتر: الأمتار المكتوبة على التوب هي «طوله» ومفيش وزن ولا بنشر (الميتينج 37) */
+        if ($meter) {
+            foreach ($rolls as &$r) {
+                $r['length_m'] = $r['labeled_length_m'] ?? $r['length_m'] ?? null;
+                $r['net_kg'] = null; $r['gsm'] = null;
+            }
+            unset($r);
+        }
+
+        // التوب المرفوض لازم يتوزن (أو بالمتر: أمتاره) — ده اللي بيتخصم من الرسالة والطلب
         foreach ($rolls as $r) {
-            if (($r['status'] ?? 'ok') === 'rejected' && (float) ($r['net_kg'] ?? 0) <= 0) {
+            if (($r['status'] ?? 'ok') !== 'rejected') continue;
+            if (!$meter && (float) ($r['net_kg'] ?? 0) <= 0) {
                 throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
                     'التوب ' . ($r['roll_no'] ?? '') . ' متعلّم «مرفوض» من غير وزن — الأتواب مش متساوية، اوزنه واكتب وزنه بالكيلو.']);
             }
+            if ($meter && (float) ($r['length_m'] ?? 0) <= 0) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                    'التوب ' . ($r['roll_no'] ?? '') . ' متعلّم «مرفوض» من غير أمتار — اكتب الأمتار المكتوبة عليه عشان تتخصم.']);
+            }
         }
 
-        // لازم توب واحد متقاس على الأقل (طول + عرض) — من غيره مفيش أقل عرض
+        // لازم توب واحد متقاس على الأقل (العرض — وبالكيلو الطول كمان) — من غيره مفيش أقل عرض
         $measured = collect($rolls)->filter(fn ($r) =>
             ($r['status'] ?? 'ok') !== 'rejected'
-            && (float) ($r['length_m'] ?? 0) > 0 && (float) ($r['width_cm'] ?? 0) > 0)->count();
+            && ($meter || (float) ($r['length_m'] ?? 0) > 0) && (float) ($r['width_cm'] ?? 0) > 0)->count();
 
         if (!$measured && $v['result'] !== 'rejected') {
+            throw \Illuminate\Validation\ValidationException::withMessages(['msg' => $meter
+                ? 'لازم تقيس عرض توب واحد على الأقل — منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.'
+                : 'لازم تقيس توب واحد على الأقل (الطول والعرض) — منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.']);
+        }
+
+        // العيّنة: الحد الأدنى من الإعدادات (الميتينج 37: 10%)
+        $minPct = (float) lv_setting('min_inspection_sample_pct', 10);
+        $sampled = collect($rolls)->filter(fn ($r) => (float) ($r['width_cm'] ?? 0) > 0 || ($r['status'] ?? 'ok') === 'rejected')->count();
+        if ($v['result'] !== 'rejected' && (int) $v['counted_rolls'] > 0 && $sampled / (int) $v['counted_rolls'] * 100 < $minPct - 0.001) {
             throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
-                'لازم تقيس توب واحد على الأقل (الطول والعرض) — منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.']);
+                'العيّنة قليلة: فحصت ' . $sampled . ' من ' . (int) $v['counted_rolls'] . ' توب — الحد الأدنى '
+                . lv_num($minPct, 0) . '% (يعني ' . (int) ceil((int) $v['counted_rolls'] * $minPct / 100) . ' توب على الأقل).']);
         }
 
         $v['total_rolls'] = $v['counted_rolls'];   // المرجع هو المجرود مش المصرّح
@@ -423,6 +450,7 @@ class FabricInspectionController extends Controller
                 'fabric_inspection_id' => $insp->id,
                 'roll_no'       => $r['roll_no'] ?? str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
                 'length_m'      => $len,
+                'labeled_length_m' => ($r['labeled_length_m'] ?? '') !== '' ? $r['labeled_length_m'] : null,
                 'width_cm'      => $r['width_cm'] ?? null,
                 'status'        => $rej ? 'rejected' : 'ok',
                 'net_kg'        => $r['net_kg'] ?? null,

@@ -22,8 +22,9 @@
     <div class="sum-sec">
       <div class="t"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> <span class="num">{{ $po->po_no }}</span></div>
       <div class="sum-grid">
-        <div><div class="k">المورد</div><div class="v">{{ $po->supplier?->name ?? '—' }}</div></div>
-        <div><div class="k">توريد متوقع</div><div class="v num">{{ $po->delivery_date?->format('Y-m-d') ?? '—' }}</div></div>
+        <div><div class="k">المورد</div><div class="v">{{ ($sourcing ?? null)?->supplier?->name ?? $po->supplier?->name ?? '—' }}</div>
+          @if(($sourcing ?? null) && $po->sourcings->count() > 1)<div class="k">تسكينة #{{ $sourcing->seq }} من {{ $po->sourcings->count() }}</div>@endif</div>
+        <div><div class="k">توريد متوقع</div><div class="v num">{{ ($sourcing ?? null)?->delivery_date?->format('Y-m-d') ?? $po->delivery_date?->format('Y-m-d') ?? '—' }}</div></div>
         <div><div class="k">المطلوب إجمالي</div><div class="v num">{{ lv_qty($ordTot, $unitLbl) }}</div></div>
         <div><div class="k">استلمنا قبل كده</div><div class="v num">{{ lv_qty($recTot, $unitLbl) }}</div></div>
         <div><div class="k">الباقي</div>
@@ -76,6 +77,19 @@
         <input type="hidden" name="supplier_id"       value="{{ old('supplier_id', $row->supplier_id ?? $po->supplier_id) }}">
         <input type="hidden" name="warehouse_id"      value="{{ old('warehouse_id', $row->warehouse_id) }}">
         <input type="hidden" name="purchase_order_id" value="{{ old('purchase_order_id', $row->purchase_order_id ?? $po->id) }}">
+        <input type="hidden" name="po_sourcing_id" value="{{ old('po_sourcing_id', $row->po_sourcing_id ?? ($sourcing?->id ?? '')) }}">
+        @if(($sourcings ?? collect())->count() > 1 && $mode === 'create')
+          <div class="alert alert-info py-2 d-flex flex-wrap align-items-center gap-2">
+            <i class="bi bi-diagram-3" aria-hidden="true"></i>
+            <span>الطلب ده متسكّن على أكتر من مورد — الاستلام ده على تسكينة:</span>
+            <select class="form-select form-select-sm w-auto" aria-label="التسكينة"
+                    onchange="location='{{ route('stock-additions.create') }}?purchase_order_id={{ $po->id }}&po_sourcing_id='+this.value">
+              @foreach($sourcings as $s)
+                <option value="{{ $s->id }}" @selected($sourcing && $sourcing->id === $s->id)>#{{ $s->seq }} — {{ $s->supplier?->name }} · توريد {{ $s->delivery_date?->format('Y-m-d') }} · باقي {{ lv_num($s->outstanding_qty, 3) }}</option>
+              @endforeach
+            </select>
+          </div>
+        @endif
 
         @php $rt = $po->inspection_exempt ? 'container' : 'normal'; @endphp
         <input type="hidden" name="receipt_type" value="{{ $rt }}">
@@ -166,21 +180,27 @@
           <thead><tr>
             <th style="width:35px">م</th>
             <th>الصنف</th>
-            <th style="width:120px">اللون المطلوب</th>
-            <th style="width:190px">اللون الواصل</th>
-            <th style="width:90px">الأتواب (توب)</th>
-            <th style="width:110px">المطلوب</th>
-            <th style="width:120px">المستلم ({{ $unitLbl ?: 'بوحدة الطلب' }})</th>
-            <th style="width:130px">الباقي</th>
-            <th style="width:170px">الباقي هيوصل إمتى؟</th>
+            <th style="width:110px">اللون المطلوب</th>
+            <th style="width:170px">اللون الواصل</th>
+            <th style="width:100px">المطلوب</th>
+            <th style="width:80px">الأتواب</th>
+            <th style="width:150px">الشكل · كيس/مصورة (جم)</th>
+            <th style="width:100px">القائم (كجم)</th>
+            <th style="width:120px">الصافي / المستلم</th>
+            <th style="width:120px">الباقي</th>
+            <th style="width:160px">الباقي هيوصل إمتى؟</th>
             <th style="width:44px"></th>
           </tr></thead>
         @else
           <thead><tr>
-            <th style="width:35px">م</th><th style="width:95px">كود الصنف</th><th>اسم الصنف</th>
-            <th style="width:160px">الخامة</th><th style="width:170px">اللون</th>
-            <th style="width:90px">الأتواب (توب)</th><th style="width:110px">الكمية</th>
-            <th class="req" style="width:96px">الوحدة</th><th style="width:44px"></th>
+            <th style="width:35px">م</th><th style="width:130px">الصنف</th>
+            <th style="width:150px">الخامة</th><th style="width:160px">اللون</th>
+            <th class="req" style="width:90px">الوحدة</th>
+            <th style="width:80px">الأتواب</th>
+            <th style="width:150px">الشكل · كيس/مصورة (جم)</th>
+            <th style="width:100px">القائم (كجم)</th>
+            <th style="width:120px">الصافي / الكمية</th>
+            <th style="width:44px"></th>
           </tr></thead>
         @endif
         <tbody id="lines" class="{{ $editable ? '' : 'lines-locked' }}">
@@ -200,12 +220,22 @@
         </tbody>
       </table>
     </div>
-    @if($po)
-      <div class="card-footer bg-white hint">
-        طلبت طن؟ بتستلم بالطن — نفس وحدة الطلب. لو اللون الواصل مختلف عن المطلوب
-        هيطلعلك سؤال القرار قبل ما تكمّل.
+    {{-- ملخص الصافي والقائم — بيتحسب لايف (الميتينج 37) --}}
+    <div class="card-footer bg-white">
+      <div class="sum-grid" id="pkSummary">
+        <div><div class="k">الأتواب</div><div class="v num" data-k="rolls">—</div></div>
+        <div><div class="k">الوزن القائم</div><div class="v num" data-k="gross">—</div></div>
+        <div><div class="k">خصم الكيس والمصورة</div><div class="v num text-danger" data-k="pack">—</div>
+          <div class="k">(كيس + مصورة) × الأتواب</div></div>
+        <div><div class="k">الصافي اللي هيدخل الرصيد</div><div class="v num text-success" data-k="net">—</div></div>
       </div>
-    @endif
+      <div class="hint mt-2">
+        المخزن بيوزن قائم بالكيس والمصورة ومش بيفك أتواب — اختار الشكل واكتب وزن الكيس الواحد والمصورة الواحدة بالجرام،
+        والسيستم يخصمهم ويطلّع الصافي. <b>الصافي</b> هو اللي بيدخل الرصيد والتشغيل، و<b>القائم</b> بيفضل على الإذن للمورد.
+        الأصناف اللي بالمتر مفيش فيها وزن خالص.
+        @if($po) لو اللون الواصل مختلف عن المطلوب هيطلعلك سؤال القرار قبل ما تكمّل. @endif
+      </div>
+    </div>
   </div>
 
   @if($editable)
@@ -308,6 +338,57 @@
 {{-- السكريبت في ستاك السكريبتات عشان يتنفذ بعد تحميل بوتستراب — وإلا الموديل مش هيشتغل --}}
 @push('scripts')
 <script>
+/* الصافي والقائم: الصافي = القائم − (كيس + مصورة) × الأتواب ÷ 1000 — والمتر من غير وزن */
+window.LVA = (function () {
+  var nf = function (n, d) { return Number(n).toLocaleString('en-US', {maximumFractionDigits: d === undefined ? 3 : d}); };
+  function isMeter(tr) { var u = tr.querySelector('.q-unit'); return u ? /متر|^م$/.test(u.value) : tr.dataset.meter === '1'; }
+  function form(sel) {
+    var tr = sel.closest('tr'), g = tr.querySelector('.pk-g'), tube = tr.querySelector('.q-tube');
+    if (g) g.hidden = !sel.value;
+    if (tube) { tube.hidden = sel.value !== 'open'; if (sel.value !== 'open') tube.value = ''; }
+    net(sel);
+  }
+  function unit(sel) {
+    var tr = sel.closest('tr'), m = /متر|^م$/.test(sel.value);
+    tr.querySelectorAll('.pk-cell').forEach(function (c) { c.hidden = m; });
+    var q = tr.querySelector('.q-recv');
+    if (q) { q.readOnly = !m && !!tr.querySelector('.q-gross'); q.placeholder = m ? 'مثال: 950' : 'يتحسب'; q.classList.toggle('q-net', !m); if (m) q.tabIndex = 0; }
+    net(sel);
+  }
+  function net(el) {
+    var tr = el.closest('tr'); if (!tr) return;
+    var q = tr.querySelector('.q-recv'), pk = tr.querySelector('.q-pk');
+    if (isMeter(tr)) { if (pk) pk.textContent = ''; summary(); return; }
+    var gross = Number(tr.querySelector('.q-gross')?.value) || 0, rolls = Number(tr.querySelector('.q-rolls')?.value) || 0;
+    var bag = Number(tr.querySelector('.q-bag')?.value) || 0, tube = Number(tr.querySelector('.q-tube')?.value) || 0;
+    var pack = Math.round((bag + tube) * rolls) / 1000, n = Math.max(0, Math.round((gross - pack) * 1000) / 1000);
+    if (q && gross > 0) { q.value = n; q.dispatchEvent(new Event('input', {bubbles: true})); }
+    else if (q && !gross) { q.value = ''; q.dispatchEvent(new Event('input', {bubbles: true})); }
+    if (pk) pk.textContent = gross > 0 && pack > 0 ? '− ' + nf(pack) + ' كيس ومصورة' : (gross > 0 ? 'من غير خصم' : '');
+    summary();
+  }
+  function summary() {
+    var rolls = 0, gross = 0, pack = 0, netT = 0, any = false;
+    document.querySelectorAll('#lines tr').forEach(function (tr) {
+      if (isMeter(tr)) return;
+      var g = Number(tr.querySelector('.q-gross')?.value) || 0; if (!g) return;
+      any = true;
+      var r = Number(tr.querySelector('.q-rolls')?.value) || 0, bag = Number(tr.querySelector('.q-bag')?.value) || 0, tube = Number(tr.querySelector('.q-tube')?.value) || 0;
+      var p = Math.round((bag + tube) * r) / 1000;
+      rolls += r; gross += g; pack += p; netT += Math.max(0, g - p);
+    });
+    var box = document.getElementById('pkSummary'); if (!box) return;
+    box.querySelector('[data-k=rolls]').textContent = any ? nf(rolls, 0) + ' توب' : '—';
+    box.querySelector('[data-k=gross]').textContent = any ? nf(gross) + ' كجم' : '—';
+    box.querySelector('[data-k=pack]').textContent  = any ? '− ' + nf(pack) + ' كجم' : '—';
+    box.querySelector('[data-k=net]').textContent   = any ? nf(netT) + ' كجم' : '—';
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#lines tr').forEach(function (tr) { var f = tr.querySelector('.q-form'); if (f && f.value) { var g = tr.querySelector('.pk-g'); if (g) g.hidden = false; } });
+    summary();
+  });
+  return {form: form, unit: unit, net: net, summary: summary};
+})();
 (function () {
   var body = document.getElementById('lines');
   if (!body) return;
@@ -328,7 +409,7 @@
     var received = parseFloat(tr.dataset.received) || 0;
     var now      = parseFloat(tr.querySelector('.q-recv')?.value) || 0;
     var rolls    = parseInt(tr.querySelector('[name$="[rolls_count]"]')?.value || '0', 10) || 0;
-    var recvLine = '<div class="hint">المستلم دلوقتي: <b class="num">' + (rolls ? rolls + ' توب · ' : '') + nf(now) + ' ' + unit + '</b></div>';
+    var recvLine = '<div class="hint">المستلم دلوقتي (صافي): <b class="num">' + (rolls ? rolls + ' توب · ' : '') + nf(now) + ' ' + unit + '</b></div>';
     var left     = ordered - received - now;          // للعرض
     var leftMin  = Math.max(0, minQty - received - now);  // للإقفال
     // ⓘ المعادلة بالأرقام الفعلية للسطر

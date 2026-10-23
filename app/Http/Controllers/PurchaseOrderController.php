@@ -83,16 +83,21 @@ class PurchaseOrderController extends Controller
      */
     public function purchasingQueue(Request $request)
     {
-        $q = PurchaseOrder::with(['requester', 'supplier', 'lines.color', 'lines.fabricType'])
+        $q = PurchaseOrder::with(['requester', 'supplier', 'lines.color', 'lines.fabricType', 'sourcings.supplier'])
             ->whereNotIn('stage', ['planning', 'cancelled']);
 
         // الفلتر: مستني / اتسعّر / الكل
+        // «مستني تسعير» = لسه ما اتسكّنش خالص، أو اتسكّن جزء ولسه فيه كمية من غير مورد (الميتينج 37)
+        $unsourced = fn ($qq) => $qq->whereNotIn('stage', ['closed', 'cancelled'])
+            ->whereHas('lines', fn ($l) => $l->whereColumn('qty', '>', 'sourced_qty'));
         $state = $request->get('state', 'pending');
-        if ($state === 'pending') $q->where('stage', 'purchasing');
-        if ($state === 'priced')  $q->whereNotIn('stage', ['purchasing']);
+        if ($state === 'pending') $q->where(fn ($qq) => $qq->where('stage', 'purchasing')->orWhere($unsourced));
+        if ($state === 'priced')  $q->whereNotIn('stage', ['purchasing'])->whereDoesntHave('lines', fn ($l) => $l->whereColumn('qty', '>', 'sourced_qty'));
 
         if ($term = trim((string) $request->get('q'))) $q->where('po_no', 'like', "%{$term}%");
         if ($u = $request->get('requested_by'))        $q->where('requested_by', $u);
+
+        $pendingCount = PurchaseOrder::where(fn ($qq) => $qq->where('stage', 'purchasing')->orWhere($unsourced))->count();
 
         return view('po.purchasing', [
             'title'      => 'المشتريات',
@@ -102,12 +107,13 @@ class PurchaseOrderController extends Controller
             'requesters' => User::whereIn('id', PurchaseOrder::whereNotNull('requested_by')
                                 ->pluck('requested_by')->unique())->pluck('name', 'id'),
             'counts'     => [
-                'pending' => PurchaseOrder::where('stage', 'purchasing')->count(),
-                'priced'  => PurchaseOrder::whereNotIn('stage', ['planning', 'purchasing', 'cancelled'])->count(),
+                'pending' => $pendingCount,
+                'priced'  => PurchaseOrder::whereNotIn('stage', ['planning', 'purchasing', 'cancelled'])
+                                ->whereDoesntHave('lines', fn ($l) => $l->whereColumn('qty', '>', 'sourced_qty'))->count(),
             ],
             'summary'    => [
-                ['label' => 'مستنية تسعير', 'value' => PurchaseOrder::where('stage', 'purchasing')->count(),
-                 'tone' => 'warn', 'note' => 'نزلت من التخطيط ولسه مالهاش مورد ولا سعر.'],
+                ['label' => 'مستنية تسعير', 'value' => $pendingCount,
+                 'tone' => 'warn', 'note' => 'نزلت من التخطيط ولسه فيها كمية من غير مورد — كلها أو جزء منها.'],
                 ['label' => 'أقدم طلب مستني',
                  'value' => ($old = PurchaseOrder::where('stage', 'purchasing')->oldest('requested_at')->first())
                              ? (int) $old->requested_at?->diffInDays(now(), true) . ' يوم' : '—',
@@ -130,7 +136,7 @@ class PurchaseOrderController extends Controller
             'colors'           => Color::usable()->orderBy('code')->get()->pluck('label', 'id'),
             'fabricTypes'      => FabricType::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'models'           => ProductModel::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
-            'defaultTolerance' => config('lvplanning.default_po_tolerance_pct', 5),
+            'defaultTolerance' => lv_setting('default_po_tolerance_pct', 5),
         ]);
     }
 
@@ -179,6 +185,7 @@ class PurchaseOrderController extends Controller
         $purchase_order->load([
             'lines.color', 'lines.fabricType', 'supplier', 'models', 'productModel',
             'requester', 'sourcer', 'financer',
+            'sourcings.supplier', 'sourcings.sourcer', 'sourcings.lines.poLine.fabricType', 'sourcings.lines.poLine.color',
         ]);
 
         return view('po.show', [
@@ -189,15 +196,16 @@ class PurchaseOrderController extends Controller
 
 
 
-    /** صفحة التسعير — بند المشتريات بس */
+    /** صفحة التسعير — بند المشتريات: تسكينة جديدة طول ما فيه كمية من غير مورد */
     public function sourceForm(PurchaseOrder $purchase_order)
     {
-        // لو الطلب عدى مرحلة المشتريات، افتح صفحة العرض
-        if ($purchase_order->stage !== 'purchasing') {
+        // لو الطلب اتسكّن كله، افتح صفحة العرض
+        if (!$purchase_order->purchasingEditable()) {
             return redirect()->route('purchase-orders.edit', $purchase_order);
         }
 
-        $purchase_order->load(['lines.color', 'lines.fabricType', 'requester', 'supplier', 'models', 'productModel']);
+        $purchase_order->load(['lines.color', 'lines.fabricType', 'requester', 'supplier', 'models', 'productModel',
+                               'sourcings.supplier', 'sourcings.lines.poLine.fabricType', 'sourcings.lines.poLine.color']);
 
         return view('po.source', [
             'title'      => 'تسعير الطلب ' . $purchase_order->po_no,
@@ -207,10 +215,14 @@ class PurchaseOrderController extends Controller
         ]);
     }
 
-    /** ② المشتريات: المورد والأسعار وتاريخ التوريد */
+    /**
+     * ② المشتريات: تسكينة — مورد + كمية من كل بند + سعر + تاريخ توريد (الميتينج 37).
+     * الطلب ممكن يتسكّن على مرات وأكتر من مورد؛ كل تسكينة بتبقى جاهزة للاستلام فورًا،
+     * والباقي من غير مورد بيفضل ظاهر في «مستنية تسعير».
+     */
     public function saveSourcing(Request $request, PurchaseOrder $purchase_order)
     {
-        abort_unless($purchase_order->purchasingEditable(), 403, 'الطلب مش في مرحلة المشتريات.');
+        abort_unless($purchase_order->purchasingEditable(), 403, 'الطلب اتسكّن كله — مفيش كمية باقية للتسعير.');
 
         $data = $request->validate([
             'supplier_id'    => ['required', 'exists:suppliers,id'],
@@ -219,10 +231,11 @@ class PurchaseOrderController extends Controller
             'payment_method' => ['required', 'in:' . implode(',', array_keys(PurchaseOrder::PAYMENT_METHODS))],
             'discount_pct'   => ['nullable', 'numeric', 'min:0', 'max:100'],
             'tax_pct'        => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'notes'          => ['nullable', 'string', 'max:500'],
             'prices'                 => ['required', 'array'],
             'prices.*.id'            => ['required', 'exists:purchase_order_lines,id'],
-            'prices.*.unit_price'    => ['required', 'numeric', 'min:0'],
-            'prices.*.unit'          => ['required', 'string', 'max:20'],
+            'prices.*.qty'           => ['nullable', 'numeric', 'min:0'],
+            'prices.*.unit_price'    => ['nullable', 'numeric', 'min:0'],
         ], [], [
             'supplier_id'    => 'المورد',
             'delivery_date'  => 'تاريخ التوريد',
@@ -230,50 +243,84 @@ class PurchaseOrderController extends Controller
             'prices'         => 'الأسعار',
         ]);
 
-        DB::transaction(function () use ($purchase_order, $data) {
-            foreach ($data['prices'] as $p) {
-                $line = $purchase_order->lines()->find($p['id']);
+        $purchase_order->load('lines');
+        $picked = collect($data['prices'])->filter(fn ($p) => (float) ($p['qty'] ?? 0) > 0)->values();
+        if ($picked->isEmpty()) {
+            return back()->withInput()->withErrors(['prices' => 'اكتب الكمية اللي هتتسكّن مع المورد ده لصنف واحد على الأقل.']);
+        }
+        foreach ($picked as $p) {
+            $line = $purchase_order->lines->firstWhere('id', (int) $p['id']);
+            if (!$line) continue;
+            if ((float) $p['qty'] > $line->unsourced_qty + 0.0005) {
+                return back()->withInput()->withErrors(['prices' =>
+                    'الصنف «' . trim(($line->fabricType?->name ?? '') . ' ' . ($line->color?->code ?? '')) . '»: الباقي من غير تسكين '
+                    . lv_num($line->unsourced_qty, 3) . ' ' . $line->unit . ' بس — مينفعش تسكّن أكتر منه.']);
+            }
+            if ((float) ($p['unit_price'] ?? 0) <= 0) {
+                return back()->withInput()->withErrors(['prices' => 'اكتب سعر الوحدة للأصناف اللي بتسكّنها.']);
+            }
+        }
+
+        $sourcing = DB::transaction(function () use ($purchase_order, $data, $picked) {
+            $sourcing = \App\Models\PoSourcing::create([
+                'purchase_order_id' => $purchase_order->id,
+                'seq'               => (int) $purchase_order->sourcings()->max('seq') + 1,
+                'supplier_id'       => $data['supplier_id'],
+                'warehouse_id'      => $data['warehouse_id'] ?? null,
+                'delivery_date'     => $data['delivery_date'],
+                'payment_method'    => $data['payment_method'],
+                'discount_pct'      => $data['discount_pct'] ?? 0,
+                'tax_pct'           => $data['tax_pct'] ?? 0,
+                'notes'             => $data['notes'] ?? null,
+                'sourced_by'        => auth()->id(),
+                'sourced_at'        => now(),
+            ]);
+
+            foreach ($picked as $p) {
+                $line = $purchase_order->lines->firstWhere('id', (int) $p['id']);
                 if (!$line) continue;
-
-                /* المشتريات ممكن تسعّر بوحدة غير اللي التخطيط طلب بيها
-                   (طلب 2 طن واتسعّر بالكيلو) — الكمية لازم تتحول معاها،
-                   وإلا الطلب يبقى 2 كيلو والاستلام يترفض. التحويل بين
-                   الوزن (طن/كيلو) بس؛ الوزن والمتر مالهمش تحويل فالوحدة بتفضل. */
-                $weight = ['طن', 'كيلو', 'كجم'];
-                $unit   = $line->unit;
-                $qty    = (float) $line->qty;
-                if ($p['unit'] !== $unit && in_array($unit, $weight, true) && in_array($p['unit'], $weight, true)) {
-                    $qty  = DocumentEffects::toUnit($qty, $unit, $p['unit']);
-                    $unit = $p['unit'];
-                }
-
+                $qty = round((float) $p['qty'], 3);
+                \App\Models\PoSourcingLine::create([
+                    'po_sourcing_id'         => $sourcing->id,
+                    'purchase_order_line_id' => $line->id,
+                    'qty'                    => $qty,
+                    'unit'                   => $line->unit,
+                    'unit_price'             => $p['unit_price'],
+                    'line_total'             => round($qty * (float) $p['unit_price'], 2),
+                ]);
+                // على سطر الطلب: المسكّن يزيد، وآخر سعر يتسجل للعرض، وإجمالي السطر = مجموع تسكيناته
+                $line->refresh();
                 $line->update([
-                    'unit'       => $unit,
-                    'qty'        => $qty,
-                    'unit_price' => $p['unit_price'],
-                    'line_total' => $qty * (float) $p['unit_price'],
+                    'sourced_qty' => (float) $line->sourced_qty + $qty,
+                    'unit_price'  => $p['unit_price'],
+                    'line_total'  => (float) $line->sourcingLines()->sum('line_total'),
                 ]);
             }
+            $sourcing->recalcTotals();
 
+            $purchase_order->refresh()->load('lines', 'sourcings');
+            $first = $purchase_order->sourcings->first();
             $purchase_order->update([
-                'supplier_id'    => $data['supplier_id'],
-                'warehouse_id'   => $data['warehouse_id'] ?? null,
-                'delivery_date'  => $data['delivery_date'],
-                'payment_method' => $data['payment_method'] ?? null,
-                'discount_pct'   => $data['discount_pct'] ?? 0,
-                'tax_pct'        => $data['tax_pct'] ?? 0,
+                // بيانات الهيدر = أول تسكينة (للتوافق مع الشاشات القديمة) — التفاصيل في التسكينات
+                'supplier_id'    => $purchase_order->supplier_id ?: $first->supplier_id,
+                'warehouse_id'   => $purchase_order->warehouse_id ?: ($data['warehouse_id'] ?? null),
+                'delivery_date'  => $purchase_order->sourcings->min('delivery_date'),
+                'payment_method' => $purchase_order->payment_method ?: $data['payment_method'],
                 'sourced_by'     => auth()->id(),
                 'sourced_at'     => now(),
-                // «احفظ» = التسعير خلص. الطلب بقى جاهز للاستلام في المخزن،
-                // والحسابات بيوصلها الترانزاكشن للمتابعة — من غير أي خطوة عليها.
-                'stage'          => 'approved',
+                // أي تسكينة = الطلب بقى جاهز للاستلام على التسكينة دي. الباقي من غير مورد يفضل في طابور التسعير.
+                'stage'          => $purchase_order->stage === 'receiving' ? 'receiving' : 'approved',
                 'status'         => 'approved',
             ]);
 
             $purchase_order->refresh()->recalcTotals();
+            return $sourcing;
         });
 
         $purchase_order->refresh();
+        $leftMsg = $purchase_order->hasUnsourcedQty()
+            ? ' — ولسه فيه كمية من غير مورد، الطلب فاضل في «مستنية تسعير».'
+            : '';
 
         // أمين المخزن: فيه توريد جاي بتاريخ محدد
         Notifier::broadcastToRole('storekeeper', 'po_ready',
@@ -290,10 +337,14 @@ class PurchaseOrderController extends Controller
                 . ' · ' . ($purchase_order->payment_method ?? ''),
             route('finance.payables'), 'info');
 
-        ActivityLogger::log('sourced', $purchase_order, 'تسعير طلب شراء ' . $purchase_order->po_no);
+        ActivityLogger::log('sourced', $purchase_order, 'تسكينة ' . $sourcing->seq . ' على طلب الشراء ' . $purchase_order->po_no
+            . ' مع ' . ($sourcing->supplier?->name ?? '') . $leftMsg);
 
-        // «احفظ» ⇒ رجوع لقايمة المشتريات — الطلب اتسعّر وخرج منها
-        return redirect()->route('purchasing.queue')->with(FlowMessage::flash('po.sourced', $purchase_order));
+        $flash = FlowMessage::flash('po.sourced', $purchase_order);
+        if ($leftMsg && isset($flash['flow']['title'])) $flash['flow']['title'] .= $leftMsg;
+
+        // «احفظ» ⇒ رجوع لقايمة المشتريات
+        return redirect()->route('purchasing.queue')->with($flash);
     }
 
 
@@ -367,13 +418,14 @@ class PurchaseOrderController extends Controller
             'product_model_ids.*' => ['integer', 'exists:product_models,id'],
             // يدخل فحص ولا استلام مباشر؟ صاحب الطلب هو اللي بيحدد — مش المخزن
             'inspection_exempt'   => ['nullable', 'boolean'],
+            'target_pieces'       => ['nullable', 'integer', 'min:0'],   // حاسبة الكمية: عايز تنتج كام قطعة (الميتينج 37)
             'notes'            => ['nullable', 'string'],
 
             'lines'                  => ['required', 'array', 'min:1'],
             'lines.*.color_id'       => ['required', 'exists:colors,id'],
             'lines.*.fabric_type_id' => ['required', 'exists:fabric_types,id'],
             'lines.*.qty'            => ['required', 'numeric', 'min:0.001'],
-            'lines.*.unit'           => ['required', 'string', 'max:20'],
+            'lines.*.unit'           => ['required', 'in:كجم,متر'],   // الميتينج 37: كيلو أو متر بس — الوحدة بتحكم الدورة كلها
             'lines.*.tolerance_pct'  => ['nullable', 'numeric', 'min:0', 'max:100'],
             'lines.*.notes'          => ['nullable', 'string'],
         ], [], [
@@ -407,7 +459,7 @@ class PurchaseOrderController extends Controller
                 'unit'              => $l['unit'],
                 'unit_price'        => 0,
                 'line_total'        => 0,
-                'tolerance_pct'     => $l['tolerance_pct'] ?? config('lvplanning.default_po_tolerance_pct', 5),
+                'tolerance_pct'     => $l['tolerance_pct'] ?? lv_setting('default_po_tolerance_pct', 5),
                 'notes'             => $l['notes'] ?? null,
             ]);
         }

@@ -40,6 +40,53 @@
 
   <div class="col-lg-8">
     <div class="card mb-3">
+      <div class="card-header">خامات الموديل <span class="hint">— الموديل بيتعمل من أنهي خامات؟ طلب الشراء بيطلّعها لوحده لما تختار الموديل</span></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>الخامة</th><th>اللون</th><th>الاستهلاك للقطعة</th><th>ملاحظات</th><th><span class="visually-hidden">حذف</span></th></tr></thead>
+          <tbody>
+          @forelse($model->fabrics as $f)
+            <tr>
+              <td>{{ $f->fabricType?->name }}</td>
+              <td>{{ $f->color?->label ?? 'أي لون' }}</td>
+              <td class="num">{{ $f->consumption_per_piece ? lv_num($f->consumption_per_piece, 4) . ' ' . $f->unit : '—' }}</td>
+              <td class="hint">{{ $f->notes }}</td>
+              <td class="text-end"><div class="row-actions">
+                <form method="post" action="{{ route('product-models.fabrics.delete', [$model->id, $f->id]) }}"
+                      onsubmit="return confirm('حذف الخامة دي من الموديل؟')">@csrf @method('DELETE')
+                  <button class="btn btn-sm btn-outline-danger btn-icon" aria-label="حذف" title="حذف"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                </form>
+              </div></td>
+            </tr>
+          @empty
+            <tr><td colspan="5"><div class="empty-state"><i class="bi bi-layers ico" aria-hidden="true"></i>
+              <div class="t">مفيش خامات مسجلة للموديل ده.</div>
+              <div class="hint">{{ $model->fabricType ? 'هيتاخد بالخامة الأساسية من كارت الموديل: ' . $model->fabricType->name : 'سجّل خاماته عشان طلب الشراء يطلّعها لوحده.' }}</div></div></td></tr>
+          @endforelse
+          </tbody>
+        </table>
+      </div>
+      <form method="post" action="{{ route('product-models.fabrics.add', $model->id) }}" class="card-footer bg-white">@csrf
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4"><label class="form-label req">الخامة</label>
+            <select name="fabric_type_id" class="form-select" required><option value="">— اختر —</option>
+              @foreach($fabricTypes as $ft)<option value="{{ $ft->id }}">{{ $ft->name }}</option>@endforeach
+            </select></div>
+          <div class="col-md-3"><label class="form-label">اللون</label>
+            <select name="color_id" class="form-select"><option value="">أي لون</option>
+              @foreach($colors as $c)<option value="{{ $c->id }}">{{ $c->label }}</option>@endforeach
+            </select></div>
+          <div class="col-md-3"><label class="form-label">الاستهلاك للقطعة</label>
+            <div class="input-group">
+              <input type="number" step="0.0001" min="0" name="consumption_per_piece" class="form-control" placeholder="مثال: 0.18" value="{{ $model->std_consumption_kg }}">
+              <select name="unit" class="form-select" style="max-width:90px" aria-label="الوحدة"><option value="كجم">كجم</option><option value="متر">متر</option></select>
+            </div></div>
+          <div class="col-md-2"><button class="btn btn-plum w-100"><i class="bi bi-plus-lg" aria-hidden="true"></i> ضيف</button></div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card mb-3">
       <div class="card-header">قائمة الإكسسوارات (BOM) <span class="hint">— الكمية لكل قطعة واحدة من الموديل</span></div>
       <div class="table-responsive">
         <table class="table table-sm mb-0">

@@ -75,11 +75,16 @@ Route::middleware('auth.user')->group(function () {
             ->middleware('can.do:master.manage,prep.request,marker.manage,wo.manage,po.request')->name('product-models.quick');
 
         // مقاسات وإكسسوارات الموديل
+        // خامات الموديلات المختارة — طلب الشراء بيطلّع البنود منها لوحده (الميتينج 37)
+        Route::get('product-models/fabrics-of', [ProductModelController::class, 'fabricsOf'])
+            ->middleware('can.do:po.request,master.view,prep.request')->name('product-models.fabrics-of');
         Route::get('product-models/{id}/sizes', [ProductModelController::class, 'sizes'])
             ->middleware('can.do:master.view')->name('product-models.sizes');
         Route::middleware('can.do:master.manage')->group(function () {
             Route::post('product-models/{id}/sizes',         [ProductModelController::class, 'saveSizes'])->name('product-models.sizes.save');
             Route::post('product-models/{id}/bom',           [ProductModelController::class, 'addBom'])->name('product-models.bom.add');
+            Route::post('product-models/{id}/fabrics',       [ProductModelController::class, 'addFabric'])->name('product-models.fabrics.add');
+            Route::delete('product-models/{id}/fabrics/{fid}', [ProductModelController::class, 'deleteFabric'])->name('product-models.fabrics.delete');
             Route::delete('product-models/{id}/bom/{bomId}', [ProductModelController::class, 'deleteBom'])->name('product-models.bom.delete');
         });
 
@@ -311,6 +316,8 @@ Route::middleware('auth.user')->group(function () {
         });
 
         Route::middleware('can.do:settings.roles')->group(function () {
+            Route::get('rules',  [SettingsController::class, 'rules'])->name('settings.rules');
+            Route::post('rules', [SettingsController::class, 'saveRules'])->name('settings.rules.save');
             Route::get('roles', [SettingsController::class, 'roles'])->name('settings.roles');
             Route::post('roles/{role}/permissions', [SettingsController::class, 'saveRolePermissions'])->name('settings.roles.permissions');
         });
