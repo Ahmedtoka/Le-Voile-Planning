@@ -78,7 +78,7 @@
       <button type="button" class="btn btn-sm btn-outline-plum mt-2" onclick="LV.add('lineTpl','lines')">
         <i class="bi bi-plus-lg" aria-hidden="true"></i> صنف
       </button>
-      <div class="hint mt-1">نسبة الزيادة = أقصى زيادة مسموح المورد يبعتها فوق الكمية (مثال: 2 طن + 5% ⇒ لحد 2.1 طن).</div>
+      <div class="hint mt-1">نسبة الزيادة = أقصى زيادة مسموح المورد يبعتها فوق الكمية (مثال: 2,000 كجم + 5% ⇒ لحد 2,100 كجم).</div>
     </div>
     <div class="card-footer form-actions m-0">
       <button class="btn btn-plum"><i class="bi bi-send" aria-hidden="true"></i> اطلب</button>

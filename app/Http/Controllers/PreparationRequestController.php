@@ -215,7 +215,7 @@ class PreparationRequestController extends Controller
         $pr = $preparation_request;
         $c  = $pr->consignment;
 
-        /* بالكيلو: المخزن بيكتب القائم وعدد الأتواب، والصافي = القائم − (كيس + مصورة) × الأتواب */
+        /* بالكيلو: المخزن بيكتب القائم وعدد الأتواب، والصافي = القائم − (كيس + ماسورة) × الأتواب */
         $packaging = 0.0;
         if (!$pr->is_remainder && !$c->is_meter && (float) ($data['actual_gross_qty'] ?? 0) > 0) {
             $packaging = $c->packagingFor((int) ($data['actual_rolls'] ?? 0));

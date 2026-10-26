@@ -184,7 +184,7 @@
             <th style="width:170px">اللون الواصل</th>
             <th style="width:100px">المطلوب</th>
             <th style="width:80px">الأتواب</th>
-            <th style="width:150px">الشكل · كيس/مصورة (جم)</th>
+            <th style="width:150px">الشكل · كيس/ماسورة (جم)</th>
             <th style="width:100px">القائم (كجم)</th>
             <th style="width:120px">الصافي / المستلم</th>
             <th style="width:120px">الباقي</th>
@@ -197,7 +197,7 @@
             <th style="width:150px">الخامة</th><th style="width:160px">اللون</th>
             <th class="req" style="width:90px">الوحدة</th>
             <th style="width:80px">الأتواب</th>
-            <th style="width:150px">الشكل · كيس/مصورة (جم)</th>
+            <th style="width:150px">الشكل · كيس/ماسورة (جم)</th>
             <th style="width:100px">القائم (كجم)</th>
             <th style="width:120px">الصافي / الكمية</th>
             <th style="width:44px"></th>
@@ -225,12 +225,12 @@
       <div class="sum-grid" id="pkSummary">
         <div><div class="k">الأتواب</div><div class="v num" data-k="rolls">—</div></div>
         <div><div class="k">الوزن القائم</div><div class="v num" data-k="gross">—</div></div>
-        <div><div class="k">خصم الكيس والمصورة</div><div class="v num text-danger" data-k="pack">—</div>
-          <div class="k">(كيس + مصورة) × الأتواب</div></div>
+        <div><div class="k">خصم الكيس والماسورة</div><div class="v num text-danger" data-k="pack">—</div>
+          <div class="k">(كيس + ماسورة) × الأتواب</div></div>
         <div><div class="k">الصافي اللي هيدخل الرصيد</div><div class="v num text-success" data-k="net">—</div></div>
       </div>
       <div class="hint mt-2">
-        المخزن بيوزن قائم بالكيس والمصورة ومش بيفك أتواب — اختار الشكل واكتب وزن الكيس الواحد والمصورة الواحدة بالجرام،
+        المخزن بيوزن قائم بالكيس والماسورة ومش بيفك أتواب — اختار الشكل واكتب وزن الكيس الواحد والماسورة الواحدة بالجرام،
         والسيستم يخصمهم ويطلّع الصافي. <b>الصافي</b> هو اللي بيدخل الرصيد والتشغيل، و<b>القائم</b> بيفضل على الإذن للمورد.
         الأصناف اللي بالمتر مفيش فيها وزن خالص.
         @if($po) لو اللون الواصل مختلف عن المطلوب هيطلعلك سؤال القرار قبل ما تكمّل. @endif
@@ -338,7 +338,7 @@
 {{-- السكريبت في ستاك السكريبتات عشان يتنفذ بعد تحميل بوتستراب — وإلا الموديل مش هيشتغل --}}
 @push('scripts')
 <script>
-/* الصافي والقائم: الصافي = القائم − (كيس + مصورة) × الأتواب ÷ 1000 — والمتر من غير وزن */
+/* الصافي والقائم: الصافي = القائم − (كيس + ماسورة) × الأتواب ÷ 1000 — والمتر من غير وزن */
 window.LVA = (function () {
   var nf = function (n, d) { return Number(n).toLocaleString('en-US', {maximumFractionDigits: d === undefined ? 3 : d}); };
   function isMeter(tr) { var u = tr.querySelector('.q-unit'); return u ? /متر|^م$/.test(u.value) : tr.dataset.meter === '1'; }
@@ -364,7 +364,7 @@ window.LVA = (function () {
     var pack = Math.round((bag + tube) * rolls) / 1000, n = Math.max(0, Math.round((gross - pack) * 1000) / 1000);
     if (q && gross > 0) { q.value = n; q.dispatchEvent(new Event('input', {bubbles: true})); }
     else if (q && !gross) { q.value = ''; q.dispatchEvent(new Event('input', {bubbles: true})); }
-    if (pk) pk.textContent = gross > 0 && pack > 0 ? '− ' + nf(pack) + ' كيس ومصورة' : (gross > 0 ? 'من غير خصم' : '');
+    if (pk) pk.textContent = gross > 0 && pack > 0 ? '− ' + nf(pack) + ' كيس وماسورة' : (gross > 0 ? 'من غير خصم' : '');
     summary();
   }
   function summary() {

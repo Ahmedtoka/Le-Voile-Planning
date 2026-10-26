@@ -116,7 +116,7 @@ class Consignment extends Model
     /** تسمية الوحدة للعرض: كجم أو م */
     public function getUnitLabelAttribute(): string { return lv_unit($this->unit); }
 
-    /** وزن الكيس والمصورة لعدد أتواب من الرسالة دي — للصرف ووزن التحضير */
+    /** وزن الكيس والماسورة لعدد أتواب من الرسالة دي — للصرف ووزن التحضير */
     public function packagingFor(int $rolls): float
     {
         if ($this->is_meter) return 0.0;

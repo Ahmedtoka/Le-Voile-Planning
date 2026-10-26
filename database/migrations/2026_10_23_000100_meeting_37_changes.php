@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * ميتينج 37 (2026-10-22):
- *   • الصافي والقائم: الكيس والمصورة على إذن الإضافة والصرف ووزن التحضير
+ *   • الصافي والقائم: الكيس والماسورة على إذن الإضافة والصرف ووزن التحضير
  *   • الوحدة كيلو / متر على بند الطلب وبتمشي على الرسالة والفحص
  *   • التسكين الجزئي: طلب الشراء يتسعّر على أكتر من مورد وأكتر من مرة
  *   • خامات الموديل (BOM) عشان طلب الشراء يطلّعها لوحده
@@ -86,7 +86,7 @@ return new class extends Migration
             if (!Schema::hasColumn('stock_addition_lines', 'po_sourcing_line_id')) $t->foreignId('po_sourcing_line_id')->nullable();
         });
 
-        // ── الرسالة: الوحدة + الكيس والمصورة + القائم + عرض التشغيل ──
+        // ── الرسالة: الوحدة + الكيس والماسورة + القائم + عرض التشغيل ──
         Schema::table('consignments', function (Blueprint $t) {
             if (!Schema::hasColumn('consignments', 'unit'))            $t->string('unit', 10)->default('كجم');
             if (!Schema::hasColumn('consignments', 'fabric_form'))     $t->string('fabric_form', 10)->nullable();

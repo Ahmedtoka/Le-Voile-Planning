@@ -66,7 +66,7 @@
           <td>{{ $r->factory?->name ?? '— يتحدد في أمر الشغل' }}</td>
           <td class="num">{{ $r->is_remainder ? 'الباقي كله' : lv_num($r->requested_qty) . ' ' . ($r->consignment?->unit_label ?? 'كجم') }}</td>
           <td class="num fw-bold">{{ $r->actual_qty !== null ? lv_num($r->actual_qty) . ' ' . ($r->consignment?->unit_label ?? 'كجم') : '—' }}
-            @if($r->actual_gross_qty)<div class="hint">قائم {{ lv_num($r->actual_gross_qty) }} − كيس ومصورة {{ lv_num($r->packaging_kg) }}</div>@endif
+            @if($r->actual_gross_qty)<div class="hint">قائم {{ lv_num($r->actual_gross_qty) }} − كيس وماسورة {{ lv_num($r->packaging_kg) }}</div>@endif
             @if($r->actual_rolls)<div class="hint">{{ $r->actual_rolls }} توب</div>@endif
             @if($r->store_note)<div class="hint">{{ $r->store_note }}</div>@endif</td>
           <td class="num">
@@ -150,7 +150,7 @@
                 <div class="hint">المطلوب تحضيره</div>
                 <div class="fw-bold num" style="font-size:2rem;color:var(--lv-brand-ink);line-height:1.2">
                   {{ $r->is_remainder ? 'الباقي كله' : lv_kg($r->requested_qty, false) }}</div>
-                <div class="hint">{{ $r->is_remainder ? 'آخر تقسيمة — من غير وزن' : 'تقريبي — اوزن أتواب قريبة من الرقم ده واكتب اللي طلع على الميزان، والسيستم يخصم الكيس والمصورة' }}</div>
+                <div class="hint">{{ $r->is_remainder ? 'آخر تقسيمة — من غير وزن' : 'تقريبي — اوزن أتواب قريبة من الرقم ده واكتب اللي طلع على الميزان، والسيستم يخصم الكيس والماسورة' }}</div>
               </div>
               <table class="table table-sm kv mb-3">
                 <tbody>
@@ -173,7 +173,7 @@
                     <span class="input-group-text">م</span>
                   </div>
                 @else
-                  <label class="form-label req" for="w{{ $r->id }}-qty">اللي طلع على الميزان (قائم بالكيس والمصورة)</label>
+                  <label class="form-label req" for="w{{ $r->id }}-qty">اللي طلع على الميزان (قائم بالكيس والماسورة)</label>
                   <div class="input-group mb-2">
                     <input type="number" step="0.001" min="0" name="actual_gross_qty" id="w{{ $r->id }}-qty" class="form-control" required placeholder="مثال: 300"
                            data-bag="{{ $cc?->bag_g ?? 0 }}" data-tube="{{ $cc?->tube_g ?? 0 }}" oninput="LVPW.net({{ $r->id }})">
@@ -200,7 +200,7 @@
 
 @push('scripts')
 <script>
-/* الصافي من القائم: (كيس + مصورة) × الأتواب ÷ 1000 — بأوزان الرسالة من إذن الإضافة (الميتينج 37) */
+/* الصافي من القائم: (كيس + ماسورة) × الأتواب ÷ 1000 — بأوزان الرسالة من إذن الإضافة (الميتينج 37) */
 window.LVPW = { net: function (id) {
   var g = document.getElementById('w' + id + '-qty'), r = document.getElementById('w' + id + '-rolls'), out = document.getElementById('w' + id + '-net');
   if (!g || !out) return;
@@ -208,7 +208,7 @@ window.LVPW = { net: function (id) {
   if (!gross) { out.hidden = true; return; }
   var n = Math.max(0, Math.round((gross - pack) * 1000) / 1000);
   out.hidden = false;
-  out.innerHTML = '<b>الصافي اللي هيدخل أمر الشغل: ' + n.toLocaleString('en-US') + ' كجم</b>' + (pack > 0 ? ' — القائم ' + gross + ' − كيس ومصورة ' + pack + ' (' + rolls + ' توب)' : (rolls ? ' — الرسالة من غير أوزان كيس/مصورة مسجلة' : ' — اكتب عدد الأتواب عشان يتخصم الكيس والمصورة'));
+  out.innerHTML = '<b>الصافي اللي هيدخل أمر الشغل: ' + n.toLocaleString('en-US') + ' كجم</b>' + (pack > 0 ? ' — القائم ' + gross + ' − كيس وماسورة ' + pack + ' (' + rolls + ' توب)' : (rolls ? ' — الرسالة من غير أوزان كيس/ماسورة مسجلة' : ' — اكتب عدد الأتواب عشان يتخصم الكيس والماسورة'));
 }};
 </script>
 @endpush

@@ -87,16 +87,16 @@
   <td class="num"><input type="number" min="0" step="1" name="lines[{{ $i }}][rolls_count]" class="q-rolls" value="{{ $l['rolls_count'] ?? '' }}" placeholder="مثال: 12" aria-label="عدد الأتواب" oninput="LVA.net(this)"></td>
 @endif
 
-  {{-- ═══ الصافي والقائم — للكيلو بس (الميتينج 37): الشكل ⇐ الكيس والمصورة ⇐ القائم ⇐ الصافي يتحسب ═══ --}}
+  {{-- ═══ الصافي والقائم — للكيلو بس (الميتينج 37): الشكل ⇐ الكيس والماسورة ⇐ القائم ⇐ الصافي يتحسب ═══ --}}
   <td class="pk-cell" @if($meter) hidden @endif>
     <select name="lines[{{ $i }}][fabric_form]" class="q-form" aria-label="مفتوح ولا مقفول" onchange="LVA.form(this)">
       <option value="" @selected($form==='')>— الشكل —</option>
-      <option value="open" @selected($form==='open')>مفتوح (مصورة)</option>
+      <option value="open" @selected($form==='open')>مفتوح (ماسورة)</option>
       <option value="closed" @selected($form==='closed')>مقفول (كيس بس)</option>
     </select>
     <div class="d-flex gap-1 mt-1 pk-g" @if($form==='') hidden @endif>
       <input type="number" step="0.1" min="0" name="lines[{{ $i }}][bag_g]" class="q-bag" value="{{ $l['bag_g'] ?? '' }}" placeholder="كيس جم" title="وزن الكيس الواحد بالجرام" aria-label="وزن الكيس الواحد بالجرام" oninput="LVA.net(this)">
-      <input type="number" step="0.1" min="0" name="lines[{{ $i }}][tube_g]" class="q-tube" value="{{ $l['tube_g'] ?? '' }}" placeholder="مصورة جم" title="وزن المصورة الواحدة بالجرام" aria-label="وزن المصورة الواحدة بالجرام" oninput="LVA.net(this)" @if($form==='closed') hidden @endif>
+      <input type="number" step="0.1" min="0" name="lines[{{ $i }}][tube_g]" class="q-tube" value="{{ $l['tube_g'] ?? '' }}" placeholder="ماسورة جم" title="وزن الماسورة الواحدة بالجرام" aria-label="وزن الماسورة الواحدة بالجرام" oninput="LVA.net(this)" @if($form==='closed') hidden @endif>
     </div>
   </td>
   <td class="num pk-cell" @if($meter) hidden @endif>

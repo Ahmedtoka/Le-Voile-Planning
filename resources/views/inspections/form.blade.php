@@ -128,7 +128,7 @@
               <tr><th>أتواب حسب الإذن</th><td class="num">{{ (int) ($row->declared_rolls ?? $c?->rolls_count) }} توب</td></tr>
               <tr><th>{{ $meter ? 'الأمتار حسب الإذن' : 'الوزن حسب الإذن (صافي)' }}</th><td class="num">{{ $c ? ($meter ? lv_num($c->total_kg, 2) . ' م' : lv_kg($c->total_kg)) : '—' }}</td></tr>
               @if($c && !$meter && (float) $c->packaging_kg > 0)
-                <tr><th>القائم على الإذن</th><td class="num hint">{{ lv_kg($c->gross_kg, false) }} − كيس ومصورة {{ lv_num($c->packaging_kg) }}</td></tr>
+                <tr><th>القائم على الإذن</th><td class="num hint">{{ lv_kg($c->gross_kg, false) }} − كيس وماسورة {{ lv_num($c->packaging_kg) }}</td></tr>
               @endif
               <tr><th>فحصه</th><td>{{ $mode === 'edit' && $row->status === 'approved' ? ($row->inspector?->name ?? '—') : '— لسه (' . auth()->user()?->name . ')' }}
                 <span class="hint num">{{ $mode === 'edit' && $row->status === 'approved' ? $row->doc_date?->format('Y-m-d') : '' }}</span></td></tr>

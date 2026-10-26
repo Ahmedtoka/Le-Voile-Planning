@@ -58,7 +58,7 @@ if (! function_exists('lv_setting')) {
 }
 
 if (! function_exists('lv_packaging_kg')) {
-    /** وزن الكيس والمصورة لعدد أتواب: (كيس جم + مصورة جم) × الأتواب ÷ 1000 */
+    /** وزن الكيس والماسورة لعدد أتواب: (كيس جم + ماسورة جم) × الأتواب ÷ 1000 */
     function lv_packaging_kg(?float $bagG, ?float $tubeG, int $rolls): float
     {
         return round(((float) $bagG + (float) $tubeG) * max(0, $rolls) / 1000, 3);

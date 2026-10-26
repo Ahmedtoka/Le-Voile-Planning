@@ -87,7 +87,7 @@
     </div>
     <div class="card-footer bg-white hint">
       <i class="bi bi-info-circle" aria-hidden="true"></i>
-      بالكيلو: اكتب اللي طلع على الميزان (قائم) وعدد الأتواب — السيستم يخصم الكيس والمصورة بأوزان الرسالة نفسها ويطلّع <b>الصافي</b>، وده اللي بيتخصم من الرصيد وبيتحسب عليه الاستهلاك.
+      بالكيلو: اكتب اللي طلع على الميزان (قائم) وعدد الأتواب — السيستم يخصم الكيس والماسورة بأوزان الرسالة نفسها ويطلّع <b>الصافي</b>، وده اللي بيتخصم من الرصيد وبيتحسب عليه الاستهلاك.
       بالمتر: اكتب الأمتار على طول. السيستم بيمنع الإرسال لو الكمية أكبر من المفرج عنه في الحوض.
     </div>
   </div>
@@ -118,7 +118,7 @@
 @push('scripts')
 <script>
 window.LVI = {
-  /* الصافي = القائم − (كيس + مصورة) × الأتواب ÷ 1000 — بأوزان الرسالة المسجلة في إذن الإضافة */
+  /* الصافي = القائم − (كيس + ماسورة) × الأتواب ÷ 1000 — بأوزان الرسالة المسجلة في إذن الإضافة */
   net(el) {
     const tr = el.closest('tr'), o = tr.querySelector('.i-cn')?.selectedOptions[0];
     const gross = Number(tr.querySelector('.i-gross')?.value) || 0, rolls = Number(tr.querySelector('.i-rolls')?.value) || 0;
@@ -131,7 +131,7 @@ window.LVI = {
     const pack = Math.round((Number(o.dataset.bag) + Number(o.dataset.tube)) * rolls) / 1000;
     const n = Math.max(0, Math.round((gross - pack) * 1000) / 1000);
     if (netIn) netIn.value = n;
-    if (pk) pk.textContent = pack > 0 ? '− ' + pack + ' كيس ومصورة' : 'الرسالة من غير أوزان كيس/مصورة';
+    if (pk) pk.textContent = pack > 0 ? '− ' + pack + ' كيس وماسورة' : 'الرسالة من غير أوزان كيس/ماسورة';
   },
   manual(el) {
     /* كتب الصافي بإيده؟ القائم بيتشال عشان ما يبقاش في رقمين متناقضين */

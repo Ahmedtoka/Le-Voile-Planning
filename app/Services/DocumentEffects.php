@@ -87,7 +87,7 @@ class DocumentEffects
                         ? $manual
                         : DocNumber::consignmentNo($prefix, $sa->doc_date, $sa->purchaseOrder?->po_no, $seq + $g);
 
-                    /* الكمية بوحدة الطلب: كيلو (صافي بعد خصم الكيس والمصورة) أو متر — الميتينج 37.
+                    /* الكمية بوحدة الطلب: كيلو (صافي بعد خصم الكيس والماسورة) أو متر — الميتينج 37.
                        أعمدة الرسالة اسمها kg بس بتشيل الوحدة اللي على الرسالة (unit). */
                     $unit  = $first->unit ?: 'كجم';
                     $meter = lv_is_meter($unit);

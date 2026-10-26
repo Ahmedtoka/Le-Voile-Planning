@@ -48,8 +48,8 @@
       </div>
       <div class="big-nums">
         <div><div class="hint">{{ $c->is_meter ? 'الأمتار اللي هتدخل' : 'الصافي اللي هيدخل الرصيد' }}</div><div class="bn-v num">{{ $c->is_meter ? lv_num($c->total_kg, 2) . ' م' : lv_kg($c->total_kg) }}</div>
-          @if(!$c->is_meter && (float) $c->gross_kg > 0)<div class="hint">القائم {{ lv_num($c->gross_kg) }} − كيس ومصورة {{ lv_num($c->packaging_kg) }} كجم
-            @include('partials.fx', ['t' => 'الصافي', 'f' => 'القائم ' . lv_num($c->gross_kg) . ' − (كيس ' . lv_num($c->bag_g, 1) . ' جم + مصورة ' . lv_num($c->tube_g ?? 0, 1) . ' جم) × ' . (int) $c->rolls_count . ' توب ÷ 1000 = ' . lv_num($c->total_kg) . ' كجم', 'why' => 'الصافي هو اللي بيدخل الرصيد والتشغيل — القائم بيفضل على إذن الإضافة للمورد'])</div>@endif</div>
+          @if(!$c->is_meter && (float) $c->gross_kg > 0)<div class="hint">القائم {{ lv_num($c->gross_kg) }} − كيس وماسورة {{ lv_num($c->packaging_kg) }} كجم
+            @include('partials.fx', ['t' => 'الصافي', 'f' => 'القائم ' . lv_num($c->gross_kg) . ' − (كيس ' . lv_num($c->bag_g, 1) . ' جم + ماسورة ' . lv_num($c->tube_g ?? 0, 1) . ' جم) × ' . (int) $c->rolls_count . ' توب ÷ 1000 = ' . lv_num($c->total_kg) . ' كجم', 'why' => 'الصافي هو اللي بيدخل الرصيد والتشغيل — القائم بيفضل على إذن الإضافة للمورد'])</div>@endif</div>
         <div><div class="hint">الأتواب</div><div class="bn-v num">{{ (int) $c->rolls_count }} <span class="hint">توب</span></div></div>
         <div><div class="hint">عرض التشغيل</div><div class="bn-v num text-danger">{{ $c->usable_width ? lv_num($c->usable_width, 2) . ' سم' : '—' }}</div>
           @if($c->min_width_cm)<div class="hint">أقل عرض مقاس {{ lv_num($c->min_width_cm, 2) }} − تأمين {{ lv_num(2 * (float) lv_setting('width_margin_cm_per_side', 2.5), 2) }} سم — الماركر بيتبني عليه</div>@endif</div>
