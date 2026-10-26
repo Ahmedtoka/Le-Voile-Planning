@@ -177,14 +177,17 @@ class DocumentEffects
                             $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $matchColor);
 
                     if ($poLine) {
-                        $poLine->increment('received_qty', self::toUnit($line->qty, $line->unit, $poLine->unit));
+                        /* المستلم على الطلب = القائم (اللي المورد سلّمه ودفعنا عليه) — الكيس والماسورة مش نقص في التوريد.
+                           الصافي بيدخل الرصيد بس. بالمتر أو من غير وزن قائم = الكمية زي ما هي. */
+                        $delivered = (float) ($line->gross_qty ?: $line->qty);
+                        $poLine->increment('received_qty', self::toUnit($delivered, $line->unit, $poLine->unit));
 
                         // التسكينة (الميتينج 37): الوارد بيتحسب على تسكينة المورد كمان
                         $srcLine = $line->po_sourcing_line_id
                             ? \App\Models\PoSourcingLine::find($line->po_sourcing_line_id)
                             : ($sa->po_sourcing_id ? \App\Models\PoSourcingLine::where('po_sourcing_id', $sa->po_sourcing_id)
                                 ->where('purchase_order_line_id', $poLine->id)->first() : null);
-                        if ($srcLine) $srcLine->increment('received_qty', self::toUnit($line->qty, $line->unit, $srcLine->unit));
+                        if ($srcLine) $srcLine->increment('received_qty', self::toUnit($delivered, $line->unit, $srcLine->unit));
 
                         if ($line->color_action === 'substitute'
                             && $line->color_id && $poLine->color_id != $line->color_id) {

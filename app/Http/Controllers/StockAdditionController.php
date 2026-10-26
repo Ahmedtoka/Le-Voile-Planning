@@ -294,7 +294,8 @@ class StockAdditionController extends Controller
                               ? $line->po_color_id : $line->color_id) == $l->color_id);
                 if (!$poLine) continue;
 
-                $incoming = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
+                // المقارنة مع الطلب على القائم — الكيس والماسورة مش باقي على المورد
+                $incoming = \App\Services\DocumentEffects::toUnit((float) ($line->gross_qty ?: $line->qty), $line->unit, $poLine->unit);
                 $left = max(0, (float) $poLine->min_allowed_qty - (float) $poLine->received_qty - $incoming);
 
                 if ($left > 0.0001 && !$line->remainder_eta) {
@@ -324,7 +325,7 @@ class StockAdditionController extends Controller
                         $l->fabric_type_id == $line->fabric_type_id && $l->color_id == $matchColor);
                 if (!$poLine) continue;
 
-                $qty = \App\Services\DocumentEffects::toUnit($line->qty, $line->unit, $poLine->unit);
+                $qty = \App\Services\DocumentEffects::toUnit((float) ($line->gross_qty ?: $line->qty), $line->unit, $poLine->unit);
                 if ((float) $poLine->received_qty + $qty > $poLine->max_allowed_qty + 0.0001) {
                     $this->alertTolerance($stock_addition, $po, $poLine, $qty);
                     return 'الكمية بتتعدى نسبة الزيادة المسموح بها (' . $poLine->tolerance_pct

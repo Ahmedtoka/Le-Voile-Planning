@@ -167,7 +167,8 @@ class PurchaseOrder extends Model
 
             $out[$poLine->id][] = [
                 'date'            => $sa->doc_date?->format('Y-m-d') ?? '',
-                'qty'             => \App\Services\DocumentEffects::toUnit($l->qty, $l->unit, $poLine->unit),
+                'qty'             => \App\Services\DocumentEffects::toUnit((float) ($l->gross_qty ?: $l->qty), $l->unit, $poLine->unit),
+                'net'             => \App\Services\DocumentEffects::toUnit($l->qty, $l->unit, $poLine->unit),
                 'unit'            => $poLine->unit,
                 'doc_no'          => $sa->doc_no,
                 'sa_id'           => $sa->id,

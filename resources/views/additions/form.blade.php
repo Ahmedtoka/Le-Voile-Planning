@@ -229,9 +229,11 @@
           <div class="k">(كيس + ماسورة) × الأتواب</div></div>
         <div><div class="k">الصافي اللي هيدخل الرصيد</div><div class="v num text-success" data-k="net">—</div></div>
       </div>
+      <div class="hint num mt-1" id="pkFormula"></div>
       <div class="hint mt-2">
         المخزن بيوزن قائم بالكيس والماسورة ومش بيفك أتواب — اختار الشكل واكتب وزن الكيس الواحد والماسورة الواحدة بالجرام،
-        والسيستم يخصمهم ويطلّع الصافي. <b>الصافي</b> هو اللي بيدخل الرصيد والتشغيل، و<b>القائم</b> بيفضل على الإذن للمورد.
+        والسيستم يخصمهم ويطلّع الصافي. <b>الصافي</b> هو اللي بيدخل الرصيد والتشغيل، و<b>القائم</b> هو اللي بيتحسب على طلب الشراء
+        (المورد سلّمه ودفعنا عليه — الكيس والماسورة مش نقص في التوريد).
         الأصناف اللي بالمتر مفيش فيها وزن خالص.
         @if($po) لو اللون الواصل مختلف عن المطلوب هيطلعلك سؤال القرار قبل ما تكمّل. @endif
       </div>
@@ -364,7 +366,12 @@ window.LVA = (function () {
     var pack = Math.round((bag + tube) * rolls) / 1000, n = Math.max(0, Math.round((gross - pack) * 1000) / 1000);
     if (q && gross > 0) { q.value = n; q.dispatchEvent(new Event('input', {bubbles: true})); }
     else if (q && !gross) { q.value = ''; q.dispatchEvent(new Event('input', {bubbles: true})); }
-    if (pk) pk.textContent = gross > 0 && pack > 0 ? '− ' + nf(pack) + ' كيس وماسورة' : (gross > 0 ? 'من غير خصم' : '');
+    // المعادلة ظاهرة تحت الصافي: القائم − (كيس + ماسورة) × الأتواب ÷ 1000
+    if (pk) pk.textContent = gross > 0
+      ? (pack > 0
+          ? nf(gross) + ' − (' + nf(bag, 1) + ' + ' + nf(tube, 1) + ') جم × ' + rolls + ' توب ÷ 1000 = ' + nf(gross) + ' − ' + nf(pack) + ' = ' + nf(n) + ' كجم'
+          : 'من غير خصم كيس وماسورة: الصافي = القائم ' + nf(gross))
+      : '';
     summary();
   }
   function summary() {
@@ -382,9 +389,15 @@ window.LVA = (function () {
     box.querySelector('[data-k=gross]').textContent = any ? nf(gross) + ' كجم' : '—';
     box.querySelector('[data-k=pack]').textContent  = any ? '− ' + nf(pack) + ' كجم' : '—';
     box.querySelector('[data-k=net]').textContent   = any ? nf(netT) + ' كجم' : '—';
+    var f = document.getElementById('pkFormula');
+    if (f) f.textContent = any ? 'الصافي = القائم ' + nf(gross) + ' − خصم الكيس والماسورة ' + nf(pack) + ' = ' + nf(netT) + ' كجم · المستلم على الطلب بيتحسب بالقائم ' + nf(gross) : '';
   }
   document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('#lines tr').forEach(function (tr) { var f = tr.querySelector('.q-form'); if (f && f.value) { var g = tr.querySelector('.pk-g'); if (g) g.hidden = false; } });
+    document.querySelectorAll('#lines tr').forEach(function (tr) {
+      var f = tr.querySelector('.q-form'); if (f && f.value) { var g = tr.querySelector('.pk-g'); if (g) g.hidden = false; }
+      // المعادلات تظهر من أول ما الصفحة تفتح — مش بس لما تكتب
+      var gr = tr.querySelector('.q-gross'); if (gr && gr.value) net(gr);
+    });
     summary();
   });
   return {form: form, unit: unit, net: net, summary: summary};
@@ -407,16 +420,19 @@ window.LVA = (function () {
     var ordered  = parseFloat(tr.dataset.ordered)  || 0;
     var minQty   = parseFloat(tr.dataset.min)      || ordered;
     var received = parseFloat(tr.dataset.received) || 0;
-    var now      = parseFloat(tr.querySelector('.q-recv')?.value) || 0;
+    /* المقارنة مع الطلب على القائم (اللي المورد سلّمه) — الكيس والماسورة مش نقص في التوريد.
+       بالمتر أو من غير قائم: الكمية المكتوبة. الصافي بيدخل الرصيد بس. */
+    var net      = parseFloat(tr.querySelector('.q-recv')?.value) || 0;
+    var gross    = parseFloat(tr.querySelector('.q-gross')?.value) || 0;
+    var now      = gross > 0 ? gross : net;
     var rolls    = parseInt(tr.querySelector('[name$="[rolls_count]"]')?.value || '0', 10) || 0;
-    var recvLine = '<div class="hint">المستلم دلوقتي (صافي): <b class="num">' + (rolls ? rolls + ' توب · ' : '') + nf(now) + ' ' + unit + '</b></div>';
+    var recvLine = '<div class="hint">المستلم دلوقتي (' + (gross > 0 ? 'قائم' : unit) + '): <b class="num">' + (rolls ? rolls + ' توب · ' : '') + nf(now) + ' ' + unit + '</b></div>';
     var left     = ordered - received - now;          // للعرض
     var leftMin  = Math.max(0, minQty - received - now);  // للإقفال
-    // ⓘ المعادلة بالأرقام الفعلية للسطر
+    // المعادلة ظاهرة بالأرقام الفعلية للسطر
     var fx = function (title) {
-      return (window.LVX && LVX.fx) ? LVX.fx(title, [
-        'المطلوب ' + nf(ordered) + ' ' + unit + ' − المستلم قبل كده ' + nf(received) + ' − المستلم دلوقتي ' + nf(now) + ' = ' + nf(left) + ' ' + unit
-      ], 'الباقي = المطلوب − اللي وصل كله') : '';
+      var line = 'المطلوب ' + nf(ordered) + ' − اتستلم قبل كده ' + nf(received) + ' − ' + (gross > 0 ? 'القائم دلوقتي ' : 'المستلم دلوقتي ') + nf(now) + ' = ' + nf(left) + ' ' + unit;
+      return '<div class="hint fx-line">' + line + '</div>';
     };
     // خانة «هيوصل إمتى» بتظهر بس لما يبقى فيه باقي على السطر ده
     var eta = tr.querySelector('.r-eta');

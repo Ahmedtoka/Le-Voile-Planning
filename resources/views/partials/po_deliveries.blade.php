@@ -42,6 +42,7 @@
               <div class="small">
                 <span class="badge bg-light text-dark">{{ $k + 1 }}</span>
                 <b class="num">{{ $n($dl['qty']) }} {{ $dl['unit'] }}</b>
+                @if(isset($dl['net']) && abs((float) $dl['net'] - (float) $dl['qty']) > 0.0005)<span class="hint">(صافي {{ $n($dl['net']) }})</span>@endif
                 <span class="hint">· {{ $dl['date'] }} ·</span>
                 <a href="{{ route('stock-additions.edit', $dl['sa_id']) }}" class="num">{{ $dl['doc_no'] }}</a>
                 @if($dl['supplier_doc_no'])<span class="hint">· إذن المورد {{ $dl['supplier_doc_no'] }}</span>@endif
