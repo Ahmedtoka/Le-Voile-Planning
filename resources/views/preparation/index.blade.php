@@ -156,6 +156,10 @@
                 <tbody>
                   <tr><th>الرسالة</th><td class="num fw-bold">{{ $cc?->consignment_no }}</td></tr>
                   <tr><th>الصنف · اللون</th><td>{{ $cc?->fabricType?->name }} · {{ $cc?->color?->label ?? $cc?->color?->code }}</td></tr>
+                  @if($cc && !$cc->is_meter && (float) $cc->gross_kg > 0)
+                    <tr><th>كيس وماسورة الرسالة</th><td class="num">كيس {{ lv_num($cc->bag_g, 1) }} جم{{ $cc->fabric_form === 'open' ? ' + ماسورة ' . lv_num($cc->tube_g, 1) . ' جم' : ' (مقفول — من غير ماسورة)' }} للتوب
+                      <div class="hint">الرسالة كلها: قائم {{ lv_num($cc->gross_kg) }} − {{ lv_num($cc->packaging_kg) }} = صافي {{ lv_num($cc->total_kg) }} كجم</div></td></tr>
+                  @endif
                   <tr><th>المتاح على الرسالة</th><td class="num">{{ $cc ? lv_kg($cc->remaining_kg + $r->reserved_qty, false) : '—' }} <span class="hint">({{ (int) $cc?->rolls_count }} توب)</span></td></tr>
                   <tr><th>الموديلات</th><td>{{ $r->models_label ?: '—' }}</td></tr>
                   <tr><th>المصنع</th><td>{{ $r->factory?->name ?? '— يتحدد في أمر الشغل' }}</td></tr>

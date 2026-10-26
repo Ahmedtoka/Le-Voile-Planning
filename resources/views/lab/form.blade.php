@@ -17,13 +17,14 @@
       <div><div class="k">رقم الرسالة</div><a href="{{ route('consignments.show', $arrived) }}" class="v num">{{ $arrived->consignment_no }}</a></div>
       <div><div class="k">الصنف</div><div class="v">{{ $arrived->fabricType?->name ?? '—' }}</div></div>
       <div><div class="k">اللون</div><div class="v">{{ $arrived->color?->label ?? $arrived->color?->code ?? '—' }}</div></div>
-      <div><div class="k">الكمية</div><div class="v num">{{ lv_kg($arrived->total_kg) }}</div><div class="k">{{ (int) $arrived->rolls_count }} توب</div></div>
+      <div><div class="k">{{ $arrived->is_meter ? 'الأمتار' : 'الكمية (صافي)' }}</div><div class="v num">{{ $arrived->is_meter ? lv_num($arrived->total_kg, 2) . ' م' : lv_kg($arrived->total_kg) }}</div><div class="k">{{ (int) $arrived->rolls_count }} توب</div></div>
       @if($arrived->min_width_cm)
         <div><div class="k">أقل عرض من الفحص</div><div class="v num">{{ lv_num($arrived->min_width_cm, 2) }} سم</div></div>
       @endif
       <div><div class="k">المورد</div><div class="v">{{ $arrived->supplier?->name ?? '—' }}</div></div>
       <div><div class="k">إذن المورد</div><div class="v">@include('partials.supplier_doc', ['sa' => $arrived->sourceAddition()])</div></div>
     </div>
+    @include('partials.packaging', ['c' => $arrived])
   </div>
 @endif
 

@@ -74,6 +74,7 @@
         <div><div class="k">المخزن</div><div class="v">{{ $sa?->warehouse?->name ?? $c->warehouse?->name ?? '—' }}</div></div>
         <div><div class="k">تاريخ الوصول</div><div class="v num">{{ $c->arrival_date?->format('Y-m-d') ?? '—' }}</div></div>
       </div>
+      @include('partials.packaging', ['c' => $c])
     </div>
 
     <div class="sum-sec">

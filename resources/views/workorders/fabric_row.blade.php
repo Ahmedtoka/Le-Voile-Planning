@@ -12,6 +12,7 @@
       @foreach($consignments as $c)
         <option value="{{ $c->id }}"
                 data-w="{{ $c->usable_width }}" data-wf="{{ $c->min_width_cm }}" data-g="{{ $c->avg_gsm }}"
+                data-pk="{{ (!$c->is_meter && (float) $c->gross_kg > 0) ? 'قائم ' . lv_num($c->gross_kg) . ' − كيس ' . lv_num($c->bag_g, 1) . ($c->fabric_form === 'open' ? ' + ماسورة ' . lv_num($c->tube_g, 1) : '') . ' جم × ' . (int) $c->rolls_count . ' توب = صافي ' . lv_num($c->total_kg) . ' كجم' : '' }}"
                 data-rem="{{ $c->remaining_kg }}" data-name="{{ $c->fabricType?->name }}"
                 data-break="{{ $c->has_color_break ? 1 : 0 }}" data-breaknote="{{ $c->color_break_note }}"
                 data-search="{{ strtolower($c->consignment_no . ' ' . ($c->fabricType?->name ?? '') . ' ' . ($c->color?->code ?? '') . ' ' . ($c->color?->name ?? '')) }}"
@@ -22,6 +23,7 @@
       @endforeach
     </select>
     <div class="f-break text-danger hint" hidden><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> فواصل / اختلاف لون في الرسالة دي</div>
+    <div class="f-pk hint num"></div>
   </td>
 
   <td><select name="fabrics[{{ $i }}][calc_mode]" class="f-mode" onchange="LVF.calc()" aria-label="طريقة الحساب">

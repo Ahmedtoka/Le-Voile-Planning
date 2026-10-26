@@ -22,6 +22,9 @@
       'g'      => $c->avg_gsm,
       'break'  => $c->has_color_break ? 1 : 0,
       'note'   => $c->color_break_note,
+      'pk'     => (!$c->is_meter && (float) $c->gross_kg > 0)
+                    ? 'قائم ' . lv_num($c->gross_kg) . ' − كيس ' . lv_num($c->bag_g, 1) . ($c->fabric_form === 'open' ? ' + ماسورة ' . lv_num($c->tube_g, 1) : '') . ' جم × ' . (int) $c->rolls_count . ' توب = صافي ' . lv_num($c->total_kg) . ' كجم'
+                    : '',
   ])->values();
   $cpSel = $cpItems->firstWhere('id', $cpVal);
 @endphp
@@ -39,6 +42,7 @@
       <div class="ro-title">الرسالة المختارة</div>
       <b class="num cp-label">{{ $cpSel['label'] ?? '' }}</b>
       <div class="hint cp-meta">@if($cpSel)متاح {{ lv_kg($cpSel['rem'], false) }} · {{ $cpSel['rolls'] }} توب · وصل {{ $cpSel['date'] }}@endif</div>
+      <div class="hint num cp-pk">{{ $cpSel['pk'] ?? '' }}</div>
       <div class="text-danger small cp-break" @if(!($cpSel['break'] ?? 0)) hidden @endif>فواصل / اختلاف لون: {{ $cpSel['note'] ?? '' }}</div>
     </div>
     <button type="button" class="btn btn-sm btn-outline-secondary cp-clear"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> غيّر</button>
@@ -81,6 +85,7 @@
       val.dataset.rem = it.rem; val.dataset.w = it.w || ''; val.dataset.g = it.g || ''; val.dataset.break = it.break; val.dataset.note = it.note || ''; val.dataset.label = it.label;
       sel.querySelector('.cp-label').textContent = it.label;
       sel.querySelector('.cp-meta').textContent = 'متاح ' + nf(it.rem) + ' كجم · ' + it.rolls + ' توب · وصل ' + (it.date || '');
+      var pkEl = sel.querySelector('.cp-pk'); if (pkEl) pkEl.textContent = it.pk || '';
       var b = sel.querySelector('.cp-break'); b.hidden = !it.break; b.textContent = it.break ? 'فواصل / اختلاف لون: ' + (it.note || '') : '';
       sel.hidden = false; input.value = ''; res.hidden = true; wrap.hidden = true;
       fire();

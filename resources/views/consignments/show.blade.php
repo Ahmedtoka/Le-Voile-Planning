@@ -14,6 +14,9 @@
 @endphp
 
 @include('partials.flow_bar', ['flow' => 'fabric', 'step' => 'consign'])
+@if((float) $row->gross_kg > 0 && !$row->is_meter)
+  <div class="ro-box mb-3"><div class="ro-title">الصافي والقائم — من إذن الإضافة</div>@include('partials.packaging', ['c' => $row])</div>
+@endif
 
 @foreach($warnings as $w)
   <div class="alert alert-{{ $w['level']==='danger'?'danger':'warning' }} py-2">
@@ -29,10 +32,12 @@
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-4 col-lg">
     <div class="position-relative h-100">
-      @include('partials.kpi', ['value' => number_format($total,1), 'label' => 'إجمالي الوزن', 'sub' => 'كجم', 'note' => $row->rolls_count . ' توب'])
+      @include('partials.kpi', ['value' => number_format($total,1), 'label' => $row->is_meter ? 'إجمالي الأمتار' : 'إجمالي الوزن (صافي)', 'sub' => $row->unit_label, 'note' => $row->rolls_count . ' توب'])
       <span class="kpi-fx">@include('partials.fx', ['t' => 'إجمالي الوزن',
-        'f' => 'مجموع أوزان الأتواب في إذن الإضافة = ' . $n($total) . ' كجم (' . (int) $row->rolls_count . ' توب)',
-        'why' => 'الرقم اللي وصل من المورد — قبل الفحص والرفض'])</span>
+        'f' => (float) $row->gross_kg > 0
+            ? 'القائم ' . $n($row->gross_kg) . ' − كيس وماسورة ' . $n($row->packaging_kg) . ' = ' . $n($total) . ' كجم (' . (int) $row->rolls_count . ' توب)'
+            : 'مجموع كميات الأتواب في إذن الإضافة = ' . $n($total) . ' ' . $row->unit_label . ' (' . (int) $row->rolls_count . ' توب)',
+        'why' => 'الصافي هو اللي بيدخل الرصيد — القائم على إذن الإضافة للمورد'])</span>
     </div>
   </div>
   <div class="col-6 col-md-4 col-lg">

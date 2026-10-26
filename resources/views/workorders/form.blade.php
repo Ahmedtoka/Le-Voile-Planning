@@ -319,6 +319,7 @@ const LVF = (function () {
     if (!o || !o.value) return;
     const bw = row.querySelector('.f-break');
     if (bw) { bw.hidden = o.dataset.break !== '1'; bw.title = o.dataset.breaknote || ''; }
+    const pkEl = row.querySelector('.f-pk'); if (pkEl) pkEl.textContent = o.dataset.pk || '';
     const wd = row.querySelector('.f-wd'), gsm = row.querySelector('.f-gsm'), qty = row.querySelector('.f-qty');
     const basis = document.getElementById('widthBasis')?.value || 'usable';
     const wSrc = basis === 'full' ? (o.dataset.wf || o.dataset.w) : (o.dataset.w || o.dataset.wf);

@@ -174,7 +174,8 @@
                 @endif
                 <div class="hint">{{ $f->mode_name }}</div>
               </td>
-              <td class="num">{{ $f->consignment?->consignment_no ?? '—' }}</td>
+              <td class="num">{{ $f->consignment?->consignment_no ?? '—' }}
+                @if($f->consignment)<div>@include('partials.packaging', ['c' => $f->consignment, 'inline' => true])</div>@endif</td>
               <td>{{ $f->color?->code ?? '—' }}</td>
               <td class="num">{{ $n($f->planned_qty) }} {{ $f->unit }}
                 @if($f->preparationRequest)<div class="hint text-success" title="وزن فعلي من المخزن">{{ $f->preparationRequest->doc_no }} · {{ $f->preparationRequest->status_name }}</div>@endif</td>

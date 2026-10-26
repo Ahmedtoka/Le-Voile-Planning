@@ -124,6 +124,7 @@ window.LVI = {
     const gross = Number(tr.querySelector('.i-gross')?.value) || 0, rolls = Number(tr.querySelector('.i-rolls')?.value) || 0;
     const netIn = tr.querySelector('.i-net'), pk = tr.querySelector('.i-pk'), gIn = tr.querySelector('.i-gross');
     if (!o || !o.value) return;
+    const cpk = tr.querySelector('.i-cpk'); if (cpk) cpk.textContent = o.dataset.pk || '';
     const meter = o.dataset.meter === '1';
     if (gIn) { gIn.disabled = meter; gIn.placeholder = meter ? 'بالمتر — مفيش وزن' : 'على الميزان'; }
     if (meter) { if (pk) pk.textContent = ''; return; }

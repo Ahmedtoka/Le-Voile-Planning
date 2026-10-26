@@ -18,12 +18,14 @@
       <option value="">— اختر رسالة —</option>
       @foreach($consignments as $c)
         <option value="{{ $c->id }}" data-bag="{{ $c->bag_g ?? 0 }}" data-tube="{{ $c->tube_g ?? 0 }}" data-meter="{{ $c->is_meter ? 1 : 0 }}" data-rem="{{ $c->remaining_kg }}"
+                data-pk="{{ (!$c->is_meter && (float) $c->gross_kg > 0) ? 'كيس ' . lv_num($c->bag_g, 1) . ($c->fabric_form === 'open' ? ' + ماسورة ' . lv_num($c->tube_g, 1) : '') . ' جم للتوب · الرسالة: قائم ' . lv_num($c->gross_kg) . ' − ' . lv_num($c->packaging_kg) . ' = صافي ' . lv_num($c->total_kg) : '' }}"
                 @selected(($l['consignment_id'] ?? null)==$c->id)>
           {{ $c->consignment_no }} — {{ $c->fabricType?->name }} · {{ $c->color?->code }}
           (متاح {{ rtrim(rtrim(number_format((float)$c->remaining_kg,2),'0'),'.') }})
         </option>
       @endforeach
     </select>
+    <div class="hint num i-cpk"></div>
   </td>
   <td>
     <select name="lines[{{ $i }}][unit]" aria-label="الوحدة">

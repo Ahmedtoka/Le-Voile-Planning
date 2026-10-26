@@ -55,7 +55,8 @@
                 @if($c->has_color_break)<div class="text-danger hint"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> فواصل / اختلاف لون</div>@endif</td>
               <td>{{ $c->fabricType?->name }}</td>
               <td>{{ $c->color?->label ?? $c->color?->code }}</td>
-              <td class="num">{{ lv_num($c->remaining_kg) }} {{ $u }}</td>
+              <td class="num">{{ lv_num($c->remaining_kg) }} {{ $u }}
+                @if(!$c->is_meter && (float) $c->gross_kg > 0)<div class="hint" style="white-space:nowrap">كيس {{ lv_num($c->bag_g, 1) }}{{ $c->fabric_form === 'open' ? ' + ماسورة ' . lv_num($c->tube_g, 1) : '' }} جم/توب</div>@endif</td>
               <td class="num">{{ (int) $c->rolls_count }}</td>
               <td class="num hint">{{ $c->arrival_date?->format('Y-m-d') }}</td>
               <td>
