@@ -30,7 +30,8 @@
           <div><div class="k">تاريخ الوصول</div><div class="v num">{{ $c->arrival_date?->format('Y-m-d') }}</div></div>
           <div><div class="k">الصنف</div><div class="v">{{ $c->fabricType?->name ?? '—' }}</div></div>
           <div><div class="k">اللون</div><div class="v">{{ $c->color?->label ?? $c->color?->code ?? '—' }}</div></div>
-          <div><div class="k">وصل في الرسالة دي</div><div class="v num">{{ lv_kg($c->total_kg) }}</div><div class="k">{{ (int) $c->rolls_count }} توب</div></div>
+          <div><div class="k">وصل في الرسالة دي (صافي)</div><div class="v num">{{ $c->is_meter ? lv_num($c->total_kg, 2) . ' م' : lv_kg($c->total_kg) }}</div>
+            <div class="k">{{ (int) $c->rolls_count }} توب{{ !$c->is_meter && (float) $c->gross_kg > 0 ? ' · قائم ' . lv_num($c->gross_kg) . ' − كيس وماسورة ' . lv_num($c->packaging_kg) : '' }}</div></div>
           <div><div class="k">نوع الاستلام</div><div class="v">{{ $sa?->receipt_type === 'container' ? 'مباشر — بدون فحص' : 'عادي — يدخل الفحص' }}</div></div>
         </div>
       </div>
@@ -126,9 +127,18 @@
             <div class="ro-title">من إذن الإضافة — للقراءة</div>
             <table class="table table-sm kv mb-0">
               <tr><th>أتواب حسب الإذن</th><td class="num">{{ (int) ($row->declared_rolls ?? $c?->rolls_count) }} توب</td></tr>
-              <tr><th>{{ $meter ? 'الأمتار حسب الإذن' : 'الوزن حسب الإذن (صافي)' }}</th><td class="num">{{ $c ? ($meter ? lv_num($c->total_kg, 2) . ' م' : lv_kg($c->total_kg)) : '—' }}</td></tr>
-              @if($c && !$meter && (float) $c->packaging_kg > 0)
-                <tr><th>القائم على الإذن</th><td class="num hint">{{ lv_kg($c->gross_kg, false) }} − كيس وماسورة {{ lv_num($c->packaging_kg) }}</td></tr>
+              @if($c && !$meter && (float) $c->gross_kg > 0)
+                {{-- الصافي والقائم مفصّلين سطر سطر بالمعادلة — عشان نتأكد من كل رقم --}}
+                <tr><th>الوزن القائم (على الميزان)</th><td class="num">{{ lv_kg($c->gross_kg, false) }}</td></tr>
+                <tr><th>الشكل</th><td>{{ $c->fabric_form === 'open' ? 'مفتوح — كيس وماسورة' : ($c->fabric_form === 'closed' ? 'مقفول — كيس بس' : '—') }}</td></tr>
+                <tr><th>وزن الكيس الواحد</th><td class="num">{{ lv_num($c->bag_g, 1) }} جم</td></tr>
+                @if($c->fabric_form === 'open')<tr><th>وزن الماسورة الواحدة</th><td class="num">{{ lv_num($c->tube_g, 1) }} جم</td></tr>@endif
+                <tr><th>خصم الكيس والماسورة</th><td class="num text-danger">− {{ lv_num($c->packaging_kg) }} كجم
+                  <div class="hint">({{ lv_num($c->bag_g, 1) }}{{ $c->fabric_form === 'open' ? ' + ' . lv_num($c->tube_g, 1) : '' }}) جم × {{ (int) $c->rolls_count }} توب ÷ 1000</div></td></tr>
+                <tr><th>الوزن الصافي (الرصيد)</th><td class="num fw-bold text-success">{{ lv_kg($c->total_kg) }}
+                  <div class="hint">{{ lv_num($c->gross_kg) }} − {{ lv_num($c->packaging_kg) }} = {{ lv_num($c->total_kg) }} كجم</div></td></tr>
+              @else
+                <tr><th>{{ $meter ? 'الأمتار حسب الإذن' : 'الوزن حسب الإذن (صافي)' }}</th><td class="num">{{ $c ? ($meter ? lv_num($c->total_kg, 2) . ' م' : lv_kg($c->total_kg)) : '—' }}</td></tr>
               @endif
               <tr><th>فحصه</th><td>{{ $mode === 'edit' && $row->status === 'approved' ? ($row->inspector?->name ?? '—') : '— لسه (' . auth()->user()?->name . ')' }}
                 <span class="hint num">{{ $mode === 'edit' && $row->status === 'approved' ? $row->doc_date?->format('Y-m-d') : '' }}</span></td></tr>
