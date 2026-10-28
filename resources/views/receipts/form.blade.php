@@ -259,7 +259,11 @@
           <tr>
             <td>{{ $rejRolls->count() }} توب</td>
             <td class="num">{{ lv_kg($insp->rejected_kg, false) }}
-              @include('partials.fx', ['t' => 'وزن المرفوض', 'f' => $rejRolls->map(fn ($r) => lv_num($r->net_kg, 3))->implode(' + ') . ' = ' . lv_num($insp->rejected_kg, 3) . ' كجم', 'why' => 'مجموع أوزان الأتواب المرفوضة — اتخصم من الرسالة'])</td>
+              @include('partials.fx', ['t' => 'وزن المرفوض', 'f' => $insp->rejected_packaging_kg > 0
+                ? ['قائم: ' . $rejRolls->map(fn ($r) => lv_num($r->net_kg, 3))->implode(' + ') . ' = ' . lv_num($insp->rejected_gross_kg, 3) . ' كجم',
+                   'صافي = ' . lv_num($insp->rejected_gross_kg, 3) . ' − كيس وماسورة ' . lv_num($insp->rejected_packaging_kg, 3) . ' = ' . lv_num($insp->rejected_kg, 3) . ' كجم']
+                : $rejRolls->map(fn ($r) => lv_num($r->net_kg, 3))->implode(' + ') . ' = ' . lv_num($insp->rejected_kg, 3) . ' كجم',
+                'why' => 'الصافي اتخصم من الرسالة — والقائم اتخصم من طلب الشراء وبقى مطالبة على المورد'])</td>
             <td colspan="4" class="hint fw-normal">
               @foreach($inspRej as $rj)
                 مطالبة على المورد: <span class="badge bg-{{ $rj->resolution === 'open' ? 'danger' : 'success' }}">{{ $rj->resolution_name }}</span>

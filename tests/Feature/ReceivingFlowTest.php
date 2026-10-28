@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Consignment;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptRejection;
+use App\Models\FabricInspection;
 use App\Models\StockAddition;
 use App\Models\StockMovement;
 
@@ -14,20 +15,20 @@ use App\Models\StockMovement;
  */
 class ReceivingFlowTest extends FlowTestCase
 {
-    public function test_po_goes_to_purchasing_and_sourcing_converts_ton_to_kilo(): void
+    public function test_po_goes_to_purchasing_and_sourcing_keeps_kilo(): void
     {
         $po = $this->createPo();
         $this->assertSame('purchasing', $po->stage);
-        $this->assertSame('طن', $po->lines->first()->unit);
-        $this->assertEqualsWithDelta(2, (float) $po->lines->first()->qty, 0.0001);
+        $this->assertSame('كجم', $po->lines->first()->unit);
+        $this->assertEqualsWithDelta(2000, (float) $po->lines->first()->qty, 0.0001);
 
         $po = $this->sourcePo($po, 'كيلو');
         $line = $po->lines->first();
 
         $this->assertSame('approved', $po->stage);
         $this->assertSame($this->supplier->id, $po->supplier_id);
-        $this->assertSame('كيلو', $line->unit);
-        $this->assertEqualsWithDelta(2000, (float) $line->qty, 0.0001, '2 طن لازم تبقى 2000 كيلو');
+        $this->assertSame('كجم', $line->unit, 'التسعير ما بيغيّرش وحدة البند');
+        $this->assertEqualsWithDelta(2000, (float) $line->qty, 0.0001, 'الكمية بتفضل بالكيلو زي ما اتطلبت');
         $this->assertEqualsWithDelta(200000, (float) $line->line_total, 0.01);
     }
 
@@ -55,8 +56,8 @@ class ReceivingFlowTest extends FlowTestCase
             'qty' => 1000, 'unit' => 'كجم', 'source_type' => StockAddition::class,
         ]);
 
-        // الباقي 950 ⇒ 1950 ≥ 1900 ⇒ الطلب يتقفل
-        $this->addStock($po, 950);
+        // نسبة الزيادة للزيادة بس — البند بيتقفل لما يوصل المطلوب كله: الباقي 1000 ⇒ 2000
+        $this->addStock($po, 1000);
         $po->refresh();
         $this->assertSame('closed', $po->stage);
         $this->assertSame('received', $po->status);
@@ -79,14 +80,14 @@ class ReceivingFlowTest extends FlowTestCase
     public function test_one_consignment_per_fabric_and_color(): void
     {
         $po = $this->sourcePo($this->createPo([
-            ['color_id' => $this->color->id,  'qty' => 1, 'unit' => 'طن', 'tolerance_pct' => 5],
-            ['color_id' => $this->color2->id, 'qty' => 1, 'unit' => 'طن', 'tolerance_pct' => 5],
+            ['color_id' => $this->color->id,  'qty' => 1000, 'unit' => 'كجم', 'tolerance_pct' => 5],
+            ['color_id' => $this->color2->id, 'qty' => 1000, 'unit' => 'كجم', 'tolerance_pct' => 5],
         ]));
         [$l1, $l2] = [$po->lines[0], $po->lines[1]];
 
         $this->postAddition($po, [
             ['po_line' => $l1, 'qty' => 1000, 'rolls' => 6],
-            ['po_line' => $l2, 'qty' => 980,  'rolls' => 5],
+            ['po_line' => $l2, 'qty' => 980,  'rolls' => 5, 'eta' => now()->addDays(5)->toDateString()],
         ])->assertSessionHasNoErrors();
 
         $cs = Consignment::orderBy('id')->get();
@@ -96,7 +97,12 @@ class ReceivingFlowTest extends FlowTestCase
         $this->assertEqualsWithDelta(980,  (float) $cs[1]->total_kg, 0.001);
         $this->assertTrue($cs->every(fn ($c) => $c->status === 'under_inspection'));
         $this->assertNotSame($cs[0]->consignment_no, $cs[1]->consignment_no);
-        $this->assertSame('closed', $po->refresh()->stage);
+
+        // قفل البند اللي اكتمل مش الطلب كله (الميتينج 36): الأول اكتمل، التاني ناقص 20 كجم
+        $po->refresh()->load('lines');
+        $this->assertTrue((bool) $po->lines[0]->is_closed, 'البند اللي اكتمل بيتقفل لوحده');
+        $this->assertFalse((bool) $po->lines[1]->is_closed, 'الناقص بيفضل مفتوح للاستلام');
+        $this->assertSame('receiving', $po->stage, 'الطلب بيفضل في الاستلام لحد ما كل البنود تكتمل');
     }
 
     public function test_inspection_and_lab_feed_the_consignment(): void
@@ -199,7 +205,9 @@ class ReceivingFlowTest extends FlowTestCase
 
     public function test_container_receipt_is_released_immediately_and_lab_does_not_move_it_back(): void
     {
-        $sa = $this->addStock($this->sourcedPo(), 1950, 10, ['receipt_type' => 'container']);
+        // الاستلام المباشر بيتحدد من صاحب الطلب على طلب الشراء (الميتينج 36) — مش من المخزن
+        $po = $this->sourcePo($this->createPo(null, ['inspection_exempt' => 1]));
+        $sa = $this->addStock($po, 1950, 10);
         $c  = Consignment::findOrFail($sa->consignment_id);
 
         $this->assertSame('released', $c->status);
@@ -219,5 +227,72 @@ class ReceivingFlowTest extends FlowTestCase
         $this->assertEqualsWithDelta(172, (float) $c->min_width_cm, 0.001);
         $this->assertEqualsWithDelta(192, (float) $c->avg_gsm, 0.001);
         $this->assertEqualsWithDelta(1950, (float) $c->remaining_kg, 0.001);
+    }
+
+    /** قرار 28 أكتوبر: التوب المرفوض بيتوزن قائم — الصافي يتخصم من الرسالة، والقائم من الطلب والمطالبة */
+    public function test_rejected_roll_is_weighed_gross_and_net_is_deducted_from_stock(): void
+    {
+        $po   = $this->sourcedPo();
+        $line = $po->lines->first();
+
+        // 10 أتواب مفتوحة، كيس 100 جم + ماسورة 200 جم ⇒ 0.3 كجم للتوب — قائم 1003 ⇒ صافي 1000
+        $this->postAddition($po, [['po_line' => $line, 'qty' => 1000, 'rolls' => 10]], [
+            'lines' => [[
+                'po_line_id' => $line->id, 'fabric_type_id' => $line->fabric_type_id,
+                'color_id' => $line->color_id, 'po_color_id' => $line->color_id,
+                'rolls_count' => 10, 'unit' => 'كجم',
+                'fabric_form' => 'open', 'bag_g' => 100, 'tube_g' => 200, 'gross_qty' => 1003, 'qty' => 1000,
+                'remainder_eta' => now()->addDays(5)->toDateString(),
+            ]],
+        ])->assertSessionHasNoErrors();
+
+        $c = Consignment::latest('id')->firstOrFail();
+        $this->assertEqualsWithDelta(1000, (float) $c->total_kg, 0.001, 'الصافي هو الرصيد');
+        $this->assertEqualsWithDelta(1003, (float) $c->gross_kg, 0.001);
+        $this->assertEqualsWithDelta(3, (float) $c->packaging_kg, 0.001);
+        $this->assertEqualsWithDelta(1003, (float) $line->refresh()->received_qty, 0.001, 'المستلم على الطلب بالقائم');
+
+        // الفحص: 3 أتواب سليمة + توب مرفوض وزنه على الميزان (قائم) 20.3 كجم
+        $this->as('ibrahim')->post(route('inspections.store'), [
+            'doc_date'       => now()->toDateString(),
+            'consignment_id' => $c->id,
+            'declared_rolls' => 10,
+            'counted_rolls'  => 10,
+            'counted_kg'     => 1000,
+            'result'         => 'accepted',
+            'rolls'          => [
+                ['length_m' => 50, 'width_cm' => 175, 'defects_count' => 0],
+                ['length_m' => 50, 'width_cm' => 172, 'defects_count' => 0],
+                ['length_m' => 50, 'width_cm' => 174, 'defects_count' => 0],
+                ['roll_no' => '004', 'status' => 'rejected', 'net_kg' => 20.3, 'length_m' => 50, 'width_cm' => 170, 'defect_type' => 'بقع'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $insp = FabricInspection::latest('id')->firstOrFail();
+        $this->assertSame(1, (int) $insp->rejected_rolls);
+        $this->assertEqualsWithDelta(20.3, (float) $insp->rejected_gross_kg, 0.001, 'القائم زي ما اتكتب');
+        $this->assertEqualsWithDelta(20.0, (float) $insp->rejected_kg, 0.001, 'الصافي = القائم − (كيس + ماسورة) للتوب');
+        $this->assertEqualsWithDelta(0.3, $insp->rejected_packaging_kg, 0.001);
+
+        // الرسالة: الصافي والقائم والخصم كلهم اتظبطوا
+        $c->refresh();
+        $this->assertSame(9, (int) $c->rolls_count);
+        $this->assertEqualsWithDelta(980.0, (float) $c->total_kg, 0.001, 'الصافي اتخصم من الرصيد');
+        $this->assertEqualsWithDelta(982.7, (float) $c->gross_kg, 0.001);
+        $this->assertEqualsWithDelta(2.7, (float) $c->packaging_kg, 0.001);
+
+        // طلب الشراء: القائم اتخصم من المستلم
+        $this->assertEqualsWithDelta(982.7, (float) $line->refresh()->received_qty, 0.001);
+
+        // المطالبة على المورد بالقائم، وحركة المخزون بالصافي
+        $rej = GoodsReceiptRejection::where('fabric_inspection_id', $insp->id)->firstOrFail();
+        $this->assertEqualsWithDelta(20.3, (float) $rej->qty, 0.001);
+        $this->assertSame('كجم', $rej->unit);
+        $this->assertSame(1, (int) $rej->rolls_count);
+
+        $this->assertDatabaseHas('stock_movements', [
+            'consignment_id' => $c->id, 'direction' => 'in', 'quality_state' => 'rejected',
+            'qty' => 20.0, 'unit' => 'كجم', 'source_type' => FabricInspection::class, 'source_id' => $insp->id,
+        ]);
     }
 }

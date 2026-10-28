@@ -408,7 +408,7 @@ class DocumentEffects
                         'direction'      => 'in',
                         'quality_state'  => 'rejected',
                         'qty'            => $rejectedKg,
-                        'unit'           => 'كجم',
+                        'unit'           => $consignment->is_meter ? 'متر' : 'كجم',
                         'source_type'    => GoodsReceipt::class,
                         'source_id'      => $gr->id,
                         'reference'      => $gr->doc_no . ' — مرفوض',
@@ -434,7 +434,7 @@ class DocumentEffects
                         'direction'      => $dir,
                         'quality_state'  => $state,
                         'qty'            => round($kg, 3),
-                        'unit'           => 'كجم',
+                        'unit'           => $consignment->is_meter ? 'متر' : 'كجم',
                         'source_type'    => GoodsReceipt::class,
                         'source_id'      => $gr->id,
                         'reference'      => $gr->doc_no,
@@ -508,11 +508,17 @@ class DocumentEffects
             ? 'rejected'
             : ($c->avg_gsm ? 'lab_done' : 'inspected');
 
-        /* رفض على مستوى التوب (الميتينج): التوب المرفوض اتوزن لوحده، ووزنه بيتخصم
-           من الرسالة ومن المستلم على طلب الشراء، وبينزل مخزن المرتجعات كمطالبة على المورد. */
+        /* رفض على مستوى التوب (الميتينج): التوب المرفوض اتوزن لوحده «قائم»، صافيه بيتخصم
+           من الرسالة، وقائمه من المستلم على طلب الشراء، وبينزل مخزن المرتجعات كمطالبة على المورد. */
         if ($insp->result !== 'rejected' && (int) $insp->rejected_rolls > 0) {
             $payload['rolls_count'] = max(0, (int) ($payload['rolls_count'] ?? $c->rolls_count) - (int) $insp->rejected_rolls);
             $payload['total_kg']    = max(0, (float) ($payload['total_kg'] ?? $c->total_kg) - (float) $insp->rejected_kg);
+
+            // القائم والخصم على الرسالة بيتظبطوا كمان عشان بلوك «القائم ⇐ الكيس والماسورة ⇐ الصافي» يفضل متّسق
+            if (!$c->is_meter && $c->gross_kg !== null) {
+                $payload['gross_kg']     = max(0, (float) $c->gross_kg - (float) ($insp->rejected_gross_kg ?? $insp->rejected_kg));
+                $payload['packaging_kg'] = max(0, (float) $c->packaging_kg - $c->packagingFor((int) $insp->rejected_rolls));
+            }
         }
 
         $c->forceFill($payload)->save();
@@ -543,8 +549,9 @@ class DocumentEffects
                     'lot_label'            => $c->consignment_no,
                     'kind'                 => 'rejected',
                     'rolls_count'          => (int) ($insp->counted_rolls ?: $c->rolls_count),
-                    'qty'                  => (float) ($insp->counted_kg ?: $c->total_kg),
-                    'unit'                 => 'كجم',
+                    // المطالبة بالقائم (اللي المورد سلّمه واتحاسب عليه) — وبالمتر بالأمتار
+                    'qty'                  => (float) ($c->is_meter ? ($insp->counted_kg ?: $c->total_kg) : ($c->gross_kg ?: $insp->counted_kg ?: $c->total_kg)),
+                    'unit'                 => $c->is_meter ? 'متر' : 'كجم',
                     'party'                => 'quality',
                     'reason'               => $insp->notes ?: 'اترفض في الفحص',
                     'resolution'           => 'open',
@@ -580,8 +587,11 @@ class DocumentEffects
             ->whereNull('goods_receipt_id')->where('kind', 'rejected')->exists();
         if ($exists) return;
 
-        $nos = $insp->rolls()->where('status', 'rejected')->pluck('roll_no')->filter()->implode('، ');
-        $kg  = (float) $insp->rejected_kg;
+        $nos   = $insp->rolls()->where('status', 'rejected')->pluck('roll_no')->filter()->implode('، ');
+        $kg    = (float) $insp->rejected_kg;                    // الصافي (أو الأمتار) — اللي بيتخصم من الرصيد
+        $gross = (float) ($insp->rejected_gross_kg ?: $kg);     // القائم — اللي المورد سلّمه واتحاسب عليه
+        $pack  = max(0, $gross - $kg);                          // الكيس والماسورة اللي اتخصموا
+        $unit  = $c->is_meter ? 'متر' : 'كجم';
 
         \App\Models\GoodsReceiptRejection::create([
             'fabric_inspection_id' => $insp->id,
@@ -591,21 +601,23 @@ class DocumentEffects
             'lot_label'            => $c->consignment_no,
             'kind'                 => 'rejected',
             'rolls_count'          => (int) $insp->rejected_rolls,
-            'qty'                  => $kg,
-            'unit'                 => 'كجم',
+            'qty'                  => $gross,
+            'unit'                 => $unit,
             'party'                => 'quality',
             'reason_category'      => 'other',
-            'reason'               => 'أتواب اترفضت في الفحص' . ($nos ? ' (' . $nos . ')' : '') . ($insp->notes ? ' — ' . $insp->notes : ''),
+            'reason'               => 'أتواب اترفضت في الفحص' . ($nos ? ' (' . $nos . ')' : '')
+                . ($pack > 0 ? ' — قائم ' . lv_num($gross, 3) . ' كجم، صافي ' . lv_num($kg, 3) . ' كجم بعد خصم الكيس والماسورة' : '')
+                . ($insp->notes ? ' — ' . $insp->notes : ''),
             'resolution'           => 'open',
             'created_by'           => auth()->id(),
         ]);
 
-        // خصم من المستلم على طلب الشراء — بوحدة الطلب
-        if ($kg > 0 && ($po = $c->purchaseOrder)) {
+        // خصم من المستلم على طلب الشراء — بالقائم (المستلم على الطلب بيتحسب بالقائم) وبوحدة الطلب
+        if ($gross > 0 && ($po = $c->purchaseOrder)) {
             $poLine = $po->lines()->where('fabric_type_id', $c->fabric_type_id)
                 ->where('color_id', $c->color_id)->first();
             if ($poLine) {
-                $dec = self::toUnit($kg, 'كجم', $poLine->unit);
+                $dec = self::toUnit($gross, $unit, $poLine->unit);
                 $poLine->forceFill([
                     'received_qty' => max(0, (float) $poLine->received_qty - $dec),
                     'is_closed'    => false,
@@ -614,7 +626,7 @@ class DocumentEffects
             }
         }
 
-        // حركة المخزون: خروج من المحجوز ودخول المرتجعات
+        // حركة المخزون بالصافي: خروج من المحجوز ودخول المرتجعات
         if ($kg > 0) {
             $rtn = \App\Models\Warehouse::where('code', 'RTN')->value('id')
                 ?? \App\Models\Warehouse::where('type', 'other')->value('id');
@@ -630,7 +642,7 @@ class DocumentEffects
                     'direction'      => $dir,
                     'quality_state'  => $state,
                     'qty'            => round($kg, 3),
-                    'unit'           => 'كجم',
+                    'unit'           => $unit,
                     'source_type'    => FabricInspection::class,
                     'source_id'      => $insp->id,
                     'reference'      => $insp->doc_no . ' — أتواب مرفوضة',
@@ -644,7 +656,9 @@ class DocumentEffects
         Notifier::broadcastToRole('purchasing', 'fabric_rejected',
             'أتواب اترفضت في الفحص — مطالبة على المورد',
             'الرسالة ' . $c->consignment_no . ' — ' . (int) $insp->rejected_rolls . ' توب بوزن '
-                . rtrim(rtrim(number_format($kg, 3), '0'), '.') . ' كجم' . ($nos ? ' (' . $nos . ')' : ''),
+                . lv_num($gross, 3) . ' ' . $unit
+                . ($pack > 0 ? ' قائم (صافي ' . lv_num($kg, 3) . ' كجم بعد خصم الكيس والماسورة)' : '')
+                . ($nos ? ' (' . $nos . ')' : ''),
             route('rejections.index'), 'danger');
     }
 
@@ -827,10 +841,12 @@ class DocumentEffects
                         ->where('size_id', $line->size_id)
                         ->first();
                     if ($woLine) {
-                        /* المرفوض من المصنع رجع فعلًا بس معيب — بيتحسب ضمن المستلم
-                           علشان المتبقي على المصنع يصفّر، ومش بيدخل مخزون التام */
+                        /* المرفوض من المصنع مش بيتحسب ضمن المستلم (قرار 28 أكتوبر):
+                           المتبقي على المصنع = المقصوص − السليم، فالمصنع لازم يعوّض
+                           المرفوض (أو الأمر يتقفل يدوي بسبب). المرفوض بيتسجل لوحده
+                           ومش بيدخل مخزون التام. */
                         $rejected = (int) ($line->rejected_qty ?? 0);
-                        $woLine->increment('received_qty', (int) $line->qty + $rejected);
+                        $woLine->increment('received_qty', (int) $line->qty);
                         if ($rejected > 0) $woLine->increment('rejected_qty', $rejected);
                         $woLine->refresh()->syncRemaining();
                     }

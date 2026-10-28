@@ -56,7 +56,7 @@
   </tr>
   <tr>
     <th>أتواب مرفوضة</th><td colspan="5"><span class="num">{{ (int) $insp->rejected_rolls }}</span> توب
-      @if($insp->rejected_kg > 0) بوزن <span class="num">{{ rtrim(rtrim(number_format((float)$insp->rejected_kg,3),'0'),'.') }}</span> كجم — اتخصموا من الرسالة ونزلوا المرتجعات @endif</td>
+      @if($insp->rejected_kg > 0) بوزن <span class="num">{{ rtrim(rtrim(number_format((float)$insp->rejected_kg,3),'0'),'.') }}</span> كجم صافي@if($insp->rejected_packaging_kg > 0) (قائم <span class="num">{{ rtrim(rtrim(number_format((float)$insp->rejected_gross_kg,3),'0'),'.') }}</span> كجم)@endif — اتخصموا من الرسالة ونزلوا المرتجعات @endif</td>
   </tr>
 </table>
 

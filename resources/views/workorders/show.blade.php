@@ -129,14 +129,15 @@
     @include('partials.kpi', ['value'=>number_format((int)$row->cut_pieces), 'label'=>'مقصوص فعلي', 'note'=>'مجموع بيانات القص المعتمدة'])
   </div>
   <div class="col-6 col-lg-2">
-    @include('partials.kpi', ['value'=>number_format((int)$row->received_pieces), 'label'=>'مستلم تام', 'tone'=>'ok', 'note'=>'مجموع استلامات الإنتاج المعتمدة'])
+    @include('partials.kpi', ['value'=>number_format((int)$row->received_pieces), 'label'=>'مستلم تام (سليم)', 'tone'=>'ok', 'note'=>'السليم في استلامات الإنتاج المعتمدة' . ((int)$row->rejected_pieces > 0 ? ' · مرفوض ' . number_format((int)$row->rejected_pieces) : '')])
   </div>
   <div class="col-6 col-lg-2">
     <div class="position-relative h-100">
       @include('partials.kpi', ['value'=>number_format($row->outstanding_pieces), 'label'=>'لسه على المصنع',
         'tone'=>$row->outstanding_pieces ? 'warn' : 'ok'])
       <span class="kpi-fx">@include('partials.fx', ['t' => 'لسه على المصنع',
-        'f' => ['المتبقي = المقصوص − المستلم', number_format((int)$row->cut_pieces) . ' − ' . number_format((int)$row->received_pieces) . ' = ' . number_format($row->outstanding_pieces) . ' قطعة']])</span>
+        'f' => ['المتبقي = المقصوص − المستلم السليم', number_format((int)$row->cut_pieces) . ' − ' . number_format((int)$row->received_pieces) . ' = ' . number_format($row->outstanding_pieces) . ' قطعة'],
+        'why' => 'المرفوض من المصنع' . ((int)$row->rejected_pieces > 0 ? ' (' . number_format((int)$row->rejected_pieces) . ' قطعة)' : '') . ' مش بيتحسب ضمن المستلم — المصنع بيعوّضه أو الأمر يتقفل يدوي بسبب'])</span>
     </div>
   </div>
 </div>
@@ -592,7 +593,7 @@
       <button class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button></div>
     <div class="modal-body">
       <p class="small">متبقي على المصنع <b class="num">{{ number_format($row->outstanding_pieces) }}</b> قطعة
-        <span class="hint">(مقصوص {{ number_format((int)$row->cut_pieces) }} − مستلم {{ number_format((int)$row->received_pieces) }})</span>.</p>
+        <span class="hint">(مقصوص {{ number_format((int)$row->cut_pieces) }} − مستلم سليم {{ number_format((int)$row->received_pieces) }}@if((int)$row->rejected_pieces > 0) · مرفوض من المصنع {{ number_format((int)$row->rejected_pieces) }}@endif)</span>.</p>
       <label class="form-label req">سبب القفل</label>
       <textarea name="variance_reason" rows="3" class="form-control" required placeholder="مثال: الباقي اتصرف كعيوب / الكمية اكتفت بالمستلم">{{ $row->variance_reason }}</textarea>
     </div>

@@ -80,6 +80,16 @@ class FabricInspection extends Model
         $total    = $counted;
         $sampled  = $rows->count();
 
+        /* المرفوض بالكيلو: الفاحص بيكتب وزن التوب «قائم» زي ما طلع على الميزان (قرار 28 أكتوبر)،
+           والسيستم بيخصم منه كيس وماسورة الرسالة ⇒ الصافي هو اللي بيتخصم من الرصيد.
+           بالمتر: المرفوض بيتخصم بأمتاره (الميتينج 37). */
+        $meter    = (bool) $this->consignment?->is_meter;
+        $packRoll = $meter ? 0.0 : (float) ($this->consignment?->packagingFor(1) ?? 0);
+        $rejGross = $meter ? 0.0 : (float) $rejRows->sum('net_kg');
+        $rejNet   = $meter
+            ? (float) $rejRows->sum('length_m')
+            : (float) $rejRows->sum(fn ($r) => max(0, (float) $r->net_kg - $packRoll));
+
         $this->forceFill([
             'declared_rolls'  => $declared,
             'counted_rolls'   => $counted,
@@ -94,14 +104,21 @@ class FabricInspection extends Model
             'width_spread_cm' => $spread,
             'total_defects'   => $totalDefects,
             'defect_pct'      => $defectPct,
-            'rejected_rolls'  => $rejRows->count(),
-            // بالمتر: المرفوض بيتخصم بأمتاره (الميتينج 37)
-            'rejected_kg'     => round((float) ($this->consignment?->is_meter ? $rejRows->sum('length_m') : $rejRows->sum('net_kg')), 3),
+            'rejected_rolls'    => $rejRows->count(),
+            'rejected_kg'       => round($rejNet, 3),                       // الصافي (أو الأمتار)
+            'rejected_gross_kg' => $meter ? null : round($rejGross, 3),     // القائم زي ما اتكتب
             // عرض التشغيل = أقل عرض − هامش من كل جانب (تأمين العروض)
             'usable_width_cm' => $min !== null ? round($min - 2 * (float) lv_setting('width_margin_cm_per_side', 2.5), 2) : null,
             // فرق العرض الكبير بين أتواب نفس الحوض = القماش نفسه فيه مشكلة
             'width_alert'     => $spread !== null && $spread > (float) config('lvplanning.width_spread_alert_cm', 5),
         ])->saveQuietly();
+    }
+
+    /** الكيس والماسورة اللي اتخصموا من أوزان الأتواب المرفوضة (قائم − صافي) */
+    public function getRejectedPackagingKgAttribute(): float
+    {
+        if ($this->rejected_gross_kg === null) return 0.0;
+        return max(0, round((float) $this->rejected_gross_kg - (float) $this->rejected_kg, 3));
     }
 
     /**

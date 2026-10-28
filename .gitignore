@@ -21,3 +21,7 @@
 .phpunit.result.cache
 .DS_Store
 Thumbs.db
+
+# ملفات بتتولد محليًا — مش جزء من الكود
+/storage/app/public/models/
+/.claude/

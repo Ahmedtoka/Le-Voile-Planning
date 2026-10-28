@@ -83,11 +83,12 @@ abstract class FlowTestCase extends TestCase
     // ── ① طلب الشراء ─────────────────────────────────────────────
 
     /** التخطيط بينشئ الطلب — بيروح للمشتريات على طول */
-    protected function createPo(?array $lines = null): PurchaseOrder
+    protected function createPo(?array $lines = null, array $extra = []): PurchaseOrder
     {
-        $lines ??= [['color_id' => $this->color->id, 'qty' => 2, 'unit' => 'طن', 'tolerance_pct' => 5]];
+        // الميتينج 37: الوحدة كيلو أو متر بس — الطن اتشال
+        $lines ??= [['color_id' => $this->color->id, 'qty' => 2000, 'unit' => 'كجم', 'tolerance_pct' => 5]];
 
-        $this->as('planner')->post(route('purchase-orders.store'), [
+        $this->as('mostafa')->post(route('purchase-orders.store'), $extra + [
             'lines' => array_map(fn ($l) => $l + ['fabric_type_id' => $this->fabric->id], $lines),
         ])->assertSessionHasNoErrors()->assertRedirect(route('purchase-orders.index'));
 
@@ -97,13 +98,14 @@ abstract class FlowTestCase extends TestCase
     /** المشتريات بتسعّر — ممكن بوحدة غير وحدة الطلب */
     protected function sourcePo(PurchaseOrder $po, string $unit = 'كيلو'): PurchaseOrder
     {
-        $this->as('moaz')->post(route('purchase-orders.sourcing', $po), [
+        $this->as('ahmed')->post(route('purchase-orders.sourcing', $po), [
             'supplier_id'    => $this->supplier->id,
             'warehouse_id'   => $this->warehouse->id,
             'delivery_date'  => now()->addDays(10)->toDateString(),
             'payment_method' => 'نقدي',
+            // الميتينج 37: التسكين بكمية لكل بند — الهيلبر بيسكّن البند كله
             'prices'         => $po->lines->map(fn ($l) => [
-                'id' => $l->id, 'unit_price' => 100, 'unit' => $unit,
+                'id' => $l->id, 'qty' => $l->unsourced_qty, 'unit_price' => 100, 'unit' => $unit,
             ])->all(),
         ])->assertSessionHasNoErrors()->assertRedirect(route('purchasing.queue'));
 
@@ -123,8 +125,10 @@ abstract class FlowTestCase extends TestCase
      */
     protected function postAddition(PurchaseOrder $po, array $lines, array $extra = [])
     {
-        return $this->as('store')->post(route('stock-additions.store'), $extra + [
+        return $this->as('hazem')->post(route('stock-additions.store'), $extra + [
             'doc_date'          => now()->toDateString(),
+            'paper_serial'      => 'SA-' . uniqid(),      // مسلسل الدفتر الورقي — إجباري
+            'supplier_doc_no'   => 'SUP-' . uniqid(),     // رقم إذن المورد — إجباري
             'supplier_id'       => $this->supplier->id,
             'warehouse_id'      => $this->warehouse->id,
             'purchase_order_id' => $po->id,
@@ -158,7 +162,7 @@ abstract class FlowTestCase extends TestCase
 
     protected function inspect(Consignment $c, array $widths = [175, 172, 174], int $counted = 9)
     {
-        return $this->as('qc')->post(route('inspections.store'), [
+        return $this->as('ibrahim')->post(route('inspections.store'), [
             'doc_date'       => now()->toDateString(),
             'consignment_id' => $c->id,
             'declared_rolls' => $c->rolls_count,
@@ -171,7 +175,7 @@ abstract class FlowTestCase extends TestCase
 
     protected function lab(Consignment $c, array $gsm = [192, 190, 194])
     {
-        return $this->as('lab')->post(route('lab-reports.store'), [
+        return $this->as('nourhan')->post(route('lab-reports.store'), [
             'doc_date'            => now()->toDateString(),
             'consignment_id'      => $c->id,
             's1_shrink_len_pct'   => 3,
@@ -185,7 +189,7 @@ abstract class FlowTestCase extends TestCase
 
     protected function postReceipt(Consignment $c, float $kg, array $rejects = [])
     {
-        return $this->as('store')->post(route('goods-receipts.store'), [
+        return $this->as('hazem')->post(route('goods-receipts.store'), [
             'doc_date'       => now()->toDateString(),
             'consignment_id' => $c->id,
             'lines'          => [[
@@ -225,7 +229,7 @@ abstract class FlowTestCase extends TestCase
     /** أمر شغل بالحسبة المرجعية: 3.10 × 1.72 × 0.192 × 12 قطعة على 600 كجم */
     protected function createWorkOrder(Consignment $c, float $kg = 600, array $override = []): WorkOrder
     {
-        $this->as('planner')->post(route('work-orders.store'), [
+        $this->as('mostafa')->post(route('work-orders.store'), [
             'wo_date'          => now()->toDateString(),
             'factory_id'       => $this->factory->id,
             'product_title'    => 'بادي كات بيج',
@@ -252,7 +256,7 @@ abstract class FlowTestCase extends TestCase
 
     protected function submitWorkOrder(WorkOrder $wo): WorkOrder
     {
-        $this->as('planner')->post(route('work-orders.submit', $wo))->assertSessionHasNoErrors();
+        $this->as('mostafa')->post(route('work-orders.submit', $wo))->assertSessionHasNoErrors();
         return $wo->refresh();
     }
 
@@ -260,7 +264,7 @@ abstract class FlowTestCase extends TestCase
     {
         $f = $wo->fabrics()->firstOrFail();
 
-        $this->as('store')->post(route('material-issues.store'), [
+        $this->as('hazem')->post(route('material-issues.store'), [
             'doc_date'     => now()->toDateString(),
             'warehouse_id' => $this->warehouse->id,
             'factory_id'   => $this->factory->id,
@@ -276,13 +280,13 @@ abstract class FlowTestCase extends TestCase
 
         $mi = MaterialIssue::latest('id')->firstOrFail();
 
-        return $this->as('store')->post(route('material-issues.submit', $mi));
+        return $this->as('hazem')->post(route('material-issues.submit', $mi));
     }
 
     /** بيان قص — بيرجّع البيان بعد محاولة الإنهاء */
     protected function cut(WorkOrder $wo, int $pieces, ?string $reason = null): CutDeclaration
     {
-        $this->as('follow')->post(route('cut-declarations.store'), [
+        $this->as('karim')->post(route('cut-declarations.store'), [
             'doc_date'               => now()->toDateString(),
             'work_order_id'          => $wo->id,
             'factory_id'             => $this->factory->id,
@@ -297,14 +301,14 @@ abstract class FlowTestCase extends TestCase
         ])->assertSessionHasNoErrors();
 
         $cd = CutDeclaration::latest('id')->firstOrFail();
-        $this->as('follow')->post(route('cut-declarations.submit', $cd));
+        $this->as('karim')->post(route('cut-declarations.submit', $cd));
 
         return $cd->refresh();
     }
 
     protected function receiveProduction(WorkOrder $wo, int $good, int $rejected = 0): ProductionReceipt
     {
-        $this->as('follow')->post(route('production-receipts.store'), [
+        $this->as('karim')->post(route('production-receipts.store'), [
             'doc_date'      => now()->toDateString(),
             'work_order_id' => $wo->id,
             'factory_id'    => $this->factory->id,
@@ -319,7 +323,7 @@ abstract class FlowTestCase extends TestCase
         ])->assertSessionHasNoErrors();
 
         $pr = ProductionReceipt::latest('id')->firstOrFail();
-        $this->as('follow')->post(route('production-receipts.submit', $pr))->assertSessionHasNoErrors();
+        $this->as('karim')->post(route('production-receipts.submit', $pr))->assertSessionHasNoErrors();
 
         return $pr->refresh();
     }

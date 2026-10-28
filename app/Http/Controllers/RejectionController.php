@@ -53,9 +53,15 @@ class RejectionController extends Controller
                 ['label' => 'أتواب مرفوضة',
                  'value' => number_format((int) (clone $base)->where('kind', 'rejected')->where('resolution', '!=', 'accepted')->sum('rolls_count')),
                  'note'  => 'إجمالي الأتواب اللي اترفضت.'],
-                ['label' => 'كجم مرفوضة',
-                 'value' => number_format((float) (clone $base)->where('kind', 'rejected')->where('resolution', '!=', 'accepted')->sum('qty'), 1),
-                 'tone'  => 'danger', 'note' => 'وزن مطالب بيه المورد.'],
+                ['label' => 'مرفوض (كمية)',
+                 // الخصم بوحدة الرسالة: كيلو للكيلو ومتر للمتر — فالمجموع بيتعرض لكل وحدة لوحدها
+                 'value' => collect(['كجم' => 'كجم', 'متر' => 'م'])->map(fn ($short, $unit) => [
+                                $unit,
+                                (float) (clone $base)->where('kind', 'rejected')->where('resolution', '!=', 'accepted')
+                                    ->where('unit', $unit)->sum('qty'),
+                            ])->filter(fn ($p) => $p[1] > 0)
+                            ->map(fn ($p) => number_format($p[1], 1) . ' ' . lv_unit($p[0]))->implode(' · ') ?: '0',
+                 'tone'  => 'danger', 'note' => 'كمية مطالب بيها المورد — قائم للكيلو، وبالأمتار للمتر.'],
                 ['label' => 'اتقفل',
                  'value' => (clone $base)->where('resolution', '!=', 'open')->count(), 'tone' => 'ok',
                  'note'  => 'اترجع أو اتقبل أو اترفض نهائي.'],

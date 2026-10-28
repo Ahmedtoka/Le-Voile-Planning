@@ -47,6 +47,21 @@
 @if($f)
   @php
     $steps = array_values(array_filter($f['steps'], fn ($s) => Route::has($s['r'])));
+
+    /* الخطوة بتبقى لينك بس لو المستخدم عنده صلاحية على شاشتها (نفس can.do بتاعة الراوت)،
+       غير كده بتتعرض كنص باهت — بدل ما يدوس ويقابل 403. */
+    $u = auth()->user();
+    $allowed = function (string $name) use ($u): bool {
+        if (!$u) return false;
+        $route = Route::getRoutes()->getByName($name);
+        if (!$route) return false;
+        foreach ($route->gatherMiddleware() as $m) {
+            if (!is_string($m) || !str_starts_with($m, 'can.do:')) continue;
+            foreach (preg_split('/[|,]/', substr($m, 7)) as $p) if ($u->can2(trim($p))) return true;
+            return false;
+        }
+        return true;
+    };
     $at = null;
     foreach ($steps as $i => $s) if ($s['k'] === ($step ?? '')) $at = $i;
     $next = ($at !== null && isset($steps[$at + 1])) ? $steps[$at + 1] : null;
@@ -64,6 +79,12 @@
             <i class="bi {{ $s['i'] }}" aria-hidden="true"></i>
             <span>{{ $s['t'] }}</span>
             <span class="visually-hidden">(إنت هنا)</span>
+          </span>
+        @elseif(!$allowed($s['r']))
+          <span class="flow-step {{ $state }}" style="opacity:.55;cursor:default" title="مالكش صلاحية على الشاشة دي">
+            @if(isset($cycleNo[$s['r']]))<span class="n">{{ $cycleNo[$s['r']] }}</span>@else<span class="n"><i class="bi {{ $s['i'] }}" style="display:inline;font-size:.68rem" aria-hidden="true"></i></span>@endif
+            <i class="bi {{ $s['i'] }}" aria-hidden="true"></i>
+            <span>{{ $s['t'] }}</span>
           </span>
         @else
           <a class="flow-step {{ $state }}" href="{{ route($s['r']) }}">

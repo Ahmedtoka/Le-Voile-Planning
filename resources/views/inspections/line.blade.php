@@ -26,7 +26,7 @@
     </select></td>
   @unless($meter)
   <td class="num"><input type="number" step="0.001" min="0" name="rolls[{{ $i }}][net_kg]" class="roll-kg" value="{{ $l['net_kg'] ?? '' }}"
-             placeholder="{{ $st==='rejected' ? 'إجباري' : 'مثال: 19.5' }}" @required($st==='rejected') aria-label="وزن التوب بالكيلو"></td>
+             placeholder="{{ $st==='rejected' ? 'قائم — إجباري' : 'مثال: 19.5' }}" @required($st==='rejected') aria-label="وزن التوب بالكيلو"></td>
   <td class="num"><input type="number" step="0.01" min="0" name="rolls[{{ $i }}][gsm]" class="roll-gsm" value="{{ $l['gsm'] ?? '' }}" placeholder="مثال: 195" aria-label="البنشر جم/م²"></td>
   @endunless
   <td><select name="rolls[{{ $i }}][defect_type]" class="roll-dtype" onchange="LVI.defect(this)" aria-label="نوع العيب">

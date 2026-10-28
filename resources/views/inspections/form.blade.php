@@ -198,7 +198,7 @@
           <div class="col"><div class="hint">نسبة العيوب</div><b class="num">{{ lv_num($row->defect_pct, 2) }}%</b>
             @include('partials.fx', ['t' => 'نسبة العيوب', 'f' => 'عدد العيوب ' . (int) $row->total_defects . ' ÷ إجمالي الطول المقاس ' . lv_num($row->total_length_m, 2) . ' م × 100 = ' . lv_num($row->defect_pct, 2) . '%', 'why' => 'يعني عيب لكل 100 متر'])</div>
           <div class="col"><div class="hint">أتواب مرفوضة</div>
-            <b class="num {{ $row->rejected_rolls > 0 ? 'text-danger' : '' }}">{{ (int) $row->rejected_rolls }}@if($row->rejected_kg > 0) · {{ lv_kg($row->rejected_kg, false) }}@endif</b></div>
+            <b class="num {{ $row->rejected_rolls > 0 ? 'text-danger' : '' }}">{{ (int) $row->rejected_rolls }}@if($row->rejected_kg > 0) · {{ $meter ? lv_num($row->rejected_kg, 2) . ' م' : lv_kg($row->rejected_kg, false) . ($row->rejected_packaging_kg > 0 ? ' صافي' : '') }}@endif</b></div>
           @if($est)
             <div class="col"><div class="hint">الوزن المتوقع من العيّنة</div>
               <b class="num {{ $est['level'] === 'danger' ? 'text-danger' : ($est['level'] === 'warn' ? 'text-warning' : '') }}">{{ lv_kg($est['expected'], false) }} ({{ $est['diff_pct'] >= 0 ? '+' : '' }}{{ lv_num($est['diff_pct'], 1) }}%)</b>
@@ -220,7 +220,11 @@
             {{ $est['level'] === 'danger' ? '· راجع الوزن مع المخزن قبل الإفراج' : '· أكبر من الطبيعي' }}</div>
         @endif
         @if($row->rejected_rolls > 0)
-          <div class="alert alert-danger py-2 mt-2 mb-0 small">{{ (int) $row->rejected_rolls }} توب اترفضوا بوزن {{ lv_kg($row->rejected_kg, false) }} — اتخصموا من الرسالة ومن طلب الشراء ونزلوا مخزن المرتجعات كمطالبة على المورد.</div>
+          <div class="alert alert-danger py-2 mt-2 mb-0 small">{{ (int) $row->rejected_rolls }} توب اترفضوا
+            @if($meter) بـ {{ lv_num($row->rejected_kg, 2) }} م — اتخصموا من الرسالة ومن طلب الشراء ونزلوا مخزن المرتجعات كمطالبة على المورد.
+            @elseif($row->rejected_packaging_kg > 0) بوزن قائم {{ lv_kg($row->rejected_gross_kg, false) }} − كيس وماسورة {{ lv_kg($row->rejected_packaging_kg, false) }} = صافي {{ lv_kg($row->rejected_kg, false) }} — الصافي اتخصم من الرسالة، والقائم اتخصم من طلب الشراء ونزل مخزن المرتجعات كمطالبة على المورد.
+            @else بوزن {{ lv_kg($row->rejected_kg, false) }} — اتخصموا من الرسالة ومن طلب الشراء ونزلوا مخزن المرتجعات كمطالبة على المورد.
+            @endif</div>
         @endif
       </div>
     @endif
@@ -233,7 +237,7 @@
         @if($meter)
           <span class="hint">— الرسالة <b>بالمتر</b>: اكتب الأمتار المكتوبة على كل توب والعرض والحالة. مفيش وزن ولا بنشر. التوب البايظ علّمه <b>مرفوض</b> — أمتاره بتتخصم من الرسالة والطلب. العيّنة على الأقل {{ lv_num(lv_setting('min_inspection_sample_pct', 10), 0) }}% من الأتواب.</span>
         @else
-          <span class="hint">— طول وعرض كل توب (أقل عرض هو اللي الماركر هيتبني عليه) + وزن البنشر لكل توب للمعمل — <b>بيتحسب لوحده</b> من وزن التوب ÷ (الطول × العرض)، ولو المعمل قاسه بالبانشر اكتب رقمه مكانه. التوب البايظ علّمه <b>مرفوض</b> واكتب وزنه. العيّنة على الأقل {{ lv_num(lv_setting('min_inspection_sample_pct', 10), 0) }}% من الأتواب.</span>
+          <span class="hint">— طول وعرض كل توب (أقل عرض هو اللي الماركر هيتبني عليه) + وزن البنشر لكل توب للمعمل — <b>بيتحسب لوحده</b> من وزن التوب ÷ (الطول × العرض)، ولو المعمل قاسه بالبانشر اكتب رقمه مكانه. التوب البايظ علّمه <b>مرفوض</b> واكتب وزنه <b>قائم</b> زي ما طلع على الميزان — السيستم بيخصم الكيس والماسورة قبل ما يخصمه من الرصيد. العيّنة على الأقل {{ lv_num(lv_setting('min_inspection_sample_pct', 10), 0) }}% من الأتواب.</span>
         @endif
       </span>
       @if($editable)<button type="button" class="btn btn-sm btn-outline-plum ms-auto" onclick="LV.add('lineTpl','lines')"><i class="bi bi-plus-lg" aria-hidden="true"></i> توب</button>@endif
@@ -446,7 +450,7 @@ window.LVI = {
     var tr = sel.closest('tr'), kg = tr.querySelector('.roll-kg');
     var rej = sel.value === 'rejected';
     tr.classList.toggle('table-danger', rej);
-    if (kg) { kg.required = rej; kg.placeholder = rej ? 'إجباري' : 'مثال: 19.5'; if (rej) kg.focus(); }
+    if (kg) { kg.required = rej; kg.placeholder = rej ? 'قائم — إجباري' : 'مثال: 19.5'; if (rej) kg.focus(); }
   },
   /* البنشر تلقائي = وزن التوب ÷ (الطول × العرض) = جم/م² — لو المعمل قاسه بالبانشر يكتبه مكانه */
   autoGsm: function (el) {

@@ -118,8 +118,8 @@
             {{ number_format($r->outstanding_pieces) }}
             @if($cut > 0 || $rec > 0)
               @include('partials.fx', ['t' => 'المتبقي على المصنع',
-                'f' => 'مقصوص ' . number_format($cut) . ' − مستلم ' . number_format($rec) . ' = ' . number_format($r->outstanding_pieces) . ' قطعة',
-                'why' => 'قطع اتقصّت ولسه ما اتسلّمتش من المصنع (لو المستلم أكبر من المقصوص بيتعرض صفر)'])
+                'f' => 'مقصوص ' . number_format($cut) . ' − مستلم سليم ' . number_format($rec) . ' = ' . number_format($r->outstanding_pieces) . ' قطعة',
+                'why' => 'قطع اتقصّت ولسه ما اتسلّمتش سليمة من المصنع — المرفوض من المصنع مش بيتحسب (لو المستلم أكبر من المقصوص بيتعرض صفر)'])
             @endif
           </td>
           <td class="num">

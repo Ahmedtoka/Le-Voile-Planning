@@ -30,11 +30,11 @@
           <div><div class="k">المنتج</div><div class="v">{{ $wo->product_title ?: '—' }}</div></div>
           <div><div class="k">المصنع</div><div class="v">{{ $wo->factory?->name ?? '—' }}</div></div>
           <div><div class="k">مقصوص (معتمد)</div><div class="v num">{{ number_format($cut) }}</div></div>
-          <div><div class="k">مستلم قبل كده</div><div class="v num">{{ number_format($recv) }}</div></div>
+          <div><div class="k">مستلم قبل كده (سليم)</div><div class="v num">{{ number_format($recv) }}@if((int)$wo->rejected_pieces > 0) <span class="hint">· مرفوض {{ number_format((int)$wo->rejected_pieces) }}</span>@endif</div></div>
           <div><div class="k">لسه على المصنع</div>
             <div class="v num {{ $out ? 'text-warning' : 'text-success' }}">{{ number_format($out) }}
-              @include('partials.fx', ['t' => 'لسه على المصنع', 'f' => ['المتبقي = المقصوص − المستلم', number_format($cut) . ' − ' . number_format($recv) . ' = ' . number_format($out) . ' قطعة'],
-                'why' => 'لما يوصل صفر أمر الشغل بيتقفل لوحده بعد اعتماد الاستلام'])
+              @include('partials.fx', ['t' => 'لسه على المصنع', 'f' => ['المتبقي = المقصوص − المستلم السليم', number_format($cut) . ' − ' . number_format($recv) . ' = ' . number_format($out) . ' قطعة'],
+                'why' => 'المرفوض من المصنع مش بيتحسب ضمن المستلم — لما يوصل صفر أمر الشغل بيتقفل لوحده بعد اعتماد الاستلام'])
             </div></div>
         </div>
       </div>

@@ -34,13 +34,15 @@ class ProductionFlowTest extends FlowTestCase
         $wo = $this->createWorkOrder($this->c);
         $f  = $wo->fabrics()->firstOrFail();
 
-        // راق = 3.10 × 1.72 × 0.192 = 1.023744 كجم ⇒ 600 ÷ 1.023744 = 586 راق × 12 = 7032 قطعة
-        $this->assertEqualsWithDelta(1.0237, (float) $f->ply_weight_kg, 0.0001);
-        $this->assertSame(586, (int) $f->plies);
-        $this->assertSame(7032, (int) $f->expected_pieces);
-        $this->assertEqualsWithDelta(0.08531, (float) $f->consumption_per_piece, 0.00001);
-        $this->assertSame(7032, $wo->refresh()->target_qty);
-        $this->assertSame(7032, (int) $wo->lines()->firstOrFail()->planned_qty);
+        // هامش الأمان 5 سم بيتضاف على الفرشة لوحده (الميتينج 36): 3.10 + 0.05 = 3.15 م
+        // راق = 3.15 × 1.72 × 0.192 = 1.040256 كجم ⇒ 600 ÷ 1.040256 = 576 راق × 12 = 6912 قطعة
+        $this->assertEqualsWithDelta(3.15, (float) $f->spread_length_safe_m, 0.001);
+        $this->assertEqualsWithDelta(1.0403, (float) $f->ply_weight_kg, 0.0001);
+        $this->assertSame(576, (int) $f->plies);
+        $this->assertSame(6912, (int) $f->expected_pieces);
+        $this->assertEqualsWithDelta(0.08669, (float) $f->consumption_per_piece, 0.00001);
+        $this->assertSame(6912, $wo->refresh()->target_qty);
+        $this->assertSame(6912, (int) $wo->lines()->firstOrFail()->planned_qty);
 
         // المسودة ما بتحجزش
         $this->assertSame('draft', $wo->status);
@@ -59,7 +61,7 @@ class ProductionFlowTest extends FlowTestCase
     {
         $wo = $this->createWorkOrder($this->c, 1900);   // المتاح 1840 بس
 
-        $this->as('planner')->post(route('work-orders.submit', $wo))->assertSessionHasErrors('msg');
+        $this->as('mostafa')->post(route('work-orders.submit', $wo))->assertSessionHasErrors('msg');
         $this->assertSame('draft', $wo->refresh()->status);
     }
 
@@ -122,7 +124,7 @@ class ProductionFlowTest extends FlowTestCase
         $this->assertSame(0, (int) $wo->refresh()->cut_pieces);
 
         // بسبب مكتوب يعدّي
-        $this->as('follow')->put(route('cut-declarations.update', $cd), [
+        $this->as('karim')->put(route('cut-declarations.update', $cd), [
             'doc_date'               => now()->toDateString(),
             'work_order_id'          => $wo->id,
             'actual_spread_length_m' => 3.10,
@@ -130,7 +132,7 @@ class ProductionFlowTest extends FlowTestCase
             'lines'                  => [['product_model_id' => $this->model->id,
                                           'size_id' => $this->size->id, 'qty' => 7400]],
         ])->assertSessionHasNoErrors();
-        $this->as('follow')->post(route('cut-declarations.submit', $cd))->assertSessionHasNoErrors();
+        $this->as('karim')->post(route('cut-declarations.submit', $cd))->assertSessionHasNoErrors();
 
         $this->assertSame('approved', $cd->refresh()->status);
         $wo->refresh();
@@ -149,10 +151,11 @@ class ProductionFlowTest extends FlowTestCase
 
         $wo->refresh();
         $line = $wo->lines()->first();
-        $this->assertSame(3000, (int) $line->received_qty, 'المرفوض من المصنع بيتحسب ضمن المستلم');
+        $this->assertSame(2950, (int) $line->received_qty, 'المرفوض من المصنع مش بيتحسب ضمن المستلم (قرار 28 أكتوبر)');
         $this->assertSame(50, (int) $line->rejected_qty);
-        $this->assertSame(0, (int) $line->remaining_qty);
-        $this->assertSame(0, $wo->outstanding_pieces);
+        $this->assertSame(50, (int) $line->remaining_qty, 'المرفوض بيفضل على المصنع لحد ما يتعوّض');
+        $this->assertSame(50, $wo->outstanding_pieces);
+        $this->assertSame(50, (int) $wo->rejected_pieces);
         $this->assertSame('partially_received', $wo->status, 'القص تحت المستهدف — الأمر ما يتقفلش');
 
         $pr = ProductionReceipt::latest('id')->first();
@@ -164,13 +167,22 @@ class ProductionFlowTest extends FlowTestCase
         // وهو مفتوح: الحجز على الرسالة = المخطط
         $this->assertEqualsWithDelta(600, (float) $this->c->refresh()->allocated_kg, 0.001);
 
-        // باقي القص: 3000 + 3800 = 6800 ≥ 6750 ⇒ استلامه يقفل الأمر
+        // باقي القص: 3000 + 3800 = 6800 ≥ 6750 — لكن لسه 50 مرفوضين على المصنع ⇒ ما يتقفلش
         $this->cut($wo, 3800);
         $this->receiveProduction($wo, 3800);
 
         $wo->refresh();
         $this->assertSame(6800, (int) $wo->cut_pieces);
+        $this->assertSame(6750, (int) $wo->received_pieces);
+        $this->assertSame(50, $wo->outstanding_pieces);
+        $this->assertSame('partially_received', $wo->status, 'المرفوض لسه ما اتعوّضش');
+
+        // المصنع عوّض الـ50 المرفوضين سليمين ⇒ السليم = المقصوص ⇒ القفل
+        $this->receiveProduction($wo, 50);
+
+        $wo->refresh();
         $this->assertSame(6800, (int) $wo->received_pieces);
+        $this->assertSame(0, $wo->outstanding_pieces);
         $this->assertSame('closed', $wo->status);
 
         // بعد القفل: الحجز = المنصرف فعلًا (590) مش المخطط (600)
