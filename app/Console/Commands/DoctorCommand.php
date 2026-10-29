@@ -272,7 +272,9 @@ class DoctorCommand extends Command
                     'chmod -R 775 storage bootstrap/cache');
         }
 
-        is_link(public_path('storage')) || is_dir(public_path('storage'))
+        // على ويندوز الرابط بيبقى junction — PHP بيشوفه أحيانًا بالمسار بالشرطة المائلة بس
+        $link = public_path('storage');
+        is_link($link) || is_dir($link) || is_dir(str_replace(DIRECTORY_SEPARATOR, '/', $link)) || @opendir($link)
             ? $this->ok('رابط الملفات العامة موجود')
             : $this->bad('رابط public/storage مش موجود — الصور والمرفقات مش هتظهر',
                 'php artisan storage:link');

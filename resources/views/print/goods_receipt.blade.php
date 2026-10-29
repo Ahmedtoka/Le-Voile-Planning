@@ -5,11 +5,15 @@
 @section('doc')
 
 <table class="meta">
+  <colgroup>
+    <col style="width:62px"><col style="width:95px"><col style="width:62px"><col>
+    <col style="width:78px"><col style="width:70px"><col style="width:92px"><col style="width:120px">
+  </colgroup>
   <tr>
-    <th>التاريخ</th><td class="v-num num">{{ $gr->doc_date?->format('d / n / Y') }}</td>
-    <th>وارد من</th><td>{{ $gr->supplier?->name }}</td>
-    <th>كود المورد</th><td class="code v-sm">{{ $gr->supplier?->code }}</td>
-    <th>أمر المشتريات</th><td class="code v-md">{{ $gr->purchaseOrder?->po_no ?: '—' }}</td>
+    <th style="width:auto">التاريخ</th><td class="num" style="white-space:nowrap">{{ $gr->doc_date?->format('d / n / Y') }}</td>
+    <th style="width:auto">وارد من</th><td>{{ $gr->supplier?->name }}</td>
+    <th style="width:auto">كود المورد</th><td class="code">{{ $gr->supplier?->code }}</td>
+    <th style="width:auto">أمر المشتريات</th><td class="code" style="white-space:nowrap">{{ $gr->purchaseOrder?->po_no ?: '—' }}</td>
   </tr>
 </table>
 

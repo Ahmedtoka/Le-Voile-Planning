@@ -790,6 +790,8 @@ class DemoDataService
         $po->models()->sync(array_values(array_filter($s['models'])));
 
         foreach ($s['lines'] as $i => [$fcode, $colorId, $qty, $unit]) {
+            // الميتينج 37: الوحدة كيلو أو متر بس — السيناريو مكتوب بالطن للاختصار وبيتحوّل هنا
+            if ($unit === 'طن') { $qty = $qty * 1000; $unit = 'كجم'; }
             $ft = $this->ft[$fcode];
             PurchaseOrderLine::create([
                 'purchase_order_id' => $po->id,
@@ -885,7 +887,18 @@ class DemoDataService
             $received[$s['key']][$li] = $soFar + $kg;
             $rollsByLine[$li] = $rolls;
 
+            /* الصافي والقائم (الميتينج 37): المخزن بيوزن قائم بالكيس والماسورة —
+               كيس 30 جم + ماسورة 20 جم للتوب المفتوح، كيس بس للمقفول. */
+            $open  = $li % 3 !== 2;
+            $bagG  = 30.0; $tubeG = $open ? 20.0 : null;
+            $pack  = lv_packaging_kg($bagG, $tubeG, count($rolls));
+
             StockAdditionLine::create([
+                'fabric_form'    => $open ? 'open' : 'closed',
+                'bag_g'          => $bagG,
+                'tube_g'         => $tubeG,
+                'gross_qty'      => round($kg + $pack, 3),
+                'packaging_kg'   => $pack,
                 'stock_addition_id' => $sa->id,
                 'item_code'      => (string) (17910000 + $ft->id * 100 + ($poLine->color_id % 100)),
                 'item_name'      => $ft->name . ' — ' . ($poLine->color?->name ?? ''),
@@ -1051,7 +1064,8 @@ class DemoDataService
                 'length_m'       => $roll->length_m,
                 'width_cm'       => $w,
                 'gsm'            => $roll->gsm,
-                'net_kg'         => $roll->net_kg,
+                // التوب المرفوض بيتوزن قائم (قرار 28 أكتوبر) — السيستم بيخصم الكيس والماسورة
+                'net_kg'         => $isRej ? round((float) $roll->net_kg + $c->packagingFor(1), 3) : $roll->net_kg,
                 'defects_count'  => $def,
                 'defect_pct'     => $roll->length_m > 0 ? round($def / $roll->length_m * 100, 3) : 0,
                 'defect_desc'    => $def ? $type . ': ' . ($isRej ? ($t['reject']['detail'] ?? $details[$type]) : $details[$type]) : null,
@@ -1709,13 +1723,15 @@ class DemoDataService
         foreach ($wo->lines as $li => $wl) {
             $q = $portion >= 1.0 ? (int) $wl->remaining_qty : (int) floor((int) $wl->cut_qty * $portion);
             if ($q <= 0) continue;
-            $rej = ($portion >= 1.0 && $li === 0) ? $this->r(0, 6) : 0;   // كام قطعة معيبة راجعة من المصنع
+            /* كام قطعة معيبة راجعة من المصنع — المرفوض مش بيتحسب ضمن المستلم (قرار 28 أكتوبر)،
+               فالمصنع بيعوّضها سليمة في نفس التسليمة الأخيرة عشان الأمر يتقفل. */
+            $rej = ($portion >= 1.0 && $li === 0) ? $this->r(0, 6) : 0;
             ProductionReceiptLine::create([
                 'production_receipt_id' => $pr->id,
                 'product_model_id'      => $wl->product_model_id,
                 'size_id'               => $wl->size_id,
                 'color_id'              => $mainC->color_id,
-                'qty'                   => max(0, $q - $rej),
+                'qty'                   => $q,
                 'rejected_qty'          => $rej,
             ]);
         }

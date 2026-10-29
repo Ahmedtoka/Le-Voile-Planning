@@ -5,8 +5,8 @@
 
 <table class="grid">
   <colgroup>
-    <col style="width:130px"><col style="width:140px"><col><col style="width:105px">
-    <col style="width:85px"><col style="width:120px">
+    <col style="width:120px"><col style="width:120px"><col><col style="width:90px">
+    <col style="width:80px"><col style="width:190px">
   </colgroup>
   <thead><tr>
     <th>الرسالة</th><th>اسم المورد</th><th>اسم الخامة</th>
@@ -19,11 +19,11 @@
       <td>{{ $lab->fabricType?->name }}</td>
       <td>{{ $lab->color?->name }}</td>
       <td class="num">{{ $lab->doc_date?->format('Y/n/j') }}</td>
-      <td rowspan="2" class="top">
+      <td rowspan="2" class="top" style="line-height:1.9">
         @foreach($lab->readings as $r)
-          <div><span class="num">{{ $r->roll_no }}</span>: <span class="num">{{ rtrim(rtrim(number_format((float)$r->gsm,2),'0'),'.') }}</span></div>
+          <span style="display:inline-block;white-space:nowrap;margin-inline-end:6px"><span class="num">{{ $r->roll_no }}</span>: <span class="num">{{ rtrim(rtrim(number_format((float)$r->gsm,2),'0'),'.') }}</span></span>
         @endforeach
-        <span class="cell-sep">متوسط: <span class="num">{{ $lab->avg_gsm }}</span></span>
+        <span class="cell-sep">متوسط <span class="num">{{ $lab->readings->count() }}</span> قراءة: <span class="num">{{ $lab->avg_gsm }}</span></span>
       </td>
     </tr>
     <tr>

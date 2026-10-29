@@ -245,6 +245,14 @@ class MaterialIssueController extends Controller
 
         /* الصافي من القائم بأوزان الرسالة — السيرفر هو اللي بيحسب */
         foreach ($v['lines'] as &$l) {
+            // الصرف على أمر شغل معتمد ومفتوح بس
+            if (!empty($l['work_order_id'])) {
+                $wo = WorkOrder::find($l['work_order_id']);
+                if (!$wo || !in_array($wo->status, ['approved', 'sent_to_factory', 'cutting', 'in_production', 'partially_received'], true)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                        'أمر الشغل ' . ($wo?->wo_no ?? '') . ' حالته «' . ($wo?->status_name ?? '—') . '» — الصرف بيتسجل على أمر معتمد ولسه مفتوح.']);
+                }
+            }
             $c = Consignment::find($l['consignment_id']);
             $gross = (float) ($l['gross_qty'] ?? 0);
             if ($c && !$c->is_meter && $gross > 0) {

@@ -185,6 +185,13 @@ class CutDeclarationController extends Controller
             'lines.*.qty'            => 'الكمية المقصوصة',
         ]);
 
+        // بيان القص على أمر شغل معتمد بس — المسودة والملغي والمستبدل ما يتقصّش عليهم
+        $wo = WorkOrder::find($v['work_order_id']);
+        if (!$wo || in_array($wo->status, ['draft', 'rejected', 'cancelled', 'superseded'], true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                'أمر الشغل ' . ($wo?->wo_no ?? '') . ' حالته «' . ($wo?->status_name ?? '—') . '» — بيان القص بيتسجل على أمر معتمد ومتبعت للمصنع.']);
+        }
+
         $lines = collect($v['lines'])->filter(fn ($l) => (int) $l['qty'] > 0)->values()->all();
         unset($v['lines']);
 

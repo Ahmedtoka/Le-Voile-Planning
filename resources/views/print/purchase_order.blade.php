@@ -15,9 +15,10 @@
   <table class="meta">
     <tr><th>رقم أمر الشراء</th><td class="code">{{ $po->po_no }}</td></tr>
     <tr><th>التاريخ</th><td class="num">{{ $po->po_date?->format('d/n/Y') }}</td></tr>
-    <tr><th>إدارة المشتريات</th><td></td></tr>
+    <tr><th>إدارة المشتريات</th><td>{{ $po->sourcer?->name ?? '' }}</td></tr>
     <tr><th>اسم الموظف</th><td>{{ $po->employee?->name }}</td></tr>
     <tr><th>تاريخ التوريد</th><td class="num">{{ $po->delivery_date?->format('d/n/Y') }}</td></tr>
+    <tr><th>مكان التسليم</th><td>{{ $po->warehouse?->name ?? '' }}</td></tr>
   </table>
 </div>
 

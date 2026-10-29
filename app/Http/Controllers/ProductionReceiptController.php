@@ -189,6 +189,13 @@ class ProductionReceiptController extends Controller
             'lines.*.notes'            => ['nullable', 'string'],
         ], [], ['warehouse_id' => 'المخزن', 'lines.*.qty' => 'الكمية']);
 
+        // الاستلام من أمر شغل معتمد بس — المسودة والملغي والمستبدل مفيش عليهم إنتاج
+        $wo = WorkOrder::find($v['work_order_id']);
+        if (!$wo || in_array($wo->status, ['draft', 'rejected', 'cancelled', 'superseded'], true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                'أمر الشغل ' . ($wo?->wo_no ?? '') . ' حالته «' . ($wo?->status_name ?? '—') . '» — استلام الإنتاج بيتسجل على أمر معتمد.']);
+        }
+
         $lines = collect($v['lines'])->map(function ($l) {
             $l['rejected_qty'] = $l['rejected_qty'] ?? 0;
             return $l;
