@@ -32,9 +32,8 @@
       <tbody>
       @forelse($rows as $r)
         @php
-          /* الأيام اللي اتقسمت عليها المبيعات فعلًا: متوسط يومي = مبيعات ÷ أيام الفترة.
-             لو مفيش متوسط (مفيش مبيعات) بنعرض نافذة الإعداد. */
-          $days = $r['avg_daily'] > 0 ? (int) round($r['sold_window'] / $r['avg_daily']) : $windowDays;
+          /* الأيام اللي اتقسمت عليها المبيعات فعلًا (طول فترة الـsnapshot) — بتيجي من CoverageService. */
+          $days = $r['period_days'] ?? $windowDays;
           $rowCls = in_array($r['flag'], ['out', 'danger'], true) ? 'table-danger' : ($r['flag'] === 'watch' ? 'table-warning' : '');
         @endphp
         <tr class="{{ $rowCls }}">

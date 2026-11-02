@@ -20,6 +20,10 @@
     <span>{{ $title }} <span class="pill pill-muted num">{{ number_format($rows->total()) }}</span></span>
 
     <form class="filter-bar" method="get" role="search" aria-label="فلترة المرفوضات">
+      <div class="fb-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input name="q" value="{{ request('q') }}" class="form-control" aria-label="بحث" placeholder="رقم الرسالة أو الإذن أو كود اللون…">
+      </div>
       <select name="kind" class="form-select" aria-label="النوع" onchange="this.form.submit()">
         <option value="">كل الأنواع</option>
         @foreach(\App\Models\GoodsReceiptRejection::KINDS as $k=>$v)

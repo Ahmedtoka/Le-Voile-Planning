@@ -37,7 +37,9 @@
 - سكربت `smoke_all.php` (في الـscratchpad) رندر **94 راوت GET** بالـHTTP kernel كـadmin: كله 200 ما عدا 3 قواعد شغل مش أخطاء (`work-orders/{approved}/edit` → 403 لأن المعتمد ما يتعدلش، `cut-declarations/create` و`production-receipts/create` من غير `work_order_id` → 404).
 - `php artisan view:cache` نضيف بعد كل دفعة.
 
-## ④ اللي محتاج Backend (ما اتعدلش — برّه النطاق)
+## ④ اللي محتاج Backend
+
+> **اتقفل كله (3 نوفمبر 2026):** بند 1 و9 في 28 أكتوبر، وبنود 2–4 و6–8 في كوميت «Backend follow-ups». بند 5 كان متغطّي — كل كروت الملخص فيها `note`.
 
 1. **`lang/ar/nav.php`** ناقصه: `preparation-requests.index` («طلبات التحضير»)، `factory.portal` («بوابة المصنع»)، `notifications.index` («الإشعارات»). الداشبورد كان بيعرض `nav.preparation-requests.index` بالنص — اتعالج في الـview بـfallback، والأصح يتضاف في الـlang.
 2. **متوسط البنشر في إذن الاستلام والفحص**: القراءات مش محمّلة في الكونترولر (`GoodsReceiptController`, `FabricInspectionController`)، فالـⓘ بيعرض «أقل–أعلى» بدل Σ÷n. `->load('labReports.readings')` يخلّيها دقيقة.

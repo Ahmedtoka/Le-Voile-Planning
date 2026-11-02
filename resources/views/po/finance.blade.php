@@ -33,7 +33,8 @@
           'note'=>$row->supplier?->payment_terms])
       </div>
       <div class="col-md-3">
-        @include('partials.kpi', ['value'=>$row->delivery_date?->format('Y-m-d') ?? '—', 'label'=>'تاريخ التوريد'])
+        @include('partials.kpi', ['value'=>$row->delivery_date?->format('Y-m-d') ?? '—', 'label'=>'تاريخ التوريد',
+          'note'=>$row->warehouse ? 'التسليم في ' . $row->warehouse->name : null])
       </div>
       <div class="col-md-3">
         @include('partials.kpi', ['value'=>$row->payment_method ?: '—', 'label'=>'طريقة الدفع'])

@@ -520,7 +520,7 @@ window.LVI = {
   });
   document.getElementById('lines').addEventListener('change', estimate);
   var ckg = document.querySelector('[name=counted_kg]'); if (ckg) ckg.addEventListener('input', estimate);
-  if (cnt) cnt.addEventListener('input', estimate);
+  var cnt = document.getElementById('countedRolls'); if (cnt) cnt.addEventListener('input', estimate);
 
   /* الوزن المتوقع = متوسط وزن التوب في العيّنة × الأتواب المجرودة — مقارنة بوزن الإذن (تنبيه بس) */
   function estimate() {
@@ -557,7 +557,7 @@ window.LVI = {
   estimate();
 
   // «تم» جنب الأتواب المجرودة ⇒ سطر لكل توب
-  var btn = document.getElementById('buildRows'), cnt = document.getElementById('countedRolls');
+  var btn = document.getElementById('buildRows');
   if (btn && cnt) {
     btn.addEventListener('click', function () {
       var want = parseInt(cnt.value || '0', 10);

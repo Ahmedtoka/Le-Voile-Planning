@@ -163,6 +163,7 @@
                 @if($row->finance_note)<div class="hint">«{{ $row->finance_note }}»</div>@endif</td></tr>
           <tr><th>المورد</th><td>{{ $row->supplier?->name ?? '—' }}</td></tr>
           <tr><th>طريقة الدفع</th><td>{{ $row->payment_method ?? '—' }}</td></tr>
+          <tr><th>المخزن</th><td>{{ $row->warehouse?->name ?? '—' }}</td></tr>
         </table>
       </div>
     </div>

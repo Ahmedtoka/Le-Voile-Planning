@@ -183,7 +183,7 @@ class PurchaseOrderController extends Controller
     public function edit(PurchaseOrder $purchase_order)
     {
         $purchase_order->load([
-            'lines.color', 'lines.fabricType', 'supplier', 'models', 'productModel',
+            'lines.color', 'lines.fabricType', 'supplier', 'warehouse', 'models', 'productModel',
             'requester', 'sourcer', 'financer',
             'sourcings.supplier', 'sourcings.sourcer', 'sourcings.lines.poLine.fabricType', 'sourcings.lines.poLine.color',
         ]);
@@ -357,7 +357,7 @@ class PurchaseOrderController extends Controller
             return redirect()->route('purchase-orders.edit', $purchase_order);
         }
 
-        $purchase_order->load(['lines.color', 'lines.fabricType', 'supplier', 'requester', 'sourcer']);
+        $purchase_order->load(['lines.color', 'lines.fabricType', 'supplier', 'warehouse', 'requester', 'sourcer']);
 
         return view('po.finance', [
             'title' => 'علم الحسابات — ' . $purchase_order->po_no,

@@ -8,10 +8,8 @@
   $plannedM = $gov?->effective_spread;
   $target   = (int) $wo->target_qty;
   $n        = fn ($v, $d = 3) => lv_num($v, $d);
-  /* الانحراف تراكمي: القص المعتمد قبل البيان ده + البيان ده مقابل المستهدف (نفس CutDeclarationController::recompute) */
-  $before   = (int) \App\Models\CutDeclaration::where('work_order_id', $wo->id)
-                ->when($row->id, fn ($q) => $q->where('id', '!=', $row->id))
-                ->where('status', 'approved')->sum('total_pieces');
+  /* الانحراف تراكمي: القص المعتمد قبل البيان ده + البيان ده مقابل المستهدف (بييجي من CutDeclarationController::cutBefore) */
+  $before   = (int) $before;
   $cumHere  = $before + (int) ($row->total_pieces ?? 0);
 @endphp
 

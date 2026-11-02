@@ -114,7 +114,7 @@ class FabricInspectionController extends Controller
             'preset'    => $preset,
             'arrivedPo' => isset($c) ? $c->purchaseOrder?->load('lines') : null,
             'arrived'   => isset($c) ? $c->load('fabricType', 'color', 'supplier') : null,
-            'lab'       => isset($c) ? $c->labReports()->latest('id')->first() : null,
+            'lab'       => isset($c) ? $c->labReports()->with('readings')->latest('id')->first() : null,
         ]));
     }
 
@@ -147,7 +147,7 @@ class FabricInspectionController extends Controller
             'mode'      => 'edit',
             'arrived'   => $inspection->consignment,
             'arrivedPo' => $inspection->consignment?->purchaseOrder,
-            'lab'       => $inspection->consignment?->labReports()->latest('id')->first(),
+            'lab'       => $inspection->consignment?->labReports()->with('readings')->latest('id')->first(),
         ]));
     }
 

@@ -85,6 +85,7 @@ class CoverageService
             'model_id'    => $modelId,
             'color_id'    => $colorId,
             'sold_window' => round($soldQty, 1),
+            'period_days' => $periodDays,
             'avg_daily'   => round($avgDaily, 2),
             'stock'       => round($stock, 1),
             'safety'      => round($safety, 1),

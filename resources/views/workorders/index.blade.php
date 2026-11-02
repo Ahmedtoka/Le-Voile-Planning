@@ -35,6 +35,10 @@
         <option value="">كل المصانع</option>
         @foreach($factories as $k=>$v)<option value="{{ $k }}" @selected(request('factory_id')==$k)>{{ $v }}</option>@endforeach
       </select>
+      <select name="variance_flag" class="form-select" aria-label="الانحراف" onchange="this.form.submit()">
+        <option value="">كل الانحرافات</option>
+        @foreach(\App\Models\WorkOrder::VARIANCE_FLAGS as $k=>$v)<option value="{{ $k }}" @selected(request('variance_flag')===$k)>{{ $v }}</option>@endforeach
+      </select>
       <div class="form-check">
         <input class="form-check-input" type="checkbox" name="late" value="1" id="lt" @checked(request('late')) onchange="this.form.submit()">
         <label class="form-check-label" for="lt">المتأخر بس</label>

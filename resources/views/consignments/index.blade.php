@@ -34,6 +34,10 @@
         <option value="">كل الألوان</option>
         @foreach($colors as $k=>$v)<option value="{{ $k }}" @selected(request('color_id')==$k)>{{ $v }}</option>@endforeach
       </select>
+      <select name="fabric_type_id" class="form-select" aria-label="الخامة" onchange="this.form.submit()">
+        <option value="">كل الخامات</option>
+        @foreach($fabricTypes as $k=>$v)<option value="{{ $k }}" @selected(request('fabric_type_id')==$k)>{{ $v }}</option>@endforeach
+      </select>
       <select name="supplier_id" class="form-select" aria-label="المورد" onchange="this.form.submit()">
         <option value="">كل الموردين</option>
         @foreach($suppliers as $k=>$v)<option value="{{ $k }}" @selected(request('supplier_id')==$k)>{{ $v }}</option>@endforeach

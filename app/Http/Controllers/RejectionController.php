@@ -36,6 +36,13 @@ class RejectionController extends Controller
             $q->whereHas('consignment', fn ($x) => $x->where('supplier_id', $s));
         }
         if ($request->boolean('open'))         $q->open();
+        if ($term = trim((string) $request->get('q'))) {
+            $q->where(fn ($w) => $w->where('lot_label', 'like', "%{$term}%")
+                ->orWhere('color_code', 'like', "%{$term}%")
+                ->orWhereHas('consignment', fn ($x) => $x->where('consignment_no', 'like', "%{$term}%"))
+                ->orWhereHas('goodsReceipt', fn ($x) => $x->where('doc_no', 'like', "%{$term}%"))
+                ->orWhereHas('color', fn ($x) => $x->where('code', 'like', "%{$term}%")));
+        }
 
         $base = GoodsReceiptRejection::query();
 

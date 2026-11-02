@@ -85,8 +85,9 @@ class CutDeclarationController extends Controller
                 'actual_spread_length_m'  => $wo->governingFabric()?->effective_spread,
                 'status'                  => 'draft',
             ]),
-            'wo'   => $wo,
-            'mode' => 'create',
+            'wo'     => $wo,
+            'before' => $this->cutBefore($wo->id),
+            'mode'   => 'create',
         ]);
     }
 
@@ -120,8 +121,9 @@ class CutDeclarationController extends Controller
         return view('cutting.form', [
             'title' => 'بيان قص ' . $cut_declaration->doc_no,
             'row'   => $cut_declaration,
-            'wo'    => $cut_declaration->workOrder,
-            'mode'  => 'edit',
+            'wo'     => $cut_declaration->workOrder,
+            'before' => $this->cutBefore($cut_declaration->work_order_id, $cut_declaration->id),
+            'mode'   => 'edit',
         ]);
     }
 
@@ -219,10 +221,7 @@ class CutDeclarationController extends Controller
 
         /* المقارنة بالتراكمي: اللي اتقص قبل كده في بيانات خلصت + البيان ده.
            القص على دفعات طبيعي — الدفعة الأولى لوحدها مش انحراف. */
-        $before = $wo
-            ? (int) CutDeclaration::where('work_order_id', $wo->id)
-                ->where('id', '!=', $cd->id)->where('status', 'approved')->sum('total_pieces')
-            : 0;
+        $before = $wo ? $this->cutBefore($wo->id, $cd->id) : 0;
 
         $v = $wo
             ? PlanningEngine::cumulativeVariance((float) $wo->target_qty, (float) ($before + $total))
@@ -234,5 +233,13 @@ class CutDeclarationController extends Controller
             'variance_pct'          => $v['pct'],
             'variance_flag'         => $v['flag'],
         ])->saveQuietly();
+    }
+
+    /** القطع المقصوصة في بيانات معتمدة قبل كده على نفس أمر الشغل (من غير البيان الحالي). */
+    private function cutBefore(int $workOrderId, ?int $exceptId = null): int
+    {
+        return (int) CutDeclaration::where('work_order_id', $workOrderId)
+            ->when($exceptId, fn ($q) => $q->where('id', '!=', $exceptId))
+            ->where('status', 'approved')->sum('total_pieces');
     }
 }

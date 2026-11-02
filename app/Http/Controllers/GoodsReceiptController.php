@@ -76,6 +76,7 @@ class GoodsReceiptController extends Controller
                     'stockAdditions' => fn ($q) => $q->latest('id'),
                     'inspections' => fn ($q) => $q->where('status', 'approved')->latest('id'),
                     'labReports'  => fn ($q) => $q->where('status', 'approved')->latest('id'),
+                    'labReports.readings',
                 ])->find($cid)) {
                 $row->consignment_id      = $c->id;
                 $row->supplier_id         = $c->supplier_id;
@@ -141,7 +142,7 @@ class GoodsReceiptController extends Controller
             'lines.color', 'lines.fabricType',
             'consignment.fabricType', 'consignment.color', 'consignment.supplier',
             'consignment.warehouse', 'consignment.purchaseOrder',
-            'consignment.stockAdditions', 'consignment.inspections', 'consignment.labReports',
+            'consignment.stockAdditions', 'consignment.inspections', 'consignment.labReports.readings',
         ]);
 
         return view('receipts.form', $this->formData([

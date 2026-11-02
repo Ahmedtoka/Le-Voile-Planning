@@ -141,7 +141,13 @@
         <div><div class="k">تقرير المعمل</div>@if($lab)<a href="{{ route('lab-reports.edit', $lab) }}" class="v num">{{ $lab->doc_no }}</a>@else <div class="v text-danger">ناقص</div> @endif</div>
         <div><div class="k">المسلسل الورقي</div>@if($lab?->paper_serial)<a href="{{ route('lab-reports.print', $lab) }}" target="_blank" class="v num">{{ $lab->paper_serial }}</a>@else <div class="v">—</div> @endif</div>
         <div><div class="k">متوسط البنشر</div><div class="v num {{ $lab?->gsm_out_of_spec ? 'text-danger' : '' }}">{{ $lab ? lv_num($lab->avg_gsm, 2) . ' جم/م²' : '—' }}
-            @if($lab && $lab->avg_gsm !== null)@include('partials.fx', ['t' => 'متوسط البنشر', 'f' => 'متوسط قراءات الأتواب في المعمل (أقل ' . lv_num($lab->min_gsm, 2) . ' – أعلى ' . lv_num($lab->max_gsm, 2) . ') = ' . lv_num($lab->avg_gsm, 2) . ' جم/م²', 'why' => 'مجموع القراءات ÷ عددها'])@endif
+            @if($lab && $lab->avg_gsm !== null)
+              @php $labG = $lab->relationLoaded('readings') ? $lab->readings->pluck('gsm')->map(fn ($v) => (float) $v)->filter(fn ($v) => $v > 0) : null; @endphp
+              @include('partials.fx', ['t' => 'متوسط البنشر', 'f' => $labG && $labG->count()
+                  ? 'مجموع القراءات ' . lv_num($labG->sum(), 2) . ' ÷ ' . $labG->count() . ' قراءة = ' . lv_num($lab->avg_gsm, 2) . ' جم/م²'
+                  : 'متوسط قراءات الأتواب في المعمل (أقل ' . lv_num($lab->min_gsm, 2) . ' – أعلى ' . lv_num($lab->max_gsm, 2) . ') = ' . lv_num($lab->avg_gsm, 2) . ' جم/م²',
+                'why' => 'مجموع القراءات ÷ عددها'])
+            @endif
           </div>@if($lab?->gsm_out_of_spec)<div class="k text-danger">خارج المواصفة</div>@endif</div>
         <div><div class="k">الانكماش طول · عرض</div><div class="v num">{{ $lab ? lv_num($lab->avg_shrink_len_pct, 2) . '% · ' . lv_num($lab->avg_shrink_width_pct, 2) . '%' : '—' }}
             @if($lab && ($lab->avg_shrink_len_pct !== null || $lab->avg_shrink_width_pct !== null))
