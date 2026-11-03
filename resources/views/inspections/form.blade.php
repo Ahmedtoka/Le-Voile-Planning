@@ -265,7 +265,8 @@
     <div class="card-footer bg-white" id="estWrap" hidden
          data-declared="{{ (float) ($row->counted_kg ?: $c?->total_kg ?: 0) }}"
          data-warn="{{ config('lvplanning.weight_estimate.warn_pct', 5) }}" data-danger="{{ config('lvplanning.weight_estimate.danger_pct', 10) }}"
-         data-minsample="{{ lv_setting('min_inspection_sample_pct', 10) }}" data-meter="{{ $meter ? 1 : 0 }}">
+         data-minsample="{{ lv_setting('min_inspection_sample_pct', 10) }}" data-meter="{{ $meter ? 1 : 0 }}"
+         data-rolls="{{ (int) ($row->declared_rolls ?? $c?->rolls_count) }}" data-addkg="{{ (float) ($c?->total_kg ?: 0) }}">
       <div id="estText" class="small"></div>
     </div>
   </div>
@@ -539,6 +540,29 @@ window.LVI = {
     var warn = parseFloat(wrap.dataset.warn), danger = parseFloat(wrap.dataset.danger);
     var tone = Math.abs(diff) >= danger ? 'danger' : (Math.abs(diff) >= warn ? 'warning' : 'success');
     var nf = function (v, d) { return Number(v).toLocaleString('en-US', {maximumFractionDigits: d}); };
+    var rank = {success: 0, warning: 1, danger: 2};
+    var worse = function (t) { if (rank[t] > rank[tone]) tone = t; };
+    var toneOf = function (pct) { return Math.abs(pct) >= danger ? 'danger' : (Math.abs(pct) >= warn ? 'warning' : 'success'); };
+
+    /* الوزن الإجمالي ممكن يطلع مظبوط بالصدفة (5 أتواب × 99 كجم ≈ 100 توب × 5 كجم) —
+       فبنقارن كمان عدد الأتواب، ووزن التوب الواحد مع اللي على الإذن. */
+    var extra = [];
+    var addRolls = parseInt(wrap.dataset.rolls || '0', 10) || 0;
+    if (addRolls > 0 && n !== addRolls) {
+      var gapPct = (n - addRolls) / addRolls * 100;
+      worse(toneOf(gapPct) === 'success' ? 'warning' : toneOf(gapPct));
+      extra.push('<b>عدد الأتواب:</b> المجرود ' + n + ' من ' + addRolls + ' توب على الإذن — '
+        + (n < addRolls ? '<b>ناقص ' + (addRolls - n) + '</b>' : '<b>زيادة ' + (n - addRolls) + '</b>'));
+    }
+    var addKg = parseFloat(wrap.dataset.addkg) || 0;
+    if (wrap.dataset.meter !== '1' && addRolls > 0 && addKg > 0) {
+      var perRoll = addKg / addRolls, rollPct = (avg - perRoll) / perRoll * 100, rt = toneOf(rollPct);
+      worse(rt);
+      if (rt !== 'success') {
+        extra.push('<b>وزن التوب:</b> متوسط العيّنة ' + nf(avg, 2) + ' كجم مقابل ' + nf(perRoll, 2)
+          + ' كجم للتوب على الإذن (' + nf(addKg, 1) + ' ÷ ' + addRolls + ') — فرق <b>' + (rollPct >= 0 ? '+' : '') + nf(rollPct, 1) + '%</b>');
+      }
+    }
     var small = (ws.length / n * 100) < parseFloat(wrap.dataset.minsample);
     var fx = (window.LVX && LVX.fx) ? LVX.fx('الوزن المتوقع من العيّنة', [
       'مجموع أوزان العيّنة ' + nf(ws.reduce((a, b) => a + b, 0), 3) + ' كجم ÷ ' + ws.length + ' توب = متوسط التوب ' + nf(avg, 3) + ' كجم',
@@ -549,8 +573,9 @@ window.LVI = {
     out.innerHTML = '<b>الوزن المتوقع من العيّنة:</b> ' + nf(exp, 1) + ' كجم ' + fx + ' '
       + '<span class="hint">(متوسط التوب ' + nf(avg, 2) + ' كجم × ' + n + ' توب — عيّنة ' + ws.length + ' توب)</span>'
       + ' مقابل <b>' + nf(declared, 1) + ' كجم</b> على الإذن — فرق <b>' + (diff >= 0 ? '+' : '') + nf(diff, 1) + '%</b>'
-      + (tone === 'danger' ? ' · <b>راجع الوزن مع المخزن قبل الإفراج</b>' : tone === 'warning' ? ' · فرق أكبر من الطبيعي' : ' · في الحدود الطبيعية')
-      + (small ? ' <span class="hint">· تقديري — العيّنة أقل من ' + wrap.dataset.minsample + '%</span>' : '');
+      + (tone === 'danger' ? ' · <b>راجع ' + (extra.length ? 'العدد والوزن' : 'الوزن') + ' مع المخزن قبل الإفراج</b>' : tone === 'warning' ? ' · فرق أكبر من الطبيعي' : ' · في الحدود الطبيعية')
+      + (small ? ' <span class="hint">· تقديري — العيّنة أقل من ' + wrap.dataset.minsample + '%</span>' : '')
+      + extra.map(function (x) { return '<div class="mt-1">' + x + '</div>'; }).join('');
     wrap.hidden = false;
     if (window.LVX && LVX.popovers) LVX.popovers(out);
   }
