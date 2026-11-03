@@ -435,6 +435,7 @@ th[aria-sort] .th-sort{font-weight:700}
 textarea.form-control{min-height:76px;line-height:1.55}
 textarea.form-control-sm{min-height:66px}
 .form-control::placeholder{color:#9A8D97;opacity:1}
+input:placeholder-shown{text-overflow:ellipsis}   /* placeholder أطول من الخانة ⇒ «…» بدل ما يتقص */
 .form-control:hover,.form-select:hover{border-color:#C4B4BE}
 .form-control:focus,.form-select:focus{border-color:var(--lv-brand);box-shadow:var(--ring)}
 .form-control:disabled,.form-select:disabled{background:var(--lv-line-soft);color:var(--lv-muted)}
@@ -504,6 +505,10 @@ th.req::after{font-size:.9em}
   background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236B606A' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
   background-repeat:no-repeat;background-position:left 6px center;background-size:12px}
 .line-table td.num input,.line-table input[type=number]{font-variant-numeric:tabular-nums;direction:ltr;text-align:center}
+/* الـplaceholder العربي في خانة رقم ضيقة: لو اتعرض ltr ومتوسّط بيتقص من أوله («تال: 12» بدل «مثال: 12»).
+   وهي فاضية ترجع rtl، والخط أصغر شوية، وحشوة أقل — ولو لسه أطول من الخانة بيخلص بـ«…» من آخره. */
+.line-table input:placeholder-shown,.line-table td.num input:placeholder-shown{direction:rtl;padding-inline:4px;text-overflow:ellipsis}
+.line-table input::placeholder{font-size:.85em}
 .line-table thead th{white-space:nowrap}
 .line-table td{padding:.3rem .35rem}
 .line-table .row-no{color:var(--lv-muted);font-size:var(--fs-xs);font-variant-numeric:tabular-nums}

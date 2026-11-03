@@ -12,7 +12,7 @@
     </select>
     <input type="hidden" name="lines[{{ $i }}][work_order_fabric_id]" value="{{ $l['work_order_fabric_id'] ?? '' }}">
   </td>
-  <td><input name="lines[{{ $i }}][item_code]" value="{{ $l['item_code'] ?? '' }}" placeholder="مثال: 14810091" aria-label="الكود"></td>
+  <td><input name="lines[{{ $i }}][item_code]" value="{{ $l['item_code'] ?? '' }}" placeholder="14810091" aria-label="الكود"></td>
   <td>
     <select name="lines[{{ $i }}][consignment_id]" class="i-cn" required aria-label="رقم الرسالة" onchange="LVI.net(this)">
       <option value="">— اختر رسالة —</option>

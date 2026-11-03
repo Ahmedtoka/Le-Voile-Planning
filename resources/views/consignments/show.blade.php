@@ -163,7 +163,7 @@
               </div></div>
             <div class="col-6"><label class="form-label">عدد الأتواب</label>
               <div class="input-group">
-                <input type="number" min="0" name="rolls_count" class="form-control" value="{{ $row->rolls_count }}" placeholder="مثال: 40">
+                <input type="number" min="0" name="rolls_count" class="form-control" value="{{ $row->rolls_count }}" placeholder="40">
                 <span class="input-group-text">توب</span>
               </div></div>
             <div class="col-6"><label class="form-label">إجمالي الطول</label>

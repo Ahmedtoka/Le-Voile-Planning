@@ -118,10 +118,10 @@
             <label class="form-label">عينة {{ $s }}</label>
             <div class="input-group shrink-group">
               <span class="input-group-text">طول</span>
-              <input type="number" step="0.01" min="0" name="s{{ $s }}_shrink_len_pct" class="form-control" value="{{ old("s{$s}_shrink_len_pct", $row->{"s{$s}_shrink_len_pct"}) }}" placeholder="مثال: 3" aria-label="عينة {{ $s }} — انكماش الطول %">
+              <input type="number" step="0.01" min="0" name="s{{ $s }}_shrink_len_pct" class="form-control" value="{{ old("s{$s}_shrink_len_pct", $row->{"s{$s}_shrink_len_pct"}) }}" placeholder="3" aria-label="عينة {{ $s }} — انكماش الطول %">
               <span class="input-group-text">%</span>
               <span class="input-group-text">عرض</span>
-              <input type="number" step="0.01" min="0" name="s{{ $s }}_shrink_width_pct" class="form-control" value="{{ old("s{$s}_shrink_width_pct", $row->{"s{$s}_shrink_width_pct"}) }}" placeholder="مثال: 2" aria-label="عينة {{ $s }} — انكماش العرض %">
+              <input type="number" step="0.01" min="0" name="s{{ $s }}_shrink_width_pct" class="form-control" value="{{ old("s{$s}_shrink_width_pct", $row->{"s{$s}_shrink_width_pct"}) }}" placeholder="2" aria-label="عينة {{ $s }} — انكماش العرض %">
               <span class="input-group-text">%</span>
             </div>
           </div>

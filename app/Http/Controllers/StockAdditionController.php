@@ -117,8 +117,9 @@ class StockAdditionController extends Controller
 
                 $preset[] = $this->poLineArray($l) + [
                     'po_sourcing_line_id' => $srcLine?->id,
-                    'src_qty'             => $srcLine ? (float) $srcLine->qty : null,
-                    'src_received'        => $srcLine ? (float) $srcLine->received_qty : null,
+                    // بوحدة سطر الطلب — التسكينة ممكن تكون متسجلة بوحدة تانية (طن)
+                    'src_qty'             => $srcLine ? \App\Services\DocumentEffects::toUnit($srcLine->qty, $srcLine->unit, $l->unit) : null,
+                    'src_received'        => $srcLine ? \App\Services\DocumentEffects::toUnit($srcLine->received_qty, $srcLine->unit, $l->unit) : null,
                     'rolls_count'  => '',
                     'qty'          => '',        // أمين المخزن بيكتب المستلم فعلًا
                     'color_id'     => $l->color_id,
@@ -166,13 +167,20 @@ class StockAdditionController extends Controller
             'consignment',
         ]);
 
+        // سطور التسكينة — الباقي بيتحسب على اللي اتسكّن مع المورد ده، مش على الطلب كله
+        $srcLines = \App\Models\PoSourcingLine::whereIn('id', $stock_addition->lines->pluck('po_sourcing_line_id')->filter())->get()->keyBy('id');
+
         // نفس شكل بيانات الإنشاء — عشان الشاشة ترسم السطور المرتبطة بالطلب صح
-        $saved = $stock_addition->lines->map(function ($l) {
+        $saved = $stock_addition->lines->map(function ($l) use ($srcLines) {
             $base = $l->only(['id', 'item_code', 'item_name', 'fabric_type_id', 'color_id',
                               'po_color_id', 'po_line_id', 'po_sourcing_line_id', 'color_action', 'rolls_count', 'qty', 'unit',
                               'fabric_form', 'bag_g', 'tube_g', 'gross_qty', 'packaging_kg',
                               'remainder_note']);
             $base['remainder_eta'] = $l->remainder_eta?->format('Y-m-d');
+            if (($src = $srcLines->get($l->po_sourcing_line_id)) && $l->poLine) {
+                $base['src_qty']      = \App\Services\DocumentEffects::toUnit($src->qty, $src->unit, $l->poLine->unit);
+                $base['src_received'] = \App\Services\DocumentEffects::toUnit($src->received_qty, $src->unit, $l->poLine->unit);
+            }
             return $l->poLine ? $this->poLineArray($l->poLine) + $base : $base;
         })->all();
 

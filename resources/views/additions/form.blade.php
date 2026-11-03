@@ -16,6 +16,12 @@
     $recTot  = (float) $po->lines->sum('received_qty');
     $remTot  = max(0, $ordTot - $recTot);   // الباقي = المطلوب − المستلم، زي ما هو
     $unitLbl = $po->lines->first()?->unit ?? '';
+    /* التسكينة: اللي المورد ده هيورده — الباقي عليه غير الباقي على الطلب كله */
+    $src     = $sourcing ?? null;
+    $toPo    = fn ($v, $l) => \App\Services\DocumentEffects::toUnit($v, $l->unit, $unitLbl);   // بوحدة الطلب
+    $srcOrd  = $src ? (float) $src->lines->sum(fn ($l) => $toPo($l->qty, $l)) : null;
+    $srcRec  = $src ? (float) $src->lines->sum(fn ($l) => $toPo($l->received_qty, $l)) : null;
+    $srcRem  = $src ? max(0, $srcOrd - $srcRec) : null;
   @endphp
   <div class="ro-box mb-3">
     <div class="ro-title">من طلب الشراء — للقراءة</div>
@@ -25,9 +31,14 @@
         <div><div class="k">المورد</div><div class="v">{{ ($sourcing ?? null)?->supplier?->name ?? $po->supplier?->name ?? '—' }}</div>
           @if(($sourcing ?? null) && $po->sourcings->count() > 1)<div class="k">تسكينة #{{ $sourcing->seq }} من {{ $po->sourcings->count() }}</div>@endif</div>
         <div><div class="k">توريد متوقع</div><div class="v num">{{ ($sourcing ?? null)?->delivery_date?->format('Y-m-d') ?? $po->delivery_date?->format('Y-m-d') ?? '—' }}</div></div>
+        @if($src)
+        <div><div class="k">على التسكينة دي</div><div class="v num">{{ lv_qty($srcOrd, $unitLbl) }}</div>
+          <div class="k">استلمنا منها {{ lv_num($srcRec, 3) }} — باقي <b class="{{ $srcRem > 0 ? 'text-danger' : 'text-success' }}">{{ lv_num($srcRem, 3) }}</b>
+            @include('partials.fx', ['t' => 'الباقي على التسكينة', 'f' => 'على التسكينة ' . lv_qty($srcOrd, $unitLbl) . ' − المستلم منها قبل كده ' . lv_qty($srcRec, $unitLbl) . ' = ' . lv_qty($srcRem, $unitLbl), 'why' => 'اللي المورد ده اتطلب منه — باقي الطلب على تسكينات تانية'])</div></div>
+        @endif
         <div><div class="k">المطلوب إجمالي</div><div class="v num">{{ lv_qty($ordTot, $unitLbl) }}</div></div>
         <div><div class="k">استلمنا قبل كده</div><div class="v num">{{ lv_qty($recTot, $unitLbl) }}</div></div>
-        <div><div class="k">الباقي</div>
+        <div><div class="k">{{ $src ? 'الباقي على الطلب كله' : 'الباقي' }}</div>
           <div class="v num {{ $remTot > 0 ? 'text-danger' : 'text-success' }}">
             {{ $remTot > 0 ? lv_qty($remTot, $unitLbl) : 'اكتمل ✓' }}
             @include('partials.fx', ['t' => 'الباقي على الطلب', 'f' => 'المطلوب ' . lv_qty($ordTot, $unitLbl) . ' − المستلم قبل كده ' . lv_qty($recTot, $unitLbl) . ' = ' . lv_qty($remTot, $unitLbl), 'why' => 'مجموع كل أصناف الطلب'])
@@ -431,7 +442,8 @@ window.LVA = (function () {
     var leftMin  = Math.max(0, minQty - received - now);  // للإقفال
     // المعادلة ظاهرة بالأرقام الفعلية للسطر
     var fx = function (title) {
-      var line = 'المطلوب ' + nf(ordered) + ' − اتستلم قبل كده ' + nf(received) + ' − ' + (gross > 0 ? 'القائم دلوقتي ' : 'المستلم دلوقتي ') + nf(now) + ' = ' + nf(left) + ' ' + unit;
+      var onSrc = tr.dataset.scope === 'src';
+      var line = (onSrc ? 'المطلوب على التسكينة ' : 'المطلوب ') + nf(ordered) + (onSrc ? ' − اتستلم منها قبل كده ' : ' − اتستلم قبل كده ') + nf(received) + ' − ' + (gross > 0 ? 'القائم دلوقتي ' : 'المستلم دلوقتي ') + nf(now) + ' = ' + nf(left) + ' ' + unit;
       return '<div class="hint fx-line">' + line + '</div>';
     };
     // خانة «هيوصل إمتى» بتظهر بس لما يبقى فيه باقي على السطر ده

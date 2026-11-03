@@ -114,7 +114,7 @@
             </select></div>
           <div class="col-md-3"><label class="form-label req" for="declared_rolls">أتواب حسب إذن الإضافة</label>
             <div class="input-group">
-              <input type="number" min="0" step="1" name="declared_rolls" id="declared_rolls" class="form-control" value="{{ old('declared_rolls',$row->declared_rolls) }}" required placeholder="مثال: 40">
+              <input type="number" min="0" step="1" name="declared_rolls" id="declared_rolls" class="form-control" value="{{ old('declared_rolls',$row->declared_rolls) }}" required placeholder="40">
               <span class="input-group-text">توب</span>
             </div></div>
         </div>
@@ -150,7 +150,7 @@
           <div class="row g-3">
             <div class="col-md-4"><label class="form-label req" for="countedRolls">الأتواب المجرودة فعليًا</label>
               <div class="input-group">
-                <input type="number" min="1" step="1" name="counted_rolls" id="countedRolls" class="form-control" value="{{ old('counted_rolls',$row->counted_rolls) }}" required placeholder="مثال: 40">
+                <input type="number" min="1" step="1" name="counted_rolls" id="countedRolls" class="form-control" value="{{ old('counted_rolls',$row->counted_rolls) }}" required placeholder="40">
                 <span class="input-group-text">توب</span>
                 @if($editable)<button type="button" class="btn btn-outline-plum" id="buildRows"><i class="bi bi-check2" aria-hidden="true"></i> تم</button>@endif
               </div>
@@ -295,10 +295,10 @@
             <label class="form-label">عينة {{ $s }}</label>
             <div class="input-group">
               <span class="input-group-text">طول</span>
-              <input type="number" step="0.01" min="0" name="lab[s{{ $s }}_shrink_len_pct]" class="form-control" value="{{ old("lab.s{$s}_shrink_len_pct", $lab?->{"s{$s}_shrink_len_pct"}) }}" placeholder="مثال: 3" aria-label="عينة {{ $s }} — انكماش الطول %">
+              <input type="number" step="0.01" min="0" name="lab[s{{ $s }}_shrink_len_pct]" class="form-control" value="{{ old("lab.s{$s}_shrink_len_pct", $lab?->{"s{$s}_shrink_len_pct"}) }}" placeholder="3" aria-label="عينة {{ $s }} — انكماش الطول %">
               <span class="input-group-text">%</span>
               <span class="input-group-text">عرض</span>
-              <input type="number" step="0.01" min="0" name="lab[s{{ $s }}_shrink_width_pct]" class="form-control" value="{{ old("lab.s{$s}_shrink_width_pct", $lab?->{"s{$s}_shrink_width_pct"}) }}" placeholder="مثال: 2" aria-label="عينة {{ $s }} — انكماش العرض %">
+              <input type="number" step="0.01" min="0" name="lab[s{{ $s }}_shrink_width_pct]" class="form-control" value="{{ old("lab.s{$s}_shrink_width_pct", $lab?->{"s{$s}_shrink_width_pct"}) }}" placeholder="2" aria-label="عينة {{ $s }} — انكماش العرض %">
               <span class="input-group-text">%</span>
             </div>
           </div>

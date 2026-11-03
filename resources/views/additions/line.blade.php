@@ -4,11 +4,15 @@
   $unit   = $l['unit'] ?? 'كجم';
   $meter  = lv_is_meter($unit);
   $form   = $l['fabric_form'] ?? '';
+  /* الطلب متسكّن على أكتر من مورد؟ الباقي بيتحسب على التسكينة دي بس (اللي المورد ده هيوردها) */
+  $onSrc  = isset($l['src_qty']) && $l['src_qty'] !== null && $l['src_qty'] !== '';
 @endphp
 @if(!$tpl)<tr class="{{ $fromPo ? 'po-row' : 'free-row' }}" data-unit="{{ $unit }}" data-meter="{{ $meter ? 1 : 0 }}"
-        @if($fromPo) data-ordered="{{ $l['po_ordered'] ?? 0 }}"
+        @if($fromPo && $onSrc) data-ordered="{{ $l['src_qty'] }}" data-min="{{ $l['src_qty'] }}"
+                data-received="{{ $l['src_received'] ?? 0 }}" data-scope="src"
+        @elseif($fromPo) data-ordered="{{ $l['po_ordered'] ?? 0 }}"
                 data-min="{{ $l['po_min'] ?? ($l['po_ordered'] ?? 0) }}"
-                data-received="{{ $l['po_received'] ?? 0 }}" @endif>@endif
+                data-received="{{ $l['po_received'] ?? 0 }}" data-scope="po" @endif>@endif
 
 @if($fromPo)
   {{-- ═══ سطر جاي من طلب الشراء: بياناته ليبلات ثابتة — مفيش تعديل على الطلب ═══ --}}
@@ -61,12 +65,15 @@
     @if((float)($l['po_received'] ?? 0) > 0)
       <div class="hint">استلم قبل كده <span class="num">{{ lv_num($l['po_received'], 3) }}</span></div>
     @endif
-    @if(!empty($l['src_qty']))
-      <div class="hint">على التسكينة دي <span class="num">{{ lv_num($l['src_qty'], 3) }}</span></div>
+    @if($onSrc)
+      <div class="hint">على التسكينة دي <b class="num">{{ lv_num($l['src_qty'], 3) }}</b></div>
+      @if((float)($l['src_received'] ?? 0) > 0)
+        <div class="hint">استلم منها قبل كده <span class="num">{{ lv_num($l['src_received'], 3) }}</span></div>
+      @endif
     @endif
   </td>
 
-  <td class="num"><input type="number" min="0" step="1" name="lines[{{ $i }}][rolls_count]" class="q-rolls" value="{{ $l['rolls_count'] ?? '' }}" placeholder="مثال: 12" aria-label="عدد الأتواب" oninput="LVA.net(this)"></td>
+  <td class="num"><input type="number" min="0" step="1" name="lines[{{ $i }}][rolls_count]" class="q-rolls" value="{{ $l['rolls_count'] ?? '' }}" placeholder="12" aria-label="عدد الأتواب" oninput="LVA.net(this)"></td>
 
 @else
   {{-- ═══ سطر حر (إذن من غير طلب) ═══ --}}
@@ -84,7 +91,7 @@
   <td><select name="lines[{{ $i }}][unit]" class="q-unit" aria-label="الوحدة" onchange="LVA.unit(this)">
       @foreach(['كجم','متر','قطعة','كرتونة'] as $u)<option value="{{ $u }}" @selected($unit===$u)>{{ $u }}</option>@endforeach
     </select></td>
-  <td class="num"><input type="number" min="0" step="1" name="lines[{{ $i }}][rolls_count]" class="q-rolls" value="{{ $l['rolls_count'] ?? '' }}" placeholder="مثال: 12" aria-label="عدد الأتواب" oninput="LVA.net(this)"></td>
+  <td class="num"><input type="number" min="0" step="1" name="lines[{{ $i }}][rolls_count]" class="q-rolls" value="{{ $l['rolls_count'] ?? '' }}" placeholder="12" aria-label="عدد الأتواب" oninput="LVA.net(this)"></td>
 @endif
 
   {{-- ═══ الصافي والقائم — للكيلو بس (الميتينج 37): الشكل ⇐ الكيس والماسورة ⇐ القائم ⇐ الصافي يتحسب ═══ --}}
@@ -95,12 +102,12 @@
       <option value="closed" @selected($form==='closed')>مقفول (كيس بس)</option>
     </select>
     <div class="d-flex gap-1 mt-1 pk-g" @if($form==='') hidden @endif>
-      <input type="number" step="0.1" min="0" name="lines[{{ $i }}][bag_g]" class="q-bag" value="{{ $l['bag_g'] ?? '' }}" placeholder="كيس جم" title="وزن الكيس الواحد بالجرام" aria-label="وزن الكيس الواحد بالجرام" oninput="LVA.net(this)">
-      <input type="number" step="0.1" min="0" name="lines[{{ $i }}][tube_g]" class="q-tube" value="{{ $l['tube_g'] ?? '' }}" placeholder="ماسورة جم" title="وزن الماسورة الواحدة بالجرام" aria-label="وزن الماسورة الواحدة بالجرام" oninput="LVA.net(this)" @if($form==='closed') hidden @endif>
+      <input type="number" step="0.1" min="0" name="lines[{{ $i }}][bag_g]" class="q-bag" value="{{ $l['bag_g'] ?? '' }}" placeholder="كيس" title="وزن الكيس الواحد بالجرام" aria-label="وزن الكيس الواحد بالجرام" oninput="LVA.net(this)">
+      <input type="number" step="0.1" min="0" name="lines[{{ $i }}][tube_g]" class="q-tube" value="{{ $l['tube_g'] ?? '' }}" placeholder="ماسورة" title="وزن الماسورة الواحدة بالجرام" aria-label="وزن الماسورة الواحدة بالجرام" oninput="LVA.net(this)" @if($form==='closed') hidden @endif>
     </div>
   </td>
   <td class="num pk-cell" @if($meter) hidden @endif>
-    <input type="number" step="0.001" min="0" name="lines[{{ $i }}][gross_qty]" class="q-gross" value="{{ $l['gross_qty'] ?? '' }}" placeholder="مثال: 600" aria-label="الوزن القائم بالكيلو" oninput="LVA.net(this)">
+    <input type="number" step="0.001" min="0" name="lines[{{ $i }}][gross_qty]" class="q-gross" value="{{ $l['gross_qty'] ?? '' }}" placeholder="600" aria-label="الوزن القائم بالكيلو" oninput="LVA.net(this)">
   </td>
 
   <td class="num">

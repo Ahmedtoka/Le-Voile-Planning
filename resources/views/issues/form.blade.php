@@ -52,7 +52,7 @@
                  value="{{ old('issued_to',$row->issued_to) }}" placeholder="مثال: أ/ الخطيب" required></div>
         <div class="col-md-2"><label class="form-label">المسلسل الورقي</label>
           <input name="paper_serial" class="form-control"
-                 value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="مثال: 1303774"></div>
+                 value="{{ old('paper_serial',$row->paper_serial) }}" placeholder="1303774"></div>
         <div class="col-md-3"><label class="form-label">المستلم</label>
           <input name="receiver_name" class="form-control" value="{{ old('receiver_name',$row->receiver_name) }}" placeholder="اسم اللي استلم من المصنع"></div>
         <div class="col-md-9"><label class="form-label">ملاحظات</label>

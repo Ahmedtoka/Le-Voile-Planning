@@ -36,9 +36,9 @@
                  value="{{ old('product_title',$row->product_title) }}" required
                  placeholder="مثال: طرحة تل + بونيه رباط مياي (بيج 241)"></div>
         <div class="col-md-2"><label class="form-label">كود المنتج</label>
-          <input name="product_code" class="form-control" value="{{ old('product_code',$row->product_code) }}" placeholder="مثال: P-1014"></div>
+          <input name="product_code" class="form-control" value="{{ old('product_code',$row->product_code) }}" placeholder="P-1014"></div>
         <div class="col-md-2"><label class="form-label">كود Q.B</label>
-          <input name="qb_code" class="form-control" value="{{ old('qb_code',$row->qb_code) }}" placeholder="مثال: O1014"></div>
+          <input name="qb_code" class="form-control" value="{{ old('qb_code',$row->qb_code) }}" placeholder="O1014"></div>
         <div class="col-md-3"><label class="form-label req">تشغيل مصنع</label>
           <select name="factory_id" class="form-select" required><option value="">— اختر المصنع —</option>
             @foreach($factories as $k=>$v)<option value="{{ $k }}" @selected(old('factory_id',$row->factory_id)==$k)>{{ $v }}</option>@endforeach
@@ -179,7 +179,7 @@
           <label class="form-label">الكمية المعتمدة</label>
           <div class="input-group">
             <input type="number" min="0" name="approved_qty" class="form-control"
-                   value="{{ old('approved_qty',$row->approved_qty) }}" placeholder="فاضية = الحاكمة">
+                   value="{{ old('approved_qty',$row->approved_qty) }}" placeholder="= الحاكمة">
             <span class="input-group-text">قطعة</span>
           </div>
           <div class="hint">فاضية معناها السيستم هياخد أقل خامة</div>
