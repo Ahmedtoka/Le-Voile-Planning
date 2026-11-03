@@ -145,7 +145,7 @@
                 @if($left > 0)
                   <div class="input-group input-group-sm">
                     <input type="number" step="0.001" min="0" max="{{ $left }}" name="prices[{{ $i }}][qty]" class="form-control s-qty"
-                           value="{{ $old['qty'] ?? lv_num($left, 3) }}" aria-label="الكمية اللي هتتسكّن" oninput="LVS.calc()">
+                           value="{{ $old['qty'] ?? '' }}" placeholder="0" aria-label="الكمية اللي هتتسكّن — الباقي {{ lv_num($left, 3) }}" oninput="LVS.calc()">
                     <span class="input-group-text">{{ $l->unit }}</span>
                   </div>
                   <div class="hint">الباقي من غير مورد <span class="num">{{ lv_num($left, 3) }}</span></div>
@@ -156,8 +156,10 @@
               </td>
               <td class="num">
                 @if($left > 0)
+                  {{-- السعر للمورد ده — آخر سعر (من مورد تاني غالبًا) لابل للمقارنة بس، مش قيمة جاهزة --}}
                   <input type="number" step="0.01" min="0" name="prices[{{ $i }}][unit_price]" class="form-control form-control-sm s-price"
-                         value="{{ $old['unit_price'] ?? ($l->unit_price > 0 ? $l->unit_price : '') }}" placeholder="مثال: 95" aria-label="سعر الوحدة" oninput="LVS.calc()">
+                         value="{{ $old['unit_price'] ?? '' }}" placeholder="0" aria-label="سعر الوحدة" oninput="LVS.calc()">
+                  @if($l->unit_price > 0)<div class="hint">آخر سعر <span class="num">{{ lv_num($l->unit_price, 2) }}</span></div>@endif
                 @else — @endif
               </td>
               <td class="num s-total">—</td>

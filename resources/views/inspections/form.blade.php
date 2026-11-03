@@ -157,7 +157,7 @@
               <div class="hint">اكتب العدد ودوس «تم» — سطر لكل توب</div></div>
             <div class="col-md-4"><label class="form-label" for="counted_kg">{{ $meter ? 'الأمتار المجرودة' : 'الوزن المجرود' }}</label>
               <div class="input-group">
-                <input type="number" step="0.001" min="0" name="counted_kg" id="counted_kg" class="form-control" value="{{ old('counted_kg', $row->counted_kg !== null ? lv_num($row->counted_kg) : '') }}" placeholder="{{ $c ? 'مثال: ' . lv_num($c->total_kg) : 'مثال: 7600' }}">
+                <input type="number" step="0.001" min="0" name="counted_kg" id="counted_kg" class="form-control" value="{{ old('counted_kg', $row->counted_kg !== null ? rtrim(rtrim(number_format((float) $row->counted_kg, 3, '.', ''), '0'), '.') : '') }}" placeholder="{{ $c ? 'مثال: ' . lv_num($c->total_kg) : 'مثال: 7600' }}">
                 <span class="input-group-text">{{ $meter ? 'م' : 'كجم' }}</span>
               </div>
               <div class="hint">{{ $meter ? 'اختياري — مجموع الأمتار المكتوبة على الأتواب' : 'اختياري — الفحص ما بيوزنش؛ لو سيبته فاضي بنقارن بوزن الإذن' }}</div></div>

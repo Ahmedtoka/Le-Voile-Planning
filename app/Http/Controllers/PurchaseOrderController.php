@@ -244,20 +244,21 @@ class PurchaseOrderController extends Controller
         ]);
 
         $purchase_order->load('lines');
-        $picked = collect($data['prices'])->filter(fn ($p) => (float) ($p['qty'] ?? 0) > 0)->values();
+        // الخانة فاضية = الصنف ده مش هيتسكّن مع المورد ده (مفيش كمية بتتكتب لوحدها — الباقي ظاهر كلابل بس)
+        $picked = collect($data['prices'])->filter(fn ($p) => (float) ($p['qty'] ?? 0) > 0);
         if ($picked->isEmpty()) {
             return back()->withInput()->withErrors(['prices' => 'اكتب الكمية اللي هتتسكّن مع المورد ده لصنف واحد على الأقل.']);
         }
-        foreach ($picked as $p) {
+        foreach ($picked as $k => $p) {
             $line = $purchase_order->lines->firstWhere('id', (int) $p['id']);
             if (!$line) continue;
             if ((float) $p['qty'] > $line->unsourced_qty + 0.0005) {
-                return back()->withInput()->withErrors(['prices' =>
+                return back()->withInput()->withErrors(["prices.$k.qty" =>
                     'الصنف «' . trim(($line->fabricType?->name ?? '') . ' ' . ($line->color?->code ?? '')) . '»: الباقي من غير تسكين '
                     . lv_num($line->unsourced_qty, 3) . ' ' . $line->unit . ' بس — مينفعش تسكّن أكتر منه.']);
             }
             if ((float) ($p['unit_price'] ?? 0) <= 0) {
-                return back()->withInput()->withErrors(['prices' => 'اكتب سعر الوحدة للأصناف اللي بتسكّنها.']);
+                return back()->withInput()->withErrors(["prices.$k.unit_price" => 'اكتب سعر الوحدة للصنف اللي بتسكّنه.']);
             }
         }
 
