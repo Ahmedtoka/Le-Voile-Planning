@@ -65,6 +65,7 @@
 
     <div class="sum-sec">
       <div class="t"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> إذن الإضافة</div>
+      <div>{{-- الخانات وشريط الصافي في عمود واحد — وإلا الشريط بينزل في عمود العنوان الضيق --}}
       <div class="sum-grid">
         <div><div class="k">رقم الإذن</div>@if($sa)<a href="{{ route('stock-additions.edit', $sa) }}" class="v num">{{ $sa->doc_no }}</a>@else <div class="v">—</div> @endif</div>
         <div><div class="k">تاريخ إذن الإضافة</div><div class="v num">{{ $sa?->doc_date?->format('Y-m-d') ?? '—' }}</div></div>
@@ -75,6 +76,7 @@
         <div><div class="k">تاريخ الوصول</div><div class="v num">{{ $c->arrival_date?->format('Y-m-d') ?? '—' }}</div></div>
       </div>
       @include('partials.packaging', ['c' => $c])
+      </div>
     </div>
 
     <div class="sum-sec">

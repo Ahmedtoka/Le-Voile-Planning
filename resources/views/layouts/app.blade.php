@@ -491,7 +491,7 @@ th.req::after{font-size:.9em}
 .sum-sec:last-child{border-bottom:0}
 .sum-sec .t{font-weight:700;color:var(--lv-brand-ink);padding-top:4px;font-size:var(--fs-sm);display:flex;align-items:center;gap:6px}
 .sum-sec .t .bi{color:var(--lv-brand)}
-.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;text-align:center;font-size:var(--fs-sm)}
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;text-align:center;font-size:var(--fs-sm)}
 .sum-grid .k{font-size:var(--fs-xs);color:var(--lv-muted);line-height:1.25}
 .sum-grid .v{font-weight:600;font-size:var(--fs-sm);line-height:1.4;overflow-wrap:anywhere}
 .sum-grid a.v{font-size:var(--fs-sm)}
