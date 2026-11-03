@@ -2,7 +2,15 @@
 @section('purpose', 'استلام القماش على الطلب — كل (خامة + لون) بيتولّد له حوض محجوز تحت الفحص')
 @section('content')
 @php
-  $lines = old('lines', ($preset ?? null) ?: ($row->lines?->toArray() ?? []));
+  $base  = ($preset ?? null) ?: ($row->lines?->toArray() ?? []);
+  /* رجعنا بخطأ؟ اللي اتكتب بيرجع زي ما هو، فوق بيانات الطلب الثابتة (اسم الصنف، المطلوب، التسكينة)
+     اللي ما بتتبعتش مع الفورم — من غيرها السطر بيرجع «—» ويبان إن الداتا ضاعت */
+  $lines = old('lines') !== null
+      ? collect(old('lines'))->map(function ($l) use ($base) {
+            $from = !empty($l['po_line_id']) ? collect($base)->firstWhere('po_line_id', $l['po_line_id']) : null;
+            return array_merge($from ?? [], $l);
+        })->all()
+      : $base;
   $editable = $row->isEditable() || $mode==='create';
 @endphp
 
@@ -451,8 +459,12 @@ window.LVA = (function () {
     var showEta = function (on) {
       if (!eta) return;
       eta.style.display = on ? '' : 'none';
+      // الباقي له تاريخ إجباري — المتصفح بيوقف الحفظ قبل ما يتبعت (نفس قاعدة السيرفر)
+      var d = eta.querySelector('input[type=date]'); if (d) d.required = !!on;
       if (!on) eta.querySelectorAll('input').forEach(function (x) { x.value = ''; });
     };
+    // اتكتب وزن أو كمية؟ عدد الأتواب إجباري — الفحص بيجرد عليه
+    var rollsIn = tr.querySelector('.q-rolls'); if (rollsIn) rollsIn.required = now > 0;
 
     if (!now) { out.innerHTML = '<span class="hint">—</span>'; showEta(false); return Math.max(0, minQty - received); }
     if (leftMin > 0.0005) {

@@ -61,7 +61,7 @@ class ProductionFlowTest extends FlowTestCase
     {
         $wo = $this->createWorkOrder($this->c, 1900);   // المتاح 1840 بس
 
-        $this->as('mostafa')->post(route('work-orders.submit', $wo))->assertSessionHasErrors('msg');
+        $this->as('mostafa')->post(route('work-orders.submit', $wo))->assertSessionHasErrors('fabrics.0.planned_qty');   // على سطر الخامة نفسه
         $this->assertSame('draft', $wo->refresh()->status);
     }
 
@@ -93,7 +93,7 @@ class ProductionFlowTest extends FlowTestCase
     {
         $wo = $this->approvedWorkOrder();
 
-        $this->issue($wo, 1900)->assertSessionHasErrors('msg');   // المفرج عنه 1840
+        $this->issue($wo, 1900)->assertSessionHasErrors('lines.0.qty');   // المفرج عنه 1840 — الغلط على حقل الكمية
         $this->assertEqualsWithDelta(0, (float) $wo->fabrics()->first()->issued_qty, 0.001);
     }
 

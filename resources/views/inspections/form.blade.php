@@ -387,7 +387,7 @@
     </div>
     <div class="card-body"><fieldset @disabled(!$editable)>
       <input type="hidden" name="result" id="resultInput" value="{{ $result }}">
-      <div class="d-flex gap-2 flex-wrap" role="group" aria-label="نتيجة الفحص">
+      <div class="d-flex gap-2 flex-wrap result-group" role="group" aria-label="نتيجة الفحص" data-error-host="result">
         @foreach([
           ['accepted',            'مقبول',          'bi-check-circle',       'ok',     'القماش سليم — يكمّل'],
           ['accepted_with_notes', 'مقبول بملاحظات', 'bi-exclamation-circle', 'warn',   'يكمّل بس لازم تكتب الملاحظة'],

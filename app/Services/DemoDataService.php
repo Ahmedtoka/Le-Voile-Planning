@@ -78,6 +78,8 @@ class DemoDataService
         'goods_receipt_lines', 'goods_receipts',
         'stock_addition_lines', 'stock_additions',
         'stock_movements', 'fabric_rolls', 'consignments',
+        // التسكينات لازم تتمسح مع الطلبات — وإلا بتلزق في أول طلب جديد ياخد نفس الرقم (الـid بيرجع من 1)
+        'po_sourcing_lines', 'po_sourcings',
         'purchase_order_models', 'purchase_order_lines', 'purchase_orders',
         'forecasts', 'sales_snapshots', 'stock_snapshots', 'factory_loads',
         'document_comments', 'activity_logs', 'app_notifications',
@@ -98,10 +100,12 @@ class DemoDataService
         'goods_receipt_lines', 'goods_receipts',
         'stock_addition_lines', 'stock_additions',
         'stock_movements', 'fabric_rolls', 'consignments',
+        // التسكينات لازم تتمسح مع الطلبات — وإلا بتلزق في أول طلب جديد ياخد نفس الرقم (الـid بيرجع من 1)
+        'po_sourcing_lines', 'po_sourcings',
         'purchase_order_models', 'purchase_order_lines', 'purchase_orders',
         'forecasts', 'color_ratios', 'safety_stocks',
         'sales_snapshots', 'stock_snapshots', 'factory_loads',
-        'model_boms', 'model_sizes', 'product_models', 'accessories',
+        'model_boms', 'model_sizes', 'model_fabrics', 'product_models', 'accessories',
         'color_merges', 'colors', 'fabric_types', 'sizes',
         'warehouses', 'factories', 'suppliers',
         'activity_logs', 'app_notifications',
@@ -831,6 +835,32 @@ class DemoDataService
                 $line->update(['unit_price' => $price, 'line_total' => round((float) $line->qty * $price, 2)]);
             }
 
+            /* التسعير الحقيقي = تسكينة (الميتينج 37) — الطلب كله على مورد واحد في السيناريو.
+               من غيرها إذن الإضافة بيحسب على الطلب كله والتسكينات تفضل فاضية. */
+            $sourcing = \App\Models\PoSourcing::create([
+                'purchase_order_id' => $po->id,
+                'seq'               => 1,
+                'supplier_id'       => $po->supplier_id,
+                'warehouse_id'      => $po->warehouse_id,
+                'delivery_date'     => $po->delivery_date,
+                'payment_method'    => $po->payment_method,
+                'tax_pct'           => 14,
+                'sourced_by'        => $this->u['purchasing'],
+                'sourced_at'        => $po->sourced_at,
+            ]);
+            foreach ($po->lines()->get() as $line) {
+                \App\Models\PoSourcingLine::create([
+                    'po_sourcing_id'         => $sourcing->id,
+                    'purchase_order_line_id' => $line->id,
+                    'qty'                    => $line->qty,
+                    'unit'                   => $line->unit,
+                    'unit_price'             => $line->unit_price,
+                    'line_total'             => $line->line_total,
+                ]);
+                $line->update(['sourced_qty' => $line->qty]);
+            }
+            $sourcing->recalcTotals();
+
             if (($s['finance'] ?? true) !== false) {
                 $po->update([
                     'finance_by'   => $this->u['finance'],
@@ -864,6 +894,7 @@ class DemoDataService
             'supplier_id'       => $po->supplier_id,
             'warehouse_id'      => $po->warehouse_id,
             'purchase_order_id' => $po->id,
+            'po_sourcing_id'    => $po->sourcings()->value('id'),   // الوارد بيتحسب على التسكينة كمان
             'receipt_type'      => $direct ? 'container' : 'normal',
             'remainder_eta'     => isset($b['eta']) ? $this->day($b['eta'])->toDateString() : null,
             'status'            => 'draft',

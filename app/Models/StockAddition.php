@@ -41,7 +41,7 @@ class StockAddition extends Model
     public function consignment()   { return $this->belongsTo(Consignment::class); }
     public function goodsReceipts() { return $this->hasMany(GoodsReceipt::class); }
     public function creator()       { return $this->belongsTo(User::class, 'created_by'); }
-    public function lines()         { return $this->hasMany(StockAdditionLine::class); }
+    public function lines()         { return $this->hasMany(StockAdditionLine::class)->orderBy('id'); }   // ترتيب ثابت — أخطاء السطور بتشاور عليه برقمه
 
     public function recalcTotals(): void
     {

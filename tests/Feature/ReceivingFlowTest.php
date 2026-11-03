@@ -68,13 +68,25 @@ class ReceivingFlowTest extends FlowTestCase
     {
         $po = $this->sourcedPo();   // أقصى 2100
 
+        // الغلط بيرجع على حقل الكمية في السطر نفسه — مش رسالة عامة فوق
         $this->postAddition($po, [['po_line' => $po->lines->first(), 'qty' => 2200]])
-             ->assertSessionHasErrors('msg');
+             ->assertSessionHasErrors('lines.0.qty')->assertSessionHas('draft_saved', true);
 
         $sa = StockAddition::latest('id')->firstOrFail();
         $this->assertSame('draft', $sa->status, 'الإذن بيفضل مسودة');
         $this->assertSame(0, Consignment::count());
         $this->assertEqualsWithDelta(0, (float) $po->refresh()->lines->first()->received_qty, 0.001);
+    }
+
+    public function test_partial_receipt_without_eta_points_at_the_eta_field(): void
+    {
+        $po = $this->sourcedPo();   // 2000
+
+        $this->postAddition($po, [['po_line' => $po->lines->first(), 'qty' => 1000]])   // من غير «إمتى»
+             ->assertSessionHasErrors('lines.0.remainder_eta');
+
+        $this->assertSame('draft', StockAddition::latest('id')->firstOrFail()->status);
+        $this->assertSame(0, Consignment::count(), 'الإذن الجزئي من غير تاريخ ما بينزلش الفحص');
     }
 
     public function test_one_consignment_per_fabric_and_color(): void

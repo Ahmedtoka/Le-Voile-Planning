@@ -36,7 +36,7 @@ class FabricInspection extends Model
     public function supplier()    { return $this->belongsTo(Supplier::class); }
     public function workOrder()   { return $this->belongsTo(WorkOrder::class); }
     public function inspector()   { return $this->belongsTo(User::class, 'inspector_id'); }
-    public function rolls()       { return $this->hasMany(InspectionRoll::class); }
+    public function rolls()       { return $this->hasMany(InspectionRoll::class)->orderBy('id'); }   // ترتيب ثابت — أخطاء الأتواب بتشاور عليه برقمه
 
     public function getResultNameAttribute(): string
     {

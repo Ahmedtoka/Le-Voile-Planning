@@ -58,10 +58,14 @@
     <div class="le-ico"><i class="bi bi-exclamation-lg" aria-hidden="true"></i></div>
     <div class="flex-grow-1 min-w-0">
       <div class="le-title">{{ $errCount === 1 ? 'فيه حاجة واحدة محتاجة تتظبط قبل الحفظ' : 'فيه ' . $errCount . ' حاجات محتاجة تتظبط قبل الحفظ' }}</div>
-      <div class="le-sub">مفيش حاجة اتحفظت. الحقول اللي فيها مشكلة متعلّمة بالأحمر تحت — دوس على السطر يوديك عليها.</div>
+      <div class="le-sub">{{ session('draft_saved')
+          ? 'المستند اتحفظ كمسودة بس — مش هينزل الخطوة اللي بعدها لحد ما تصلّح ده وتحفظ تاني.'
+          : 'مفيش حاجة اتحفظت.' }} الحقول اللي فيها مشكلة متعلّمة بالأحمر — دوس على الرسالة يوديك عليها.</div>
       <ul>
         @foreach($errBag as $field => $msgs)
-          @foreach($msgs as $e)<li data-field="{{ $field }}">{{ $e }}</li>@endforeach
+          {{-- lines.2.qty ⇒ «السطر 3:» عشان المستخدم يعرف أي سطر من غير ما يدوّر --}}
+          @php $rowNo = preg_match('/^(?:lines|rolls|fabrics|products|readings)\.(\d+)\./', $field, $m) ? ((int) $m[1] + 1) : null; @endphp
+          @foreach($msgs as $e)<li data-field="{{ $field }}">@if($rowNo)<b>السطر {{ $rowNo }}:</b> @endif{{ $e }}</li>@endforeach
         @endforeach
       </ul>
     </div>

@@ -166,32 +166,31 @@ class FabricInspectionController extends Controller
         return $this->finish($inspection->refresh());
     }
 
-    /** اللي لازم يتظبط قبل ما التقرير يخلص — بيرجّع نص المشكلة أو null */
-    private function guard(FabricInspection $inspection): ?string
+    /** اللي لازم يتظبط قبل ما التقرير يخلص — [الحقل => الرسالة] أو null (الحقل بيتعلّم بالأحمر في الشاشة) */
+    private function guard(FabricInspection $inspection): ?array
     {
-        if (!$inspection->rolls()->count()) {
-            return 'مينفعش تحفظ تقرير من غير أتواب مقيسة — اكتب الأتواب المجرودة ودوس «تم».';
+        $rolls = $inspection->rolls()->get()->values();
+        if (!$rolls->count()) {
+            return ['counted_rolls' => 'مينفعش تحفظ تقرير من غير أتواب مقيسة — اكتب الأتواب المجرودة ودوس «تم».'];
         }
 
         if ($inspection->result === 'pending' || !$inspection->result) {
-            return 'اختار نتيجة الفحص الأول: مقبول، مقبول بملاحظات، ولا مرفوض.';
+            return ['result' => 'اختار نتيجة الفحص الأول: مقبول، مقبول بملاحظات، ولا مرفوض.'];
         }
 
         // «مقبول بملاحظات» و«مرفوض» — لازم سبب مكتوب
         if (in_array($inspection->result, ['accepted_with_notes', 'rejected'], true)
             && trim((string) $inspection->notes) === '') {
-            return $inspection->result === 'rejected'
+            return ['notes' => $inspection->result === 'rejected'
                 ? 'الرفض لازم يكون معاه سبب مكتوب — هيظهر في شاشة المرفوضات وللمورد.'
-                : 'اخترت «مقبول بملاحظات» — لازم تكتب الملاحظة.';
+                : 'اخترت «مقبول بملاحظات» — لازم تكتب الملاحظة.'];
         }
 
         // المرفوض مش لازم يتقاس — وزنه هو المهم
-        $noWidth = $inspection->rolls()->where('status', '!=', 'rejected')
-            ->where(fn ($q) => $q->whereNull('width_cm')->orWhere('width_cm', '<=', 0))
-            ->count();
-
-        if ($noWidth) {
-            return 'كل توب مقيس لازم يكون له عرض — منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.';
+        foreach ($rolls as $i => $r) {
+            if ($r->status !== 'rejected' && (float) $r->width_cm <= 0) {
+                return ["rolls.$i.width_cm" => 'التوب ' . ($r->roll_no ?: $i + 1) . ' من غير عرض — كل توب مقيس لازم يكون له عرض، منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.'];
+            }
         }
 
         return null;
@@ -205,7 +204,7 @@ class FabricInspectionController extends Controller
     {
         if ($problem = $this->guard($inspection)) {
             return redirect()->route('inspections.edit', $inspection)
-                ->withErrors(['msg' => $problem]);
+                ->withErrors($problem)->with('draft_saved', true);
         }
 
         FlowEngine::complete($inspection, 'تقرير الفحص ' . $inspection->doc_no . ' اتحفظ وخلص');
@@ -392,14 +391,14 @@ class FabricInspectionController extends Controller
         }
 
         // التوب المرفوض لازم يتوزن (أو بالمتر: أمتاره) — ده اللي بيتخصم من الرسالة والطلب
-        foreach ($rolls as $r) {
+        foreach ($rolls as $k => $r) {
             if (($r['status'] ?? 'ok') !== 'rejected') continue;
             if (!$meter && (float) ($r['net_kg'] ?? 0) <= 0) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                throw \Illuminate\Validation\ValidationException::withMessages(["rolls.$k.net_kg" =>
                     'التوب ' . ($r['roll_no'] ?? '') . ' متعلّم «مرفوض» من غير وزن — الأتواب مش متساوية، اوزنه واكتب وزنه بالكيلو.']);
             }
             if ($meter && (float) ($r['length_m'] ?? 0) <= 0) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                throw \Illuminate\Validation\ValidationException::withMessages(["rolls.$k.labeled_length_m" =>
                     'التوب ' . ($r['roll_no'] ?? '') . ' متعلّم «مرفوض» من غير أمتار — اكتب الأمتار المكتوبة عليه عشان تتخصم.']);
             }
         }
@@ -410,7 +409,8 @@ class FabricInspectionController extends Controller
             && ($meter || (float) ($r['length_m'] ?? 0) > 0) && (float) ($r['width_cm'] ?? 0) > 0)->count();
 
         if (!$measured && $v['result'] !== 'rejected') {
-            throw \Illuminate\Validation\ValidationException::withMessages(['msg' => $meter
+            $first = array_key_first($rolls) ?? 0;
+            throw \Illuminate\Validation\ValidationException::withMessages(["rolls.$first.width_cm" => $meter
                 ? 'لازم تقيس عرض توب واحد على الأقل — منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.'
                 : 'لازم تقيس توب واحد على الأقل (الطول والعرض) — منه بيتحدد أقل عرض اللي الماركر بيتبني عليه.']);
         }
@@ -419,7 +419,7 @@ class FabricInspectionController extends Controller
         $minPct = (float) lv_setting('min_inspection_sample_pct', 10);
         $sampled = collect($rolls)->filter(fn ($r) => (float) ($r['width_cm'] ?? 0) > 0 || ($r['status'] ?? 'ok') === 'rejected')->count();
         if ($v['result'] !== 'rejected' && (int) $v['counted_rolls'] > 0 && $sampled / (int) $v['counted_rolls'] * 100 < $minPct - 0.001) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+            throw \Illuminate\Validation\ValidationException::withMessages(['counted_rolls' =>
                 'العيّنة قليلة: فحصت ' . $sampled . ' من ' . (int) $v['counted_rolls'] . ' توب — الحد الأدنى '
                 . lv_num($minPct, 0) . '% (يعني ' . (int) ceil((int) $v['counted_rolls'] * $minPct / 100) . ' توب على الأقل).']);
         }

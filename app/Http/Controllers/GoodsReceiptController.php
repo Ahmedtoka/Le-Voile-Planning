@@ -201,7 +201,7 @@ class GoodsReceiptController extends Controller
     {
         if ($problem = $this->guard($goods_receipt)) {
             return redirect()->route('goods-receipts.edit', $goods_receipt)
-                ->withErrors(['msg' => $problem]);
+                ->withErrors(['msg' => $problem])->with('draft_saved', true);
         }
 
         FlowEngine::complete($goods_receipt, 'استلام الخام ' . $goods_receipt->doc_no . ' اتسجّل وخلص');

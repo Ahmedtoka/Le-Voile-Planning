@@ -21,7 +21,7 @@ class ProductionReceipt extends Model
     public function factory()   { return $this->belongsTo(Factory::class); }
     public function warehouse() { return $this->belongsTo(Warehouse::class); }
     public function creator()   { return $this->belongsTo(User::class, 'created_by'); }
-    public function lines()     { return $this->hasMany(ProductionReceiptLine::class); }
+    public function lines()     { return $this->hasMany(ProductionReceiptLine::class)->orderBy('id'); }   // ترتيب ثابت — أخطاء السطور بتشاور عليه برقمه
 
     public function recalcTotals(): void
     {

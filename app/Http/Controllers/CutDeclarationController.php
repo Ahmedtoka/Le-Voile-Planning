@@ -149,7 +149,7 @@ class CutDeclarationController extends Controller
 
         // الانحراف خارج الحدود لازم يتكتب له سبب قبل الإرسال
         if ($cut_declaration->variance_flag === 'danger' && !trim((string) $cut_declaration->variance_reason)) {
-            return back()->withErrors(['msg' =>
+            return back()->withErrors(['variance_reason' =>
                 'الانحراف ' . $cut_declaration->variance_pct . '% خارج الحدود المقبولة ('
                 . config('lvplanning.variance.warn_pct') . '%). اكتب سبب الفرق قبل الإرسال.']);
         }

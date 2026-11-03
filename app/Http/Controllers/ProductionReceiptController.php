@@ -148,12 +148,12 @@ class ProductionReceiptController extends Controller
 
         // منع استلام أكتر من المقصوص
         if ($wo) {
-            foreach ($production_receipt->lines as $line) {
+            foreach ($production_receipt->lines->values() as $i => $line) {
                 $woLine = $wo->lines->first(fn ($l) =>
                     $l->product_model_id == $line->product_model_id && $l->size_id == $line->size_id);
 
                 if ($woLine && (int) $line->qty > (int) $woLine->remaining_qty) {
-                    return back()->withErrors(['msg' =>
+                    return back()->withErrors(["lines.$i.qty" =>
                         'مينفعش تستلم ' . $line->qty . ' من ' . ($woLine->productModel->name ?? '')
                         . ' — المتبقي على المصنع ' . $woLine->remaining_qty . ' بس.']);
                 }

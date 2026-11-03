@@ -251,20 +251,26 @@ class StockAdditionController extends Controller
             ->where('purchase_order_line_id', $poLine->id)->first();
     }
 
-    private function guard(StockAddition $stock_addition): ?string
+    /**
+     * المشكلة بترجع [اسم الحقل => الرسالة] — الحقل بيتعلّم بالأحمر في الشاشة والرسالة تحته.
+     * أرقام السطور على ترتيب سطور الإذن المحفوظ — نفس ترتيبها في شاشة التعديل.
+     */
+    private function guard(StockAddition $stock_addition): ?array
     {
-        if (!$stock_addition->lines()->count()) {
-            return 'مينفعش تحفظ إذن فاضي — ضيف صنف واحد على الأقل.';
+        $lines = $stock_addition->lines()->orderBy('id')->get()->values();
+        $stock_addition->setRelation('lines', $lines);
+
+        if (!$lines->count()) {
+            return ['msg' => 'مينفعش تحفظ إذن فاضي — اكتب الكمية لصنف واحد على الأقل.'];
         }
 
         // لازم عدد أتواب على كل سطر قماش — الفحص (أو الجرد) بيتم عليه
-        $missing = $stock_addition->lines()
-            ->whereNotNull('fabric_type_id')->where('rolls_count', '<=', 0)->count();
-
-        if ($missing) {
-            return $stock_addition->receipt_type === 'container'
-                ? 'لازم تكتب عدد الأتواب لكل صنف قماش — الجرد والفحص الاستدلالي بيتم عليه.'
-                : 'لازم تكتب عدد الأتواب لكل صنف قماش — الفحص هيجرد عليه.';
+        foreach ($lines as $i => $line) {
+            if ($line->fabric_type_id && (int) $line->rolls_count <= 0) {
+                return ["lines.$i.rolls_count" => $stock_addition->receipt_type === 'container'
+                    ? 'اكتب عدد الأتواب — الجرد والفحص الاستدلالي بيتم عليه.'
+                    : 'اكتب عدد الأتواب — الفحص هيجرد عليه.'];
+            }
         }
 
         // أكتر من لون في نفس الاستلامة عادي — كل لون بياخد رسالته (حوضه) لوحده
@@ -278,18 +284,18 @@ class StockAdditionController extends Controller
                     $q->where('id', '!=', $stock_addition->consignment_id))
                 ->exists();
             if ($taken) {
-                return 'رقم الرسالة «' . $manualNo . '» مستخدم قبل كده لاستلامة تانية — '
-                    . 'سيبه فاضي والسيستم هيولّد رقم جديد، أو اكتب رقم مختلف.';
+                return ['consignment_no' => 'رقم الرسالة «' . $manualNo . '» مستخدم قبل كده لاستلامة تانية — '
+                    . 'سيبه فاضي والسيستم هيولّد رقم جديد، أو اكتب رقم مختلف.'];
             }
         }
 
         /* انحراف اللون الأول — لازم قرار قبل أي حسبة على الطلب،
            لأن القرار نفسه هو اللي بيحدد السطر اللي الكمية هتتحسب عليه. */
-        foreach ($stock_addition->lines as $line) {
+        foreach ($lines as $i => $line) {
             if ($line->fabric_type_id && $line->po_color_id
                 && $line->color_id != $line->po_color_id && !$line->color_action) {
-                return 'فيه صنف وصل بلون مختلف عن المطلوب في الطلب — افتح الإذن واختار القرار: '
-                    . 'تسكينه مكان اللون المطلوب، أو فتح طلب جديد والأصلي يفضل مطلوب.';
+                return ["lines.$i.color_id" => 'اللون الواصل مختلف عن المطلوب — اختار القرار: '
+                    . 'تسكينه مكان اللون المطلوب، أو فتح طلب جديد والأصلي يفضل مطلوب.'];
             }
         }
 
@@ -300,7 +306,7 @@ class StockAdditionController extends Controller
         if ($po = $stock_addition->purchaseOrder) {
             $po->load('lines');
 
-            foreach ($stock_addition->lines as $line) {
+            foreach ($lines as $i => $line) {
                 if (!$line->fabric_type_id || $line->color_action === 'new_po') continue;
 
                 $poLine = $line->po_line_id
@@ -323,10 +329,9 @@ class StockAdditionController extends Controller
 
                 if ($left > 0.0001 && !$line->remainder_eta) {
                     $name = trim(($poLine->fabricType?->name ?? '') . ' ' . ($poLine->color?->code ?? ''));
-                    return 'الصنف «' . $name . '» اتستلم جزئي — باقي ' . ($srcLine ? 'على التسكينة ' : '')
+                    return ["lines.$i.remainder_eta" => '«' . $name . '» اتستلم جزئي — باقي ' . ($srcLine ? 'على التسكينة ' : '')
                         . rtrim(rtrim(number_format($left, 3), '0'), '.') . ' ' . $poLine->unit
-                        . '. حدد على السطر «الباقي هيوصل إمتى؟» قبل الإرسال '
-                        . '(لو المورد مش محدد، حط تاريخ تقديري واكتب السبب في الملاحظة).';
+                        . '. حدد «الباقي هيوصل إمتى؟» — لو المورد مش محدد، حط تاريخ تقديري واكتب السبب في الملاحظة.'];
                 }
             }
         }
@@ -335,7 +340,7 @@ class StockAdditionController extends Controller
            طالب 50 بزيادة 5%؟ أقصى استلام تراكمي = 52.5 — أكتر من كده بيترفض. */
         if ($po = $stock_addition->purchaseOrder) {
             $po->load('lines');
-            foreach ($stock_addition->lines as $line) {
+            foreach ($lines as $i => $line) {
                 if (!$line->fabric_type_id) continue;
                 if ($line->color_action === 'new_po') continue;   // مش بيتحسب على الطلب الأصلي
 
@@ -351,11 +356,11 @@ class StockAdditionController extends Controller
                 $qty = \App\Services\DocumentEffects::toUnit((float) ($line->gross_qty ?: $line->qty), $line->unit, $poLine->unit);
                 if ((float) $poLine->received_qty + $qty > $poLine->max_allowed_qty + 0.0001) {
                     $this->alertTolerance($stock_addition, $po, $poLine, $qty);
-                    return 'الكمية بتتعدى نسبة الزيادة المسموح بها (' . $poLine->tolerance_pct
+                    return ["lines.$i." . ($line->gross_qty ? 'gross_qty' : 'qty') => 'الكمية بتتعدى نسبة الزيادة المسموح بها (' . $poLine->tolerance_pct
                         . '%) على الطلب ' . $po->po_no . ' — المستلم قبل كده '
                         . rtrim(rtrim(number_format((float) $poLine->received_qty, 2), '0'), '.')
                         . ' والمطلوب ' . rtrim(rtrim(number_format((float) $poLine->qty, 2), '0'), '.')
-                        . ' ' . $poLine->unit . '.';
+                        . ' ' . $poLine->unit . '. التخطيط والمشتريات اتبلّغوا.'];
                 }
             }
         }
@@ -398,7 +403,7 @@ class StockAdditionController extends Controller
         if ($problem = $this->guard($stock_addition)) {
             // الإذن بيفضل مسودة — المستخدم يصلّح ويحفظ تاني
             return redirect()->route('stock-additions.edit', $stock_addition)
-                ->withErrors(['msg' => $problem]);
+                ->withErrors($problem)->with('draft_saved', true);
         }
 
         FlowEngine::complete($stock_addition,

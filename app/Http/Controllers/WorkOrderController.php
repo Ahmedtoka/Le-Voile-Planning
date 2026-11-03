@@ -243,21 +243,22 @@ class WorkOrderController extends Controller
             return back()->withErrors(['msg' => 'أمر الشغل لازم يكون فيه خامة واحدة على الأقل.']);
         }
 
+        /* كل مشكلة على سطر الخامة بتاعها — بتتعلّم بالأحمر جنب الحقل نفسه */
         $blockers = [];
-        foreach ($work_order->fabrics as $f) {
+        foreach ($work_order->fabrics->values() as $i => $f) {
             $c = $f->consignment;
-            if (!$c) { $blockers[] = 'فيه خامة من غير رسالة محددة.'; continue; }
+            if (!$c) { $blockers["fabrics.$i.consignment_id"][] = 'اختار الرسالة اللي الخامة دي هتتصرف منها.'; continue; }
 
             foreach (PlanningEngine::warnings($c, $f->marker, (float) $f->planned_qty) as $w) {
-                if ($w['level'] === 'danger') $blockers[] = ($c->consignment_no . ': ' . $w['text']);
+                if ($w['level'] === 'danger') $blockers["fabrics.$i.planned_qty"][] = $c->consignment_no . ': ' . $w['text'];
             }
             if ((int) $f->expected_pieces <= 0) {
-                $blockers[] = ($f->fabricType?->name ?? 'خامة') . ': القص المتوقع صفر — راجع الحسبة.';
+                $blockers["fabrics.$i.expected_pieces"][] = ($f->fabricType?->name ?? 'خامة') . ': القص المتوقع صفر — راجع الحسبة.';
             }
         }
 
         if ($blockers) {
-            return back()->withErrors(['msg' => implode(' | ', array_unique($blockers))]);
+            return back()->withErrors(array_map(fn ($m) => array_values(array_unique($m)), $blockers));
         }
 
         FlowEngine::complete($work_order, 'أمر الشغل ' . $work_order->wo_no . ' اتسجّل وخلص');

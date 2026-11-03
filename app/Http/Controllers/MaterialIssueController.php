@@ -157,6 +157,7 @@ class MaterialIssueController extends Controller
         /* مينفعش تصرف أكتر من المتاح.
            المتاح = المفرج عنه − اللي اتصرف قبل كده على إذون معتمدة تانية. */
         $over = [];
+        $idx  = $material_issue->lines->values()->pluck('id')->flip();   // id السطر ⇒ رقمه في الشاشة
         foreach ($material_issue->lines->groupBy('consignment_id') as $cid => $lines) {
             $c = $lines->first()->consignment;
             if (!$c) continue;
@@ -170,7 +171,9 @@ class MaterialIssueController extends Controller
             $qty = (float) $lines->sum('qty');
 
             if ($qty > $available + 0.001) {
-                $over[] = $c->consignment_no . ': مطلوب ' . number_format($qty, 2)
+                $l0 = $lines->first();
+                $over['lines.' . $idx[$l0->id] . '.' . ((float) $l0->gross_qty > 0 ? 'gross_qty' : 'qty')] =
+                        'الكمية أكبر من المتاح في الرسالة ' . $c->consignment_no . ': مطلوب ' . number_format($qty, 2)
                         . ' والمتاح ' . number_format(max(0, $available), 2)
                         . ' (المفرج عنه ' . number_format((float) $c->released_kg, 2)
                         . ' − منصرف قبل كده ' . number_format($alreadyIssued, 2) . ')';
@@ -178,7 +181,7 @@ class MaterialIssueController extends Controller
         }
 
         if ($over) {
-            return back()->withErrors(['msg' => 'الكمية أكبر من المفرج عنه — ' . implode(' | ', $over)]);
+            return back()->withErrors($over);
         }
 
         FlowEngine::complete($material_issue, 'إذن الصرف ' . $material_issue->doc_no . ' اتسجّل وخلص');
@@ -244,12 +247,12 @@ class MaterialIssueController extends Controller
         ]);
 
         /* الصافي من القائم بأوزان الرسالة — السيرفر هو اللي بيحسب */
-        foreach ($v['lines'] as &$l) {
+        foreach ($v['lines'] as $k => &$l) {
             // الصرف على أمر شغل معتمد ومفتوح بس
             if (!empty($l['work_order_id'])) {
                 $wo = WorkOrder::find($l['work_order_id']);
                 if (!$wo || !in_array($wo->status, ['approved', 'sent_to_factory', 'cutting', 'in_production', 'partially_received'], true)) {
-                    throw \Illuminate\Validation\ValidationException::withMessages(['msg' =>
+                    throw \Illuminate\Validation\ValidationException::withMessages(["lines.$k.work_order_id" =>
                         'أمر الشغل ' . ($wo?->wo_no ?? '') . ' حالته «' . ($wo?->status_name ?? '—') . '» — الصرف بيتسجل على أمر معتمد ولسه مفتوح.']);
                 }
             }

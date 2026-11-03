@@ -623,6 +623,21 @@ class DocumentEffects
                     'is_closed'    => false,
                     'closed_at'    => null,
                 ])->saveQuietly();
+
+                /* وعلى التسكينة اللي الرسالة وصلت عليها — المورد ده هو اللي هيعوّض المرفوض،
+                   فالباقي عليه في «استلم الباقي» لازم يرجع يبان */
+                $saLine = \App\Models\StockAdditionLine::with('stockAddition')->where('consignment_id', $c->id)->first();
+                $srcLine = $saLine?->po_sourcing_line_id
+                    ? \App\Models\PoSourcingLine::find($saLine->po_sourcing_line_id)
+                    : ($saLine?->stockAddition?->po_sourcing_id
+                        ? \App\Models\PoSourcingLine::where('po_sourcing_id', $saLine->stockAddition->po_sourcing_id)
+                            ->where('purchase_order_line_id', $poLine->id)->first()
+                        : null);
+                if ($srcLine) {
+                    $srcLine->forceFill([
+                        'received_qty' => max(0, (float) $srcLine->received_qty - self::toUnit($gross, $unit, $srcLine->unit)),
+                    ])->saveQuietly();
+                }
             }
         }
 

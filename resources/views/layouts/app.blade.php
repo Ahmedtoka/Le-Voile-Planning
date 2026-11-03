@@ -102,6 +102,7 @@ body{background:var(--lv-offwhite);color:var(--lv-ink);font-size:var(--fs-base);
 h1,h2,h3,h4,h5,h6{color:var(--lv-brand-ink);font-weight:700}
 a{text-decoration:none;color:var(--lv-brand)}
 a:hover{color:var(--lv-brand-dark);text-decoration:underline;text-underline-offset:3px}
+a.btn:hover,a.btn:focus{text-decoration:none}   /* الزرار لينك؟ يفضل زرار — من غير خط تحت */
 ::selection{background:var(--lv-soft);color:var(--lv-brand-ink)}
 b,strong{font-weight:700}
 small,.small{font-size:var(--fs-xs)}
@@ -343,7 +344,9 @@ body.nav-open .nav-scrim{opacity:1;pointer-events:auto}
 /* عمود الأفعال: دايمًا آخر عمود، ضيق، والزراير أيقونات مربعة */
 .table td:last-child .btn-sm,.table .row-actions .btn{min-height:var(--ctl-h-row);min-width:var(--ctl-h-row);padding-inline:.45rem;
   border-radius:7px;font-size:.85rem}
-.table td:last-child .btn-sm:not(:has(span)):not(:has(.visually-hidden)){padding-inline:0}
+/* أيقونة لوحدها بس اللي من غير حشوة — زرار عليه كلام («استلم الباقي») بياخد حشوته كاملة */
+.table td:last-child .btn-icon,.table .row-actions .btn-icon{padding-inline:0}
+.table td:last-child .btn-sm:not(.btn-icon){padding-inline:.75rem;min-width:72px}
 .row-actions{display:inline-flex;gap:4px;flex-wrap:nowrap;justify-content:flex-end;align-items:center}
 .row-actions form{display:inline-flex;margin:0}
 /* صفوف الحالة: لون خفيف جدًا + خط جانبي */
@@ -498,6 +501,8 @@ th.req::after{font-size:.9em}
 /* جداول الإدخال */
 .line-table input,.line-table select,.line-table textarea{border:1px solid var(--lv-field);border-radius:7px;padding:4px 8px;
   font-size:var(--fs-sm);width:100%;background:var(--lv-white);min-height:var(--ctl-h-row);max-width:none;color:var(--lv-ink)}
+/* form-control / form-control-sm جوه جدول السطور بياخدوا نفس ارتفاع باقي الجدول (32) — مش 28 ولا 38 */
+.line-table input.form-control,.line-table select.form-select,.line-table input.form-control-sm{min-height:var(--ctl-h-row);height:var(--ctl-h-row);padding-block:4px}
 .line-table input:hover,.line-table select:hover{border-color:#C4B4BE}
 .line-table input:focus,.line-table select:focus{border-color:var(--lv-brand);box-shadow:var(--ring);outline:0}
 .line-table input::placeholder{color:#A79BA4}
@@ -519,6 +524,8 @@ th.req::after{font-size:.9em}
 /* التحقق: الحقل الغلط + رسالته تحته مباشرة */
 .is-invalid,.line-table .is-invalid{border-color:var(--lv-danger)!important;background-color:#FFF8F7}
 .is-invalid:focus{box-shadow:0 0 0 3px rgba(181,52,43,.16)!important}
+.line-table tr.row-invalid>td{background:#FFF8F7}
+.result-group.is-invalid{outline:2px solid var(--lv-danger);outline-offset:4px;border-radius:10px}   /* السطر اللي فيه الغلط باين في الجدول كله */
 .invalid-feedback{color:var(--lv-danger);font-size:var(--fs-xs);font-weight:600;margin-top:4px;line-height:1.45}
 .invalid-feedback.d-block{display:block}
 .line-table .invalid-feedback{white-space:normal}
@@ -714,7 +721,7 @@ a.flow-step:hover{background:var(--lv-surface-2);color:var(--lv-ink);text-decora
 .alert-danger{background:var(--lv-danger-bg);border-color:var(--lv-danger-line);color:var(--lv-danger)}
 .alert-success{background:var(--lv-ok-bg);border-color:var(--lv-ok-line);color:var(--lv-ok)}
 .alert-info{background:var(--lv-info-bg);border-color:var(--lv-info-line);color:var(--lv-info)}
-.alert a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.alert a:not(.btn){color:inherit;text-decoration:underline;text-underline-offset:2px}
 .alert.py-2{padding-block:.55rem}
 .alert b{font-weight:700}
 /* رسالة أخطاء التحقق: عنوان واضح + ليستة بلغة بسيطة */
@@ -1192,7 +1199,20 @@ window.LVX = (function () {
       var parts = key.split('.'), name = parts[0] + parts.slice(1).map(p => '[' + p + ']').join('');
       var f = document.querySelector('[name="' + name + '"], [name="' + name + '[]"]');
       if (!f) return;
+      /* حقل مخفي (قيمته بتتحط من زراير زي «نتيجة الفحص»)؟ الخطأ يتعلّم على العنصر الظاهر بتاعه */
+      if (f.type === 'hidden') {
+        var vis = document.querySelector('[data-error-host="' + name + '"]');
+        if (!vis) { var cell = f.closest('td'); vis = cell && cell.querySelector('select:not([type=hidden]), input:not([type=hidden])'); }
+        if (vis) f = vis;
+      }
       f.classList.add('is-invalid'); f.setAttribute('aria-invalid', 'true');
+      /* الحقل جوه حاجة مستخبية (زي «الباقي هيوصل إمتى» أو تفاصيل مقفولة)؟ نفتحها — الخطأ لازم يبان مكانه */
+      for (var p = f.parentElement; p && p !== document.body; p = p.parentElement) {
+        if (p.hidden) p.hidden = false;
+        if (p.style && p.style.display === 'none') p.style.display = '';
+        if (p.tagName === 'DETAILS') p.open = true;
+      }
+      var row = f.closest('tr'); if (row) row.classList.add('row-invalid');
       var host = f.closest('.input-group') || f.closest('.cons-picker') || f.closest('.model-picker') || f;
       if (!host.nextElementSibling || !host.nextElementSibling.classList.contains('invalid-feedback')) {
         var d = document.createElement('div'); d.className = 'invalid-feedback d-block';
@@ -1201,12 +1221,26 @@ window.LVX = (function () {
       }
       if (!first) first = f;
     });
+    /* مفيش ليستة أخطاء فوق بتشاور على الحقل؟ ننزل لأول حقل غلط على طول */
+    if (first && !document.querySelector('.lv-errors li[data-field]')) {
+      setTimeout(function () { first.scrollIntoView({block: 'center'}); try { first.focus({preventScroll: true}); } catch (e) {} }, 60);
+    }
     /* لينكات في ليستة الأخطاء فوق بتنط للحقل */
     document.querySelectorAll('.lv-errors li[data-field]').forEach(function (li) {
       var key = li.dataset.field, parts = key.split('.'), name = parts[0] + parts.slice(1).map(p => '[' + p + ']').join('');
       var f = document.querySelector('[name="' + name + '"], [name="' + name + '[]"]'); if (!f) return;
       li.style.cursor = 'pointer'; li.title = 'روح للحقل';
       li.addEventListener('click', function () { f.scrollIntoView({block: 'center', behavior: 'smooth'}); try { f.focus({preventScroll: true}); } catch (e) {} });
+    });
+  }
+
+  /* الحقل اللي عليه نجمة «إجباري» يبقى required فعلًا — المتصفح بيوقف الحفظ ويشاور على الحقل
+     قبل ما الفورم يتبعت، بدل ما الغلط يرجع من السيرفر */
+  function reqFields() {
+    document.querySelectorAll('label.req[for]').forEach(function (l) {
+      var f = document.getElementById(l.htmlFor);
+      // المستخبي وقت التحميل بنسيبه — required على حقل مش باين بيوقف الحفظ من غير ما المستخدم يشوف ليه
+      if (f && !f.disabled && !f.readOnly && f.type !== 'hidden' && f.type !== 'checkbox' && f.offsetParent !== null) f.required = true;
     });
   }
 
@@ -1220,7 +1254,7 @@ window.LVX = (function () {
     });
   }
 
-  document.addEventListener('DOMContentLoaded', function () { popovers(document); fieldErrors(); reqLegend(); });
+  document.addEventListener('DOMContentLoaded', function () { popovers(document); fieldErrors(); reqFields(); reqLegend(); });
   return {popovers, fx, fieldErrors, esc};
 })();
 

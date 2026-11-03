@@ -27,7 +27,7 @@ class MaterialIssue extends Model
     public function warehouse() { return $this->belongsTo(Warehouse::class); }
     public function factory()   { return $this->belongsTo(Factory::class); }
     public function creator()   { return $this->belongsTo(User::class, 'created_by'); }
-    public function lines()     { return $this->hasMany(MaterialIssueLine::class); }
+    public function lines()     { return $this->hasMany(MaterialIssueLine::class)->orderBy('id'); }   // ترتيب ثابت — أخطاء السطور بتشاور عليه برقمه
 
     /** أوامر الشغل اللي الورقة دي بتخدمها */
     public function workOrders()
