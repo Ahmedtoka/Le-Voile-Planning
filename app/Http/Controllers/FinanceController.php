@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PoSourcing;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
@@ -11,26 +12,31 @@ use Illuminate\Http\Request;
  *
  * الحسابات مش بتوقف الطلب، بس بتتابع: إيه اللي جاي عليها فلوس،
  * ولمين، وإمتى تاريخ التوريد.
+ *
+ * الصف = أمر شراء (تسكينة)، مش طلب: طلب اتشرى من موردين بيظهر صفين،
+ * كل واحد بمورده وإجماليه وعلمه — و«حسب المورد» بيجمع إجمالي كل مورد الحقيقي.
  */
 class FinanceController extends Controller
 {
+    private const OPEN_STAGES = ['finance', 'approved', 'receiving'];
+
     public function payables(Request $request)
     {
-        $q = PurchaseOrder::with(['supplier', 'sourcer', 'lines'])
-            ->whereNotNull('supplier_id')
-            ->whereIn('stage', ['finance', 'approved', 'receiving'])
+        $open = fn ($q) => $q->whereHas('purchaseOrder', fn ($p) => $p->whereIn('stage', self::OPEN_STAGES));
+
+        $q = PoSourcing::with(['purchaseOrder' => fn ($p) => $p->withCount('sourcings'), 'supplier', 'sourcer'])
+            ->tap($open)
             // الأحدث فوق زي كل جداول السيستم.
             // عايز اللي ما اتشافش بس؟ الكارت في مكتب الحسابات بيفتح ?unseen=1
-            ->orderBy('id', 'desc');
+            ->orderByDesc('sourced_at')->orderByDesc('id');
 
         if ($s = $request->get('supplier_id')) $q->where('supplier_id', $s);
-        if ($st = $request->get('stage'))      $q->where('stage', $st);
+        if ($st = $request->get('stage'))      $q->whereHas('purchaseOrder', fn ($p) => $p->where('stage', $st));
         if ($request->get('unseen'))           $q->whereNull('finance_at');
 
         $rows = $q->paginate(30)->withQueryString();
 
-        $base = PurchaseOrder::whereNotNull('supplier_id')
-            ->whereIn('stage', ['finance', 'approved', 'receiving']);
+        $base = PoSourcing::query()->tap($open);
 
         return view('finance.payables', [
             'title'     => 'المستحقات المتوقعة للموردين',
@@ -38,7 +44,7 @@ class FinanceController extends Controller
             'suppliers' => Supplier::orderBy('name')->pluck('name', 'id'),
             'stages'    => PurchaseOrder::STAGES,
             'summary'   => [
-                'priced_today' => PurchaseOrder::whereDate('sourced_at', now()->toDateString())->count(),
+                'priced_today' => PoSourcing::whereDate('sourced_at', now()->toDateString())->count(),
                 'total'        => (float) (clone $base)->sum('total'),
                 'due_30'       => (float) (clone $base)
                                     ->whereNotNull('delivery_date')
@@ -49,6 +55,7 @@ class FinanceController extends Controller
                 ->selectRaw('supplier_id, COUNT(*) orders, SUM(total) total')
                 ->groupBy('supplier_id')
                 ->with('supplier')
+                ->orderByDesc('total')
                 ->get(),
         ]);
     }

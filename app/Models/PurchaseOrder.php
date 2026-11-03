@@ -124,6 +124,23 @@ class PurchaseOrder extends Model
     /** التسكينات: الطلب ممكن يتسعّر على أكتر من مورد وأكتر من مرة (الميتينج 37) */
     public function sourcings() { return $this->hasMany(PoSourcing::class)->orderBy('seq'); }
 
+    /**
+     * علم الحسابات على مستوى الطلب = اتعلم بكل أوامره (تسكيناته).
+     * أمر جديد اتسكّن بعد العلم ⇒ الطلب يرجع «ما اتشافش» لحد ما الحسابات تعلم بالأمر الجديد.
+     */
+    public function syncFinanceAck(): void
+    {
+        $src = $this->sourcings()->get();
+        if ($src->isEmpty()) return;
+        $last = $src->sortByDesc('finance_at')->first();
+        $all  = $src->every(fn ($s) => $s->finance_at);
+        $this->forceFill([
+            'finance_at'   => $all ? $last->finance_at : null,
+            'finance_by'   => $all ? $last->finance_by : null,
+            'finance_note' => $all ? $src->pluck('finance_note')->filter()->implode(' · ') ?: null : $this->finance_note,
+        ])->saveQuietly();
+    }
+
     /** لسه فيه كمية ما اتسكّنتش مع مورد؟ */
     public function hasUnsourcedQty(): bool
     {

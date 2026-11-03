@@ -4,21 +4,23 @@
   $sortable=['رقم الإذن'=>'doc_no','المسلسل الورقي'=>'paper_serial','التاريخ'=>'doc_date','الأتواب'=>'total_rolls','الكمية'=>'total_qty','الحالة'=>'status'];
   // الطلبات اللي اتسعّرت ومستنية القماش يوصل — زرار «استلم» بيفتح إذن إضافة متملي
   $topTable = [
-    'title' => 'طلبات شراء مستنية الاستلام — دوس «استلم» والإذن يتملى من الطلب',
-    'cols'  => ['رقم الطلب','الحالة','المورد','توريد متوقع','مستلم','الباقي هيوصل',''],
-    'empty' => 'مفيش طلبات مستنية استلام.',
-    'rows'  => ($awaitingPos ?? collect())->map(function ($p) {
-        $eta  = $p->delivery_date;
+    'title' => 'أوامر شراء مستنية الاستلام — دوس «استلم» والإذن يتملى من أمر المورد',
+    'cols'  => ['أمر الشراء','الحالة','المورد','توريد متوقع','مستلم','الباقي هيوصل',''],
+    'empty' => 'مفيش أوامر شراء مستنية استلام.',
+    'rows'  => ($awaitingOrders ?? collect())->map(function ($s) {
+        /* $s = أمر شراء لمورد (تسكينة). الطلب اللي من موردين بيظهر صفين — كل مورد بإذنه */
+        $p    = $s->purchaseOrder;
+        $eta  = $s->delivery_date;
         $late = $eta && $eta->isPast();
-        $tot  = (float) $p->lines->sum('qty');
-        $rec  = (float) $p->lines->sum('received_qty');
+        $tot  = (float) $s->lines->sum('qty');
+        $rec  = (float) $s->lines->sum('received_qty');
         $pct  = $tot > 0 ? (int) round($rec / $tot * 100) : 0;
-        $badge = $p->stage === 'receiving'
+        $badge = $rec > 0
             ? '<span class="badge bg-info">جزئي — استلم '.$pct.'%</span>'
             : '<span class="badge bg-secondary">لسه موصلش</span>';
-        return '<td class="num fw-bold">'.e($p->po_no).'</td>'
+        return '<td class="num fw-bold">'.e($s->label).'</td>'
              . '<td>'.$badge.'</td>'
-             . '<td>'.e($p->supplier?->name ?? '—').'</td>'
+             . '<td>'.e($s->supplier?->name ?? '—').'</td>'
              . '<td class="num'.($late ? ' text-danger fw-bold' : '').'">'
                  .($eta ? $eta->format('Y-m-d').($late ? ' — متأخر' : '') : '—').'</td>'
              . '<td class="num">'.rtrim(rtrim(number_format($rec,2),'0'),'.').' / '
@@ -28,8 +30,8 @@
                      ? '<span class="text-danger fw-bold">'.$p->remainder_eta->format('Y-m-d').' — فات</span>'
                      : $p->remainder_eta->format('Y-m-d'))
                  : '<span class="hint">مش محدد</span>').'</td>'
-             . '<td><a href="'.route('stock-additions.create', ['purchase_order_id' => $p->id]).'"'
-                 .' class="btn btn-sm btn-plum py-0">'.($p->stage === 'receiving' ? 'استلم الباقي' : 'استلم').'</a></td>';
+             . '<td><a href="'.route('stock-additions.create', ['purchase_order_id' => $p->id, 'po_sourcing_id' => $s->id]).'"'
+                 .' class="btn btn-sm btn-plum py-0">'.($rec > 0 ? 'استلم الباقي' : 'استلم').'</a></td>';
     })->all(),
   ];
   $intro = 'أول مستند في دورة القماش. اعتماده بيولّد <b>الحوض (الرسالة)</b> ويدخّل الكمية المخزن '

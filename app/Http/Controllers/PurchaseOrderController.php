@@ -289,12 +289,15 @@ class PurchaseOrderController extends Controller
                     'unit_price'             => $p['unit_price'],
                     'line_total'             => round($qty * (float) $p['unit_price'], 2),
                 ]);
-                // على سطر الطلب: المسكّن يزيد، وآخر سعر يتسجل للعرض، وإجمالي السطر = مجموع تسكيناته
+                // على سطر الطلب: المسكّن يزيد، وإجمالي السطر = مجموع تسكيناته،
+                // والسعر = متوسط مرجّح (إجمالي ÷ كمية) — مش آخر سعر كأنه على الكمية كلها
                 $line->refresh();
+                $srcTotal = (float) $line->sourcingLines()->sum('line_total');
+                $srcQty   = (float) $line->sourcingLines()->sum('qty');
                 $line->update([
                     'sourced_qty' => (float) $line->sourced_qty + $qty,
-                    'unit_price'  => $p['unit_price'],
-                    'line_total'  => (float) $line->sourcingLines()->sum('line_total'),
+                    'unit_price'  => $srcQty > 0 ? round($srcTotal / $srcQty, 2) : $p['unit_price'],
+                    'line_total'  => $srcTotal,
                 ]);
             }
             $sourcing->recalcTotals();
@@ -315,6 +318,8 @@ class PurchaseOrderController extends Controller
             ]);
 
             $purchase_order->refresh()->recalcTotals();
+            // أمر شراء جديد لسه ما اتشافش ⇒ الطلب يرجع في قايمة الحسابات لحد ما تعلم بيه
+            $purchase_order->syncFinanceAck();
             return $sourcing;
         });
 
@@ -358,12 +363,55 @@ class PurchaseOrderController extends Controller
             return redirect()->route('purchase-orders.edit', $purchase_order);
         }
 
-        $purchase_order->load(['lines.color', 'lines.fabricType', 'supplier', 'warehouse', 'requester', 'sourcer']);
+        // العلم بقى بأمر الشراء (التسكينة): نفتح أول أمر لسه ما اتشافش، وإلا آخر أمر
+        $next = $purchase_order->sourcings()->whereNull('finance_at')->first()
+             ?? $purchase_order->sourcings()->get()->last();
+        if ($next) {
+            return redirect()->route('finance.supplier-order', $next);
+        }
+
+        return redirect()->route('purchase-orders.edit', $purchase_order);
+    }
+
+    /** علم الحسابات بأمر شراء واحد — مورده وسطوره بأسعاره وإجماليه */
+    public function supplierOrderFinance(\App\Models\PoSourcing $po_sourcing)
+    {
+        $po_sourcing->load(['lines.poLine.color', 'lines.poLine.fabricType', 'supplier', 'warehouse', 'sourcer', 'financer',
+            'purchaseOrder.requester', 'purchaseOrder.sourcings.supplier', 'purchaseOrder.models']);
 
         return view('po.finance', [
-            'title' => 'علم الحسابات — ' . $purchase_order->po_no,
-            'row'   => $purchase_order,
+            'title' => 'علم الحسابات — ' . $po_sourcing->label,
+            'src'   => $po_sourcing,
+            'row'   => $po_sourcing->purchaseOrder,
         ]);
+    }
+
+    /**
+     * ③ الحسابات: علم بأمر الشراء — مفيش اعتماد ولا توقيف.
+     * طلب اتشرى من موردين = أمرين، كل واحد بعلمه. الطلب نفسه بيتعلّم «اتشاف» لما كل أوامره تتشاف.
+     */
+    public function supplierOrderAck(Request $request, \App\Models\PoSourcing $po_sourcing)
+    {
+        abort_if((bool) $po_sourcing->finance_at, 403, 'الحسابات سجّلت علمها بأمر الشراء ده قبل كده.');
+        $data = $request->validate(['finance_note' => ['nullable', 'string']], [], ['finance_note' => 'ملاحظة الحسابات']);
+
+        $po_sourcing->forceFill([
+            'finance_by'   => auth()->id(),
+            'finance_at'   => now(),
+            'finance_note' => $data['finance_note'] ?? null,
+        ])->save();
+
+        $po = $po_sourcing->purchaseOrder;
+        $po->syncFinanceAck();
+        ActivityLogger::log('acknowledged', $po, 'علم الحسابات بأمر الشراء ' . $po_sourcing->label . ' — ' . ($po_sourcing->supplier?->name ?? ''));
+
+        // فيه أمر تاني على نفس الطلب لسه ما اتشافش؟ نفتحه على طول
+        if ($next = $po->sourcings()->whereNull('finance_at')->first()) {
+            return redirect()->route('finance.supplier-order', $next)
+                ->with('success', 'اتسجّل علمك بـ' . $po_sourcing->label . ' — فاضل ' . $next->label . ' على نفس الطلب.');
+        }
+
+        return redirect()->route('finance.payables')->with(FlowMessage::flash('po.finance_ack', $po));
     }
 
     /**
@@ -378,6 +426,10 @@ class PurchaseOrderController extends Controller
 
         $data = $request->validate(['finance_note' => ['nullable', 'string']], [], ['finance_note' => 'ملاحظة الحسابات']);
 
+        // الراوت القديم (علم بالطلب كله) — بيعلم بكل أوامر الشراء اللي لسه ما اتشافتش
+        $purchase_order->sourcings()->whereNull('finance_at')->update([
+            'finance_by' => auth()->id(), 'finance_at' => now(), 'finance_note' => $data['finance_note'] ?? null,
+        ]);
         $purchase_order->forceFill([
             // المرحلة ما بتتغيّرش — الطلب أصلًا ماشي. ده تسجيل علم بس.
             'finance_by'   => auth()->id(),
@@ -391,10 +443,19 @@ class PurchaseOrderController extends Controller
         return redirect()->route('finance.payables')->with(FlowMessage::flash('po.finance_ack', $purchase_order));
     }
 
-    public function print(PurchaseOrder $purchase_order)
+    /**
+     * ورقة أمر الشراء. الطلب اتشرى من أكتر من مورد؟ كل مورد ليه ورقته:
+     * ?order=2 بيطبع PO-…/2، ومن غيرها بيطبع أول أمر (والشاشة فيها زرار طباعة لكل أمر).
+     */
+    public function print(Request $request, PurchaseOrder $purchase_order)
     {
-        $purchase_order->load(['lines.color', 'lines.fabricType', 'supplier', 'requester', 'sourcer']);
-        return view('print.purchase_order', ['po' => $purchase_order]);
+        $purchase_order->load(['lines.color', 'lines.fabricType', 'supplier', 'requester', 'sourcer', 'warehouse', 'employee']);
+        $src = $purchase_order->sourcings()
+            ->with(['lines.poLine.color', 'lines.poLine.fabricType', 'supplier', 'warehouse', 'sourcer'])
+            ->when($request->filled('order'), fn ($q) => $q->where('seq', (int) $request->get('order')))
+            ->first();
+
+        return view('print.purchase_order', ['po' => $purchase_order, 'src' => $src]);
     }
 
     public function destroy(PurchaseOrder $purchase_order)

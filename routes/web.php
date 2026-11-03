@@ -110,6 +110,8 @@ Route::middleware('auth.user')->group(function () {
         Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
         Route::get('purchase-orders/{purchase_order}/edit', [PurchaseOrderController::class, 'edit'])->name('purchase-orders.edit');
         Route::get('purchase-orders/{purchase_order}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
+        // تقرير أسعار الشراء — الخامة من مين وبكام
+        Route::get('reports/purchase-prices', [\App\Http\Controllers\PurchasePriceController::class, 'index'])->name('reports.purchase-prices');
     });
 
     Route::middleware('can.do:po.request')->group(function () {
@@ -129,6 +131,9 @@ Route::middleware('auth.user')->group(function () {
     Route::middleware('can.do:po.finance')->group(function () {
         // صفحة العلم — بند الحسابات بس
         Route::get('finance/orders/{purchase_order}', [PurchaseOrderController::class, 'financeForm'])->name('finance.ack');
+        // علم الحسابات بأمر شراء واحد (تسكينة) — طلب من موردين = أمرين
+        Route::get('finance/supplier-orders/{po_sourcing}', [PurchaseOrderController::class, 'supplierOrderFinance'])->name('finance.supplier-order');
+        Route::post('finance/supplier-orders/{po_sourcing}/ack', [PurchaseOrderController::class, 'supplierOrderAck'])->name('finance.supplier-order.ack');
         Route::post('purchase-orders/{purchase_order}/finance-ack', [PurchaseOrderController::class, 'financeAck'])->name('purchase-orders.finance-ack');
         Route::get('finance/payables', [FinanceController::class, 'payables'])->name('finance.payables');
     });

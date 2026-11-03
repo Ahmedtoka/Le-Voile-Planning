@@ -13,6 +13,7 @@ return [
     'purchase-orders.index'      => 'طلبات الشراء',
     'purchasing.queue'           => 'المشتريات',
     'finance.payables'           => 'الحسابات',
+    'reports.purchase-prices'    => 'أسعار الشراء',
     'stock-additions.index'      => 'أذون الإضافة',
     'inspections.index'          => 'تقارير فحص القماش',
     'lab-reports.index'          => 'تقارير المعمل',

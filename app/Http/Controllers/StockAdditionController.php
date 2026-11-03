@@ -42,10 +42,12 @@ class StockAdditionController extends Controller
 
         return view('additions.index', [
             'title'   => 'أذون الإضافة (تحت الفحص)',
-            // approved = لسه موصلش حاجة · receiving = وصل جزء ومستني الباقي
-            'awaitingPos' => PurchaseOrder::with(['supplier', 'lines'])
-                ->whereIn('stage', ['approved', 'receiving'])
-                ->latest('id')->limit(8)->get(),
+            /* أوامر الشراء (تسكينة لكل مورد) اللي لسه عليها باقي — طلب من موردين = صفين،
+               وكل صف بيفتح إذن إضافة على أمره: كل مورد بإذنه */
+            'awaitingOrders' => \App\Models\PoSourcing::with(['supplier', 'lines', 'purchaseOrder'])
+                ->whereHas('purchaseOrder', fn ($q) => $q->whereIn('stage', ['approved', 'receiving']))
+                ->latest('id')->limit(40)->get()
+                ->filter(fn ($s) => $s->outstanding_qty > 0.0005)->take(8)->values(),
             'rows'    => $this->applySort($q, $request, ['doc_no','paper_serial','doc_date','total_qty','total_rolls','status','consignment_no'])->paginate(25)->withQueryString(),
             'filters' => [
                 ['name' => 'status', 'label' => 'كل الحالات', 'options' => ['draft'=>'مسودة','approved'=>'تم','rejected'=>'ملغي']],

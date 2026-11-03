@@ -7,27 +7,28 @@
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   <span>الشاشة دي <b>متابعة — مش بوابة</b>. أول ما المشتريات تسعّر طلب، الترانزاكشن بتنزل هنا
   تلقائيًا: المستحق، المورد، طريقة الدفع، وتاريخ التوريد — والمخزن بيستلم عادي من غير ما يستناك.
-  زرار «سجّل علمك» بيشيل الطلب من قايمة الجديد عندك بس، وما بيوقّفش حاجة.</span>
+  كل صف <b>أمر شراء لمورد</b>: طلب اتشرى من موردين بيظهر صفين (PO-…/1 و PO-…/2) كل واحد بأسعاره وإجماليه.
+  زرار «سجّل علمك» بيشيل الأمر من قايمة الجديد عندك بس، وما بيوقّفش حاجة.</span>
 </div>
 
 @php $cur = config('lvplanning.currency'); @endphp
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-4">
-    @include('partials.kpi', ['value' => number_format((int) $summary['priced_today']), 'label' => 'اتسعّرت النهارده', 'tone' => 'ok',
-      'note' => 'طلبات خلّصت تسعير النهارده ونزلت هنا للمتابعة.'])
+    @include('partials.kpi', ['value' => number_format((int) $summary['priced_today']), 'label' => 'اتسكّنت النهارده', 'tone' => 'ok',
+      'note' => 'أوامر شراء اتعملت مع موردين النهارده ونزلت هنا للمتابعة.'])
   </div>
   <div class="col-6 col-md-4">
     @include('partials.kpi', ['value' => number_format($summary['total'], 0), 'label' => 'إجمالي المستحق المتوقع', 'tone' => 'brand',
       'sub' => $cur,
-      'note' => 'مجموع إجمالي الطلبات اللي اتسعّرت ولسه ما اتقفلتش (عند الحسابات، معتمدة، أو بتتستلم).',
-      'fx'  => 'مجموع «الإجمالي» لكل طلب ليه مورد ومرحلته: الحسابات / معتمد / بيتستلم = ' . number_format($summary['total'], 2) . ' ' . $cur,
-      'why' => 'إجمالي كل طلب = مجموع البنود − الخصم + الضريبة'])
+      'note' => 'مجموع أوامر الشراء على الطلبات اللي لسه ما اتقفلتش (عند الحسابات، معتمدة، أو بتتستلم).',
+      'fx'  => 'مجموع «الإجمالي» لكل أمر شراء (تسكينة) على طلب مرحلته: الحسابات / معتمد / بيتستلم = ' . number_format($summary['total'], 2) . ' ' . $cur,
+      'why' => 'إجمالي كل أمر = سطوره بأسعار مورده − خصمه + ضريبته'])
   </div>
   <div class="col-6 col-md-4">
     @include('partials.kpi', ['value' => number_format($summary['due_30'], 0), 'label' => 'توريد خلال 30 يوم', 'tone' => 'warn',
       'sub' => $cur,
       'note' => 'منها اللي تاريخ توريدها من النهارده لحد ' . now()->addDays(30)->format('Y-m-d') . '.',
-      'fx'  => 'مجموع «الإجمالي» للطلبات اللي تاريخ توريدها ≤ ' . now()->addDays(30)->format('Y-m-d') . ' = ' . number_format($summary['due_30'], 2) . ' ' . $cur])
+      'fx'  => 'مجموع «الإجمالي» لأوامر الشراء اللي تاريخ توريدها ≤ ' . now()->addDays(30)->format('Y-m-d') . ' = ' . number_format($summary['due_30'], 2) . ' ' . $cur])
   </div>
 </div>
 
@@ -63,21 +64,25 @@
 
       <div class="table-responsive">
         <table class="table table-sm doc-table">
-          <thead><tr><th>رقم الطلب</th><th>المورد</th><th>تاريخ التوريد</th><th>الإجمالي ({{ $cur }})</th>
+          <thead><tr><th>أمر الشراء</th><th>المورد</th><th>تاريخ التوريد</th><th>الإجمالي ({{ $cur }})</th>
             <th>طريقة الدفع</th><th>المرحلة</th><th>علم الحسابات</th>
             <th style="width:60px"><span class="visually-hidden">إجراءات</span></th></tr></thead>
           <tbody>
           @forelse($rows as $r)
             @php
-              /* ⓘ المستحق المتوقع = إجمالي الطلب = مجموع البنود − الخصم + الضريبة */
-              $fxTotal = ['مجموع البنود = ' . number_format((float) $r->subtotal, 2)];
-              if ((float) $r->discount_value > 0) $fxTotal[] = '− خصم ' . lv_num($r->discount_pct, 2) . '% = ' . number_format((float) $r->discount_value, 2);
-              if ((float) $r->tax_value > 0)      $fxTotal[] = '+ ضريبة ' . lv_num($r->tax_pct, 2) . '% = ' . number_format((float) $r->tax_value, 2);
+              /* $r = أمر شراء (تسكينة). ⓘ المستحق = سطوره بأسعار مورده − خصمه + ضريبته */
+              $po   = $r->purchaseOrder;
+              $disc = round((float) $r->subtotal * (float) $r->discount_pct / 100, 2);
+              $tax  = round((float) $r->total - (float) $r->subtotal + $disc, 2);
+              $fxTotal = ['مجموع سطور الأمر = ' . number_format((float) $r->subtotal, 2)];
+              if ($disc > 0) $fxTotal[] = '− خصم ' . lv_num($r->discount_pct, 2) . '% = ' . number_format($disc, 2);
+              if ($tax > 0)  $fxTotal[] = '+ ضريبة ' . lv_num($r->tax_pct, 2) . '% = ' . number_format($tax, 2);
               $fxTotal[] = 'المستحق المتوقع = ' . number_format((float) $r->total, 2) . ' ' . $cur;
               $dueSoon = $r->delivery_date && !$r->delivery_date->isPast() && $r->delivery_date->lte(now()->addDays(30));
             @endphp
             <tr class="{{ !$r->finance_at ? 'table-warning' : '' }}">
-              <td class="num fw-bold"><a href="{{ route('purchase-orders.edit',$r) }}">{{ $r->po_no }}</a></td>
+              <td class="num fw-bold"><a href="{{ route('finance.supplier-order', $r) }}">{{ $r->label }}</a>
+                @if($po && $po->sourcings_count > 1)<div class="hint">من الطلب <a href="{{ route('purchase-orders.edit', $po) }}">{{ $po->po_no }}</a></div>@endif</td>
               <td>{{ $r->supplier?->name }}</td>
               <td class="num">{{ $r->delivery_date?->format('Y-m-d') ?? '—' }}
                 @if($dueSoon)<div class="hint">خلال {{ (int) now()->diffInDays($r->delivery_date, true) }} يوم</div>@endif</td>
@@ -86,26 +91,28 @@
                 @include('partials.fx', ['t' => 'المستحق المتوقع', 'f' => $fxTotal, 'why' => 'بيتحسب تلقائي من أسعار المشتريات — ده المتوقع مش الفاتورة النهائية'])
               </td>
               <td class="hint">{{ $r->payment_method ?: '—' }}</td>
-              <td><span class="badge bg-{{ $r->stage_color }}">{{ $r->stage_name }}</span></td>
+              <td>@if($po)<span class="badge bg-{{ $po->stage_color }}">{{ $po->stage_name }}</span>@endif</td>
               <td>
                 @if($r->finance_at)
                   <span class="badge bg-success">اتشاف <span class="num">{{ $r->finance_at->format('Y-m-d') }}</span></span>
                 @else
-                  <a href="{{ route('finance.ack',$r) }}" class="btn btn-sm btn-plum"
-                     title="يشيل الطلب من قايمة الجديد عندك — ما بيوقّفش حاجة" aria-label="سجّل علمك بالطلب {{ $r->po_no }}">
+                  <a href="{{ route('finance.supplier-order', $r) }}" class="btn btn-sm btn-plum"
+                     title="يشيل أمر الشراء من قايمة الجديد عندك — ما بيوقّفش حاجة" aria-label="سجّل علمك بأمر الشراء {{ $r->label }}">
                     <i class="bi bi-check2" aria-hidden="true"></i> سجّل علمك</a>
                 @endif
               </td>
               <td class="text-nowrap text-end"><div class="row-actions">
-                <a href="{{ route('purchase-orders.edit',$r) }}" class="btn btn-sm btn-outline-plum btn-icon"
-                   title="فتح الطلب" aria-label="فتح الطلب {{ $r->po_no }}"><i class="bi bi-box-arrow-up-left" aria-hidden="true"></i></a>
+                <a href="{{ route('purchase-orders.print', [$po, 'order' => $r->seq]) }}" target="_blank" class="btn btn-sm btn-outline-secondary btn-icon"
+                   title="طباعة أمر الشراء" aria-label="طباعة أمر الشراء {{ $r->label }}"><i class="bi bi-printer" aria-hidden="true"></i></a>
+                <a href="{{ route('purchase-orders.edit',$po) }}" class="btn btn-sm btn-outline-plum btn-icon"
+                   title="فتح الطلب" aria-label="فتح الطلب {{ $po?->po_no }}"><i class="bi bi-box-arrow-up-left" aria-hidden="true"></i></a>
               </div></td>
             </tr>
           @empty
             <tr><td colspan="8">
               <div class="empty-state">
                 <i class="bi bi-inbox ico" aria-hidden="true"></i>
-                <div class="t">{{ $hasFilters ? 'مفيش مستحقات مطابقة للفلاتر.' : 'مفيش مستحقات متوقعة.' }}</div>
+                <div class="t">{{ $hasFilters ? 'مفيش أوامر شراء مطابقة للفلاتر.' : 'مفيش مستحقات متوقعة.' }}</div>
                 @if($hasFilters)
                   <div class="hint mb-2">جرّب تشيل الفلاتر.</div>
                   <a href="{{ url()->current() }}" class="btn btn-sm btn-outline-plum mt-1">امسح الفلاتر واعرض الكل</a>
@@ -132,13 +139,13 @@
       <div class="card-header"><span>حسب المورد <span class="pill pill-muted num">{{ $bySupplier->count() }}</span></span></div>
       <div class="table-responsive">
         <table class="table table-sm no-min mb-0">
-          <thead><tr><th>المورد</th><th>طلبات</th><th>الإجمالي ({{ $cur }})</th></tr></thead>
+          <thead><tr><th>المورد</th><th>أوامر</th><th>الإجمالي ({{ $cur }})</th></tr></thead>
           <tbody>
           @forelse($bySupplier as $s)
             <tr>
               <td>
                 @if($s->supplier)
-                  <a href="{{ route('finance.payables', ['supplier_id' => $s->supplier_id]) }}" title="اعرض طلبات المورد ده">{{ $s->supplier->name }}</a>
+                  <a href="{{ route('finance.payables', ['supplier_id' => $s->supplier_id]) }}" title="اعرض أوامر المورد ده">{{ $s->supplier->name }}</a>
                 @else — @endif
               </td>
               <td class="num">{{ $s->orders }}</td>

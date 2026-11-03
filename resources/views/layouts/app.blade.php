@@ -926,6 +926,8 @@ details[open]>summary::before{transform:rotate(-90deg)}
        'المشتريات: المورد والسعر وتاريخ التوريد — بعدها الطلب جاهز للاستلام', 2],
       ['finance.payables', 'الحسابات', 'bi-cash-coin', 'po.finance',
        'الحسابات: المستحق المتوقع لكل مورد — متابعة مش بوابة', 3],
+      ['reports.purchase-prices', 'أسعار الشراء', 'bi-tags', 'po.view|po.source|po.finance',
+       'كل خامة اتشرت من مين وبكام — الأرخص متعلّم'],
     ], '①'],
 
     ['fabric', 'وصول القماش', 'bi-box-arrow-in-down', [

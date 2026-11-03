@@ -43,8 +43,17 @@
 
 <div class="doc-actions">
   <span class="da-label">إجراءات</span>
-  <a href="{{ route('purchase-orders.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
-    <i class="bi bi-printer" aria-hidden="true"></i> اطبع</a>
+  @if($row->sourcings->count() > 1)
+    {{-- كل مورد ليه ورقة أمر شراء لوحده --}}
+    @foreach($row->sourcings as $s)
+      <a href="{{ route('purchase-orders.print', [$row, 'order' => $s->seq]) }}" target="_blank" class="btn btn-sm btn-outline-secondary"
+         title="ورقة أمر الشراء للمورد {{ $s->supplier?->name }}">
+        <i class="bi bi-printer" aria-hidden="true"></i> اطبع {{ $s->label }} — {{ $s->supplier?->name }}</a>
+    @endforeach
+  @else
+    <a href="{{ route('purchase-orders.print',$row) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-printer" aria-hidden="true"></i> اطبع</a>
+  @endif
   <div class="da-end">
     <a href="{{ route('purchase-orders.index') }}" class="btn btn-sm btn-outline-secondary">
       <i class="bi bi-arrow-right" aria-hidden="true"></i> رجوع للطلبات</a>
@@ -71,10 +80,29 @@
               <td>{{ $l->unit }}</td>
               <td class="num">{{ lv_num($l->tolerance_pct, 2) }}%
                 @include('partials.fx', ['t' => 'أقصى كمية مسموح استلامها', 'f' => lv_num($l->qty, 3) . ' × (1 + ' . lv_num($l->tolerance_pct, 2) . '%) = ' . lv_num($l->max_allowed_qty, 3) . ' ' . $l->unit, 'why' => 'الزيادة بتسمح بالأكتر بس — الأقل بيفضل باقي مفتوح'])</td>
-              <td class="num">{{ $l->unit_price > 0 ? number_format((float)$l->unit_price,2) : '—' }}</td>
+              @php
+                /* السطر اتسكّن على أكتر من مورد بأسعار مختلفة؟ السعر = متوسط مرجّح (إجمالي ÷ كمية)
+                   وكل مورد بكميته وسعره في ⓘ — مش آخر سعر كأنه على الكمية كلها */
+                $sls   = $row->sourcings->flatMap->lines->where('purchase_order_line_id', $l->id);
+                $slQty = (float) $sls->sum('qty');
+                $multi = $sls->pluck('unit_price')->map(fn ($p) => (float) $p)->unique()->count() > 1;
+                $price = $slQty > 0 ? (float) $sls->sum('line_total') / $slQty : (float) $l->unit_price;
+                $split = $sls->map(fn ($sl) => ($row->sourcings->firstWhere('id', $sl->po_sourcing_id)?->supplier?->name ?? '—')
+                    . ': ' . lv_num($sl->qty, 3) . ' ' . $sl->unit . ' × ' . number_format((float) $sl->unit_price, 2)
+                    . ' = ' . number_format((float) $sl->line_total, 2))->values()->all();
+              @endphp
+              <td class="num">{{ $price > 0 ? number_format($price, 2) : '—' }}
+                @if($multi)
+                  <div class="hint">متوسط — {{ $sls->count() }} موردين</div>
+                  @include('partials.fx', ['t' => 'متوسط سعر الوحدة', 'f' => array_merge($split, ['المتوسط = ' . number_format((float) $sls->sum('line_total'), 2) . ' ÷ ' . lv_num($slQty, 3) . ' = ' . number_format($price, 2) . ' ' . $cur]),
+                    'why' => 'كل مورد بسعره — التفاصيل في أوامر الشراء'])
+                @endif
+              </td>
               <td class="num">{{ $l->line_total > 0 ? number_format((float)$l->line_total,2) : '—' }}
                 @if($l->line_total > 0)
-                  @include('partials.fx', ['t' => 'إجمالي السطر', 'f' => 'الكمية ' . lv_num($l->qty, 3) . ' ' . $l->unit . ' × سعر الوحدة ' . number_format((float)$l->unit_price, 2) . ' = ' . number_format((float)$l->line_total, 2) . ' ' . $cur])
+                  @include('partials.fx', ['t' => 'إجمالي السطر', 'f' => $sls->count()
+                      ? array_merge($split, ['الإجمالي = ' . number_format((float) $l->line_total, 2) . ' ' . $cur])
+                      : 'الكمية ' . lv_num($l->qty, 3) . ' ' . $l->unit . ' × سعر الوحدة ' . number_format((float)$l->unit_price, 2) . ' = ' . number_format((float)$l->line_total, 2) . ' ' . $cur])
                 @endif
               </td>
               <td class="num">{{ $l->received_qty > 0 ? lv_num($l->received_qty, 3) : '—' }}</td>
@@ -115,19 +143,21 @@
   <div class="col-lg-5">
     @if($row->sourcings->count())
       <div class="card mb-3">
-        <div class="card-header"><span>التسكينات <span class="pill pill-muted num">{{ $row->sourcings->count() }}</span>
-          <span class="hint">— كل مورد بكميته وسعره وتاريخه</span></span>
+        <div class="card-header"><span>أوامر الشراء <span class="pill pill-muted num">{{ $row->sourcings->count() }}</span>
+          <span class="hint">— كل مورد بأمره: كميته وسعره وتاريخه</span></span>
           @if($row->purchasingEditable() && $u->can2('po.source'))
             <a href="{{ route('purchasing.source', $row) }}" class="btn btn-sm btn-plum ms-auto">سكّن الباقي</a>
           @endif
         </div>
         <div class="table-responsive">
           <table class="table table-sm mb-0">
-            <thead><tr><th>#</th><th>المورد</th><th>توريد</th><th>الأصناف</th><th>الإجمالي ({{ $cur }})</th></tr></thead>
+            <thead><tr><th>أمر الشراء</th><th>المورد</th><th>توريد</th><th>الأصناف</th><th>الإجمالي ({{ $cur }})</th>
+              <th style="width:44px"><span class="visually-hidden">طباعة</span></th></tr></thead>
             <tbody>
             @foreach($row->sourcings as $s)
               <tr>
-                <td class="num">{{ $s->seq }}</td>
+                <td class="num fw-bold">{{ $s->label }}
+                  <div>@if($s->finance_at)<span class="pill pill-ok">الحسابات علمت</span>@else<span class="pill pill-warn">عند الحسابات</span>@endif</div></td>
                 <td>{{ $s->supplier?->name }}<div class="hint">{{ $s->payment_method }}</div></td>
                 <td class="num">{{ $s->delivery_date?->format('Y-m-d') }}</td>
                 <td class="hint">
@@ -137,6 +167,8 @@
                   @endforeach
                 </td>
                 <td class="num fw-bold">{{ number_format((float) $s->total, 2) }}</td>
+                <td><a href="{{ route('purchase-orders.print', [$row, 'order' => $s->seq]) }}" target="_blank" class="btn btn-sm btn-outline-secondary btn-icon"
+                       title="طباعة أمر الشراء {{ $s->label }}" aria-label="طباعة أمر الشراء {{ $s->label }}"><i class="bi bi-printer" aria-hidden="true"></i></a></td>
               </tr>
             @endforeach
             </tbody>

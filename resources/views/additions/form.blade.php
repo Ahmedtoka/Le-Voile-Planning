@@ -37,7 +37,7 @@
       <div class="t"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> <span class="num">{{ $po->po_no }}</span></div>
       <div class="sum-grid">
         <div><div class="k">المورد</div><div class="v">{{ ($sourcing ?? null)?->supplier?->name ?? $po->supplier?->name ?? '—' }}</div>
-          @if(($sourcing ?? null) && $po->sourcings->count() > 1)<div class="k">تسكينة #{{ $sourcing->seq }} من {{ $po->sourcings->count() }}</div>@endif</div>
+          @if($sourcing ?? null)<div class="k">أمر الشراء <span class="num">{{ $sourcing->label }}</span>@if($po->sourcings->count() > 1) — من {{ $po->sourcings->count() }} أوامر@endif</div>@endif</div>
         <div><div class="k">توريد متوقع</div><div class="v num">{{ ($sourcing ?? null)?->delivery_date?->format('Y-m-d') ?? $po->delivery_date?->format('Y-m-d') ?? '—' }}</div></div>
         @if($src)
         <div><div class="k">على التسكينة دي</div><div class="v num">{{ lv_qty($srcOrd, $unitLbl) }}</div>
@@ -100,11 +100,11 @@
         @if(($sourcings ?? collect())->count() > 1 && $mode === 'create')
           <div class="alert alert-info py-2 d-flex flex-wrap align-items-center gap-2">
             <i class="bi bi-diagram-3" aria-hidden="true"></i>
-            <span>الطلب ده متسكّن على أكتر من مورد — الاستلام ده على تسكينة:</span>
-            <select class="form-select form-select-sm w-auto" aria-label="التسكينة"
+            <span>الطلب ده اتشرى من أكتر من مورد — كل مورد بإذنه. الإذن ده على أمر الشراء:</span>
+            <select class="form-select form-select-sm w-auto" aria-label="أمر الشراء"
                     onchange="location='{{ route('stock-additions.create') }}?purchase_order_id={{ $po->id }}&po_sourcing_id='+this.value">
               @foreach($sourcings as $s)
-                <option value="{{ $s->id }}" @selected($sourcing && $sourcing->id === $s->id)>#{{ $s->seq }} — {{ $s->supplier?->name }} · توريد {{ $s->delivery_date?->format('Y-m-d') }} · باقي {{ lv_num($s->outstanding_qty, 3) }}</option>
+                <option value="{{ $s->id }}" @selected($sourcing && $sourcing->id === $s->id)>{{ $s->label }} — {{ $s->supplier?->name }} · توريد {{ $s->delivery_date?->format('Y-m-d') }} · باقي {{ lv_num($s->outstanding_qty, 3) }}</option>
               @endforeach
             </select>
           </div>
