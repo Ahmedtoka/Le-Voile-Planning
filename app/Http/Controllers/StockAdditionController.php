@@ -242,6 +242,15 @@ class StockAdditionController extends Controller
      * مفصولين في ميثود لوحدها لأن «حفظ» بقى هو نفسه «خلّص» —
      * فالحفظ بينده عليهم، ولو وقع الإذن بيفضل مسودة والمستخدم يصلّح.
      */
+    /** سطر التسكينة اللي الصنف ده جاي عليه — بنفس طريقة DocumentEffects وقت الإقفال */
+    private function sourcingLineFor(StockAddition $sa, $line, $poLine): ?\App\Models\PoSourcingLine
+    {
+        if ($line->po_sourcing_line_id) return \App\Models\PoSourcingLine::find($line->po_sourcing_line_id);
+        if (!$sa->po_sourcing_id) return null;
+        return \App\Models\PoSourcingLine::where('po_sourcing_id', $sa->po_sourcing_id)
+            ->where('purchase_order_line_id', $poLine->id)->first();
+    }
+
     private function guard(StockAddition $stock_addition): ?string
     {
         if (!$stock_addition->lines()->count()) {
@@ -304,11 +313,17 @@ class StockAdditionController extends Controller
 
                 // المقارنة مع الطلب على القائم — الكيس والماسورة مش باقي على المورد
                 $incoming = \App\Services\DocumentEffects::toUnit((float) ($line->gross_qty ?: $line->qty), $line->unit, $poLine->unit);
-                $left = max(0, (float) $poLine->min_allowed_qty - (float) $poLine->received_qty - $incoming);
+
+                /* الطلب متسكّن؟ الباقي على المورد ده = تسكينته بس — باقي الطلب على تسكينة تانية
+                   (طالب 2,500 ومسكّن 1,000 على المورد ده ووصل 1,000 ⇒ مفيش باقي عليه) */
+                $srcLine = $this->sourcingLineFor($stock_addition, $line, $poLine);
+                $left = $srcLine
+                    ? max(0, \App\Services\DocumentEffects::toUnit((float) $srcLine->qty - (float) $srcLine->received_qty, $srcLine->unit, $poLine->unit) - $incoming)
+                    : max(0, (float) $poLine->min_allowed_qty - (float) $poLine->received_qty - $incoming);
 
                 if ($left > 0.0001 && !$line->remainder_eta) {
                     $name = trim(($poLine->fabricType?->name ?? '') . ' ' . ($poLine->color?->code ?? ''));
-                    return 'الصنف «' . $name . '» اتستلم جزئي — باقي '
+                    return 'الصنف «' . $name . '» اتستلم جزئي — باقي ' . ($srcLine ? 'على التسكينة ' : '')
                         . rtrim(rtrim(number_format($left, 3), '0'), '.') . ' ' . $poLine->unit
                         . '. حدد على السطر «الباقي هيوصل إمتى؟» قبل الإرسال '
                         . '(لو المورد مش محدد، حط تاريخ تقديري واكتب السبب في الملاحظة).';

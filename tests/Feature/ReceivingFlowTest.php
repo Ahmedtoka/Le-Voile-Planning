@@ -295,4 +295,51 @@ class ReceivingFlowTest extends FlowTestCase
             'qty' => 20.0, 'unit' => 'كجم', 'source_type' => FabricInspection::class, 'source_id' => $insp->id,
         ]);
     }
+
+    /**
+     * طلب متسكّن جزئي: ريب 2,500 وسنجل 5,000 — التسكينة الأولى 1,000 و4,000.
+     * وصل الريب 1,000 كامل (على التسكينة) والسنجل 3,000 ⇒ الإذن يتحفظ من غير «إمتى»
+     * للريب، و«استلم الباقي» يفتح السنجل بس بباقي 1,000.
+     */
+    public function test_partial_sourcing_remaining_is_counted_on_the_sourcing(): void
+    {
+        $po = $this->createPo([
+            ['color_id' => $this->color->id,  'qty' => 2500, 'unit' => 'كجم', 'tolerance_pct' => 5],
+            ['color_id' => $this->color2->id, 'qty' => 5000, 'unit' => 'كجم', 'tolerance_pct' => 5],
+        ]);
+        [$rib, $single] = [$po->lines[0], $po->lines[1]];
+
+        $this->as('ahmed')->post(route('purchase-orders.sourcing', $po), [
+            'supplier_id'    => $this->supplier->id,
+            'warehouse_id'   => $this->warehouse->id,
+            'delivery_date'  => now()->addDays(10)->toDateString(),
+            'payment_method' => 'نقدي',
+            'prices'         => [
+                ['id' => $rib->id,    'qty' => 1000, 'unit_price' => 100, 'unit' => 'كيلو'],
+                ['id' => $single->id, 'qty' => 4000, 'unit_price' => 100, 'unit' => 'كيلو'],
+            ],
+        ])->assertSessionHasNoErrors();
+        $sourcing = $po->refresh()->sourcings()->with('lines')->firstOrFail();
+
+        // الريب كامل على التسكينة (من غير «إمتى») والسنجل جزئي (بـ«إمتى»)
+        $this->postAddition($po, [
+            ['po_line' => $rib,    'qty' => 1000, 'rolls' => 20],
+            ['po_line' => $single, 'qty' => 3000, 'rolls' => 10, 'eta' => now()->addDays(8)->toDateString()],
+        ], ['po_sourcing_id' => $sourcing->id])->assertSessionHasNoErrors();
+
+        $sa = StockAddition::latest('id')->firstOrFail();
+        $this->assertSame('approved', $sa->status, 'الريب كمّل تسكينته — مفيش باقي عليه يطلب تاريخ');
+
+        $sourcing->load('lines');
+        $this->assertEqualsWithDelta(1000, (float) $sourcing->lines->firstWhere('purchase_order_line_id', $rib->id)->received_qty, 0.001);
+        $this->assertEqualsWithDelta(3000, (float) $sourcing->lines->firstWhere('purchase_order_line_id', $single->id)->received_qty, 0.001);
+
+        // «استلم الباقي»: السنجل بس، والباقي عليه 1,000 من التسكينة
+        $preset = $this->as('hazem')->get(route('stock-additions.create', ['purchase_order_id' => $po->id]))
+            ->assertOk()->viewData('preset');
+        $this->assertCount(1, $preset, 'الريب خلّص تسكينته — مايظهرش تاني');
+        $this->assertSame($single->id, $preset[0]['po_line_id']);
+        $this->assertEqualsWithDelta(4000, $preset[0]['src_qty'], 0.001);
+        $this->assertEqualsWithDelta(3000, $preset[0]['src_received'], 0.001);
+    }
 }
