@@ -72,6 +72,16 @@ return Application::configure(basePath: dirname(__DIR__))
             if (!config('app.debug') || function_exists('highlight_file')) {
                 return null;   // كمّل بالسلوك الطبيعي
             }
+            /* أخطاء HTTP العادية (404، 403، 419) وتحويل الدخول والفاليديشن ليها صفحاتها —
+               مش أعطال، فما تتقلبش 500 بتفاصيل السيرفر */
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
+                || $e instanceof \Illuminate\Session\TokenMismatchException
+                || $e instanceof \Illuminate\Auth\AuthenticationException
+                || $e instanceof \Illuminate\Auth\Access\AuthorizationException
+                || $e instanceof \Illuminate\Validation\ValidationException
+                || $e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                return null;
+            }
 
             if ($request->expectsJson()) {
                 return response()->json([
