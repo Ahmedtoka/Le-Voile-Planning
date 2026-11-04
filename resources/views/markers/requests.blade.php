@@ -40,8 +40,14 @@
             @if($r->consignment?->has_color_break)<i class="bi bi-exclamation-triangle-fill text-danger" title="فواصل / اختلاف لون" aria-label="فواصل / اختلاف لون"></i>@endif</td>
           <td class="num fw-bold">{{ $r->fabric_width_cm }} <span class="hint">/ {{ $r->avg_gsm ?? '—' }}</span></td>
           <td class="hint" style="white-space:normal">
-            @forelse($r->models as $m)<div class="text-nowrap">{{ $m->label }}</div>@empty {{ Str::limit($r->models_label, 70) }} @endforelse
-            @if($r->sizes_note)<div>{{ $r->sizes_note }}</div>@endif
+            @if($r->lines->isNotEmpty())
+              @foreach($r->lines->groupBy('product_model_id') as $ls)
+                <div class="text-nowrap">{{ $ls->first()->productModel?->label }} — <b>{{ $ls->map(fn ($l) => $l->size?->name)->filter()->implode('، ') }}</b></div>
+              @endforeach
+            @else
+              @forelse($r->models as $m)<div class="text-nowrap">{{ $m->label }}</div>@empty {{ Str::limit($r->models_label, 70) }} @endforelse
+              @if($r->sizes_note)<div>{{ $r->sizes_note }}</div>@endif
+            @endif
             @if($r->suggestedMarker)<div class="text-success">اتقفل على ماركر قديم {{ $r->suggestedMarker->code }}</div>@endif
             {{-- الكمية اللي المخزن أكّدها — الباترونيست يعرف الماركر هيتقص على كام --}}
             @if($pq = $r->preparationRequest)

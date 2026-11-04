@@ -24,6 +24,7 @@ class MarkerRequest extends Model
     public function models()      { return $this->belongsToMany(ProductModel::class, 'marker_request_models'); }
     public function suggestedMarker()    { return $this->belongsTo(Marker::class, 'suggested_marker_id'); }
     public function preparationRequest() { return $this->belongsTo(PreparationRequest::class); }
+    public function lines()              { return $this->hasMany(MarkerRequestLine::class)->orderBy('id'); }   // موديل + مقاس
 
     public function getModelsLabelAttribute(): string
     {

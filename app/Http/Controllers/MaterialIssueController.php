@@ -28,6 +28,9 @@ class MaterialIssueController extends Controller
 {
     use FiltersIndex;
 
+    /** أوامر الشغل اللي ينفع يتصرف عليها: معتمدة ولسه ما اتقفلتش */
+    private const OPEN_WO = ['approved', 'sent_to_factory', 'cutting', 'in_production', 'partially_received'];
+
     public function index(Request $request)
     {
         $q = MaterialIssue::with(['factory', 'warehouse']);
@@ -127,6 +130,7 @@ class MaterialIssueController extends Controller
             'row'    => $material_issue,
             'mode'   => 'edit',
             'preset' => $material_issue->lines->toArray(),
+            'keep'   => $material_issue->lines->pluck('work_order_fabric_id')->filter()->map(fn ($v) => (int) $v)->all(),
         ]));
     }
 
@@ -154,10 +158,32 @@ class MaterialIssueController extends Controller
             return back()->withErrors(['msg' => 'مينفعش ترسل إذن صرف فاضي.']);
         }
 
-        /* مينفعش تصرف أكتر من المتاح.
-           المتاح = المفرج عنه − اللي اتصرف قبل كده على إذون معتمدة تانية. */
         $over = [];
         $idx  = $material_issue->lines->values()->pluck('id')->flip();   // id السطر ⇒ رقمه في الشاشة
+
+        /* الصرف على خامة أمر الشغل: اللي فاضل على الخامة (المخطط − المنصرف قبل كده) + الحر في الرسالة
+           (اللي مش متخصص لأوامر تانية ولا محجوز لطلبات تحضير). الزيادة عن كده بتاكل من شغل حد تاني. */
+        foreach ($material_issue->lines->groupBy('work_order_fabric_id') as $fid => $lines) {
+            $wf = \App\Models\WorkOrderFabric::with('workOrder', 'consignment')->find($fid);
+            if (!$wf || !$wf->consignment) continue;
+            if (!in_array($wf->workOrder?->status, self::OPEN_WO, true)) {
+                $over['lines.' . $idx[$lines->first()->id] . '.work_order_fabric_id'] = 'أمر الشغل ' . $wf->workOrder?->wo_no . ' مبقاش مفتوح — مينفعش يتصرف عليه.';
+                continue;
+            }
+            $c     = $wf->consignment;
+            $own   = max(0, (float) $wf->planned_qty - (float) $wf->issued_qty);
+            $free  = max(0, (float) $c->remaining_kg);
+            $qty   = (float) $lines->sum('qty');
+            if ($qty > $own + $free + 0.001) {
+                $l0 = $lines->first();
+                $over['lines.' . $idx[$l0->id] . '.' . ((float) $l0->gross_qty > 0 ? 'gross_qty' : 'qty')] =
+                    'الصافي ' . lv_num($qty) . ' أكبر من المتاح لأمر الشغل ' . $wf->workOrder->wo_no . ': فاضل على الخامة ' . lv_num($own)
+                    . ' + حر في الرسالة ' . $c->consignment_no . ' ' . lv_num($free) . ' = ' . lv_num($own + $free) . ' ' . $c->unit_label
+                    . ' — الباقي متخصص لأوامر تانية أو محجوز لطلبات تحضير.';
+            }
+        }
+
+        /* وكمان مينفعش يخرج من الرسالة أكتر من اللي اتفرج عنه فعلًا */
         foreach ($material_issue->lines->groupBy('consignment_id') as $cid => $lines) {
             $c = $lines->first()->consignment;
             if (!$c) continue;
@@ -170,9 +196,10 @@ class MaterialIssueController extends Controller
             $available = (float) $c->released_kg - $alreadyIssued;
             $qty = (float) $lines->sum('qty');
 
-            if ($qty > $available + 0.001) {
+            $key = 'lines.' . $idx[$lines->first()->id] . '.' . ((float) $lines->first()->gross_qty > 0 ? 'gross_qty' : 'qty');
+            if ($qty > $available + 0.001 && !isset($over[$key])) {
                 $l0 = $lines->first();
-                $over['lines.' . $idx[$l0->id] . '.' . ((float) $l0->gross_qty > 0 ? 'gross_qty' : 'qty')] =
+                $over[$key] =
                         'الكمية أكبر من المتاح في الرسالة ' . $c->consignment_no . ': مطلوب ' . number_format($qty, 2)
                         . ' والمتاح ' . number_format(max(0, $available), 2)
                         . ' (المفرج عنه ' . number_format((float) $c->released_kg, 2)
@@ -210,10 +237,15 @@ class MaterialIssueController extends Controller
             'title'      => 'إذن صرف خام',
             'warehouses' => Warehouse::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
             'factories'  => Factory::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
-            'workOrders' => WorkOrder::with(['factory', 'fabrics.consignment', 'fabrics.fabricType', 'fabrics.color'])
-                                ->whereIn('status', ['approved', 'sent_to_factory', 'cutting', 'in_production'])
-                                ->latest('id')->limit(150)->get(),
-            'consignments' => Consignment::with(['color', 'fabricType'])->readyForProduction()->latest('id')->get(),
+            /* السطر = خامة في أمر شغل معتمد ولسه مفتوح — الرسالة والوحدة جايين منها، مش اختيار حر */
+            'openFabrics' => \App\Models\WorkOrderFabric::with(['workOrder.factory', 'consignment', 'fabricType', 'color'])
+                                // سطور الإذن نفسه بتفضل ظاهرة حتى لو أمرها اتقفل بعدين (عرض إذن قديم)
+                                ->where(fn ($q) => $q->whereHas('workOrder', fn ($w) => $w->whereIn('status', self::OPEN_WO))
+                                    ->orWhereIn('id', $extra['keep'] ?? []))
+                                ->orderByDesc('work_order_id')->orderBy('line_no')->get()
+                                ->filter(fn ($f) => (float) $f->planned_qty - (float) $f->issued_qty > 0.0005
+                                    || in_array($f->id, $extra['keep'] ?? [], true))
+                                ->values(),
         ], $extra);
     }
 
@@ -229,34 +261,35 @@ class MaterialIssueController extends Controller
             'notes'         => ['nullable', 'string'],
 
             'lines'                        => ['required', 'array', 'min:1'],
-            'lines.*.work_order_id'        => ['nullable', 'exists:work_orders,id'],
-            'lines.*.work_order_fabric_id' => ['nullable', 'exists:work_order_fabrics,id'],
-            'lines.*.consignment_id'       => ['required', 'exists:consignments,id'],
+            // السطر = خامة في أمر شغل — الأمر والرسالة والوحدة والعرض بيتحددوا منها على السيرفر
+            'lines.*.work_order_fabric_id' => ['required', 'exists:work_order_fabrics,id'],
             'lines.*.item_code'            => ['nullable', 'string', 'max:40'],
-            'lines.*.unit'                 => ['required', 'string', 'max:20'],
-            'lines.*.width_cm'             => ['nullable', 'numeric', 'min:0'],
-            'lines.*.rolls_count'          => ['nullable', 'integer', 'min:0'],
+            'lines.*.rolls_count'          => ['required', 'integer', 'min:1'],
             'lines.*.gross_qty'            => ['nullable', 'numeric', 'min:0'],   // القائم على الميزان (الميتينج 37)
             'lines.*.qty'                  => ['required', 'numeric', 'min:0.001'],
             'lines.*.notes'                => ['nullable', 'string'],
         ], [], [
             'warehouse_id'           => 'المخزن',
             'issued_to'              => 'منصرف إلى',
-            'lines.*.consignment_id' => 'رقم الرسالة',
+            'lines.*.work_order_fabric_id' => 'أمر الشغل والخامة',
+            'lines.*.rolls_count'    => 'عدد الأتواب',
             'lines.*.qty'            => 'الكمية',
         ]);
 
         /* الصافي من القائم بأوزان الرسالة — السيرفر هو اللي بيحسب */
         foreach ($v['lines'] as $k => &$l) {
             // الصرف على أمر شغل معتمد ومفتوح بس
-            if (!empty($l['work_order_id'])) {
-                $wo = WorkOrder::find($l['work_order_id']);
-                if (!$wo || !in_array($wo->status, ['approved', 'sent_to_factory', 'cutting', 'in_production', 'partially_received'], true)) {
-                    throw \Illuminate\Validation\ValidationException::withMessages(["lines.$k.work_order_id" =>
-                        'أمر الشغل ' . ($wo?->wo_no ?? '') . ' حالته «' . ($wo?->status_name ?? '—') . '» — الصرف بيتسجل على أمر معتمد ولسه مفتوح.']);
-                }
+            $wf = \App\Models\WorkOrderFabric::with('workOrder', 'consignment')->find($l['work_order_fabric_id']);
+            $wo = $wf?->workOrder;
+            if (!$wo || !in_array($wo->status, self::OPEN_WO, true)) {
+                throw \Illuminate\Validation\ValidationException::withMessages(["lines.$k.work_order_fabric_id" =>
+                    'أمر الشغل ' . ($wo?->wo_no ?? '') . ' حالته «' . ($wo?->status_name ?? '—') . '» — الصرف بيتسجل على أمر معتمد ولسه مفتوح.']);
             }
-            $c = Consignment::find($l['consignment_id']);
+            $l['work_order_id']  = $wo->id;
+            $l['consignment_id'] = $wf->consignment_id;
+            $l['width_cm']       = $wf->consignment?->min_width_cm;
+            $l['unit']           = $wf->consignment?->is_meter ? 'متر' : 'كجم';
+            $c = $wf->consignment;
             $gross = (float) ($l['gross_qty'] ?? 0);
             if ($c && !$c->is_meter && $gross > 0) {
                 $pack = $c->packagingFor((int) ($l['rolls_count'] ?? 0));

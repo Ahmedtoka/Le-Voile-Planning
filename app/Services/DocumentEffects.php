@@ -753,13 +753,14 @@ class DocumentEffects
                     'created_by'     => auth()->id(),
                 ]);
 
-                $line->consignment?->recalcRemaining();
-
-                // الخامة المنصرفة بتتسجّل على سطر أمر الشغل
+                // الخامة المنصرفة بتتسجّل على سطر أمر الشغل — قبل حساب الرصيد،
+                // عشان الصرف فوق المخطط يتحسب على الأمر مش يفضل باين متاح في الرسالة
                 if ($line->work_order_fabric_id) {
                     \App\Models\WorkOrderFabric::where('id', $line->work_order_fabric_id)
                         ->increment('issued_qty', (float) $line->qty);
                 }
+
+                $line->consignment?->recalcRemaining();
             }
 
             // أوامر الشغل اللي اتصرفلها خامة بتدخل التشغيل

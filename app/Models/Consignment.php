@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\HasDocumentIdentity;
 use App\Support\HasComments;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 /**
  * الحوض / الرسالة — وحدة الشغل الأساسية.
@@ -205,7 +206,8 @@ class Consignment extends Model
            بياخد من أكتر من حوض، وكل حوض بكميته. */
         $open = (float) $this->workOrderFabrics()
             ->whereHas('workOrder', fn ($q) => $q->whereNotIn('status', ['cancelled', 'draft', 'superseded', 'closed']))
-            ->sum('planned_qty');
+            // اتصرف أكتر من المخطط؟ الزيادة خرجت فعلًا — بتتحسب على الأمر مش متاحة للرسالة
+            ->sum(DB::raw('GREATEST(planned_qty, COALESCE(issued_qty, 0))'));
 
         /* الأمر المقفول بيحجز اللي اتصرف فعلًا بس — الباقي من المخطط
            بيرجع متاح للرسالة بدل ما يفضل محجوز على أمر خلص. */

@@ -289,11 +289,10 @@ abstract class FlowTestCase extends TestCase
             'warehouse_id' => $this->warehouse->id,
             'factory_id'   => $this->factory->id,
             'issued_to'    => 'مصنع سيني',
+            // السطر = خامة الأمر — الرسالة والوحدة بيتحددوا منها على السيرفر
             'lines'        => [[
-                'work_order_id'        => $wo->id,
                 'work_order_fabric_id' => $f->id,
-                'consignment_id'       => $f->consignment_id,
-                'unit'                 => 'كجم',
+                'rolls_count'          => 10,
                 'qty'                  => $kg,
             ]],
         ])->assertSessionHasNoErrors();

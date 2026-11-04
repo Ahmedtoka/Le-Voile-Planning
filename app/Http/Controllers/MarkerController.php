@@ -30,7 +30,7 @@ class MarkerController extends Controller
 
     public function requests(Request $request)
     {
-        $q = MarkerRequest::with(['consignment', 'factory', 'patternist', 'marker', 'models', 'suggestedMarker', 'preparationRequest'])->latest('id');
+        $q = MarkerRequest::with(['consignment', 'factory', 'patternist', 'marker', 'models', 'lines.productModel', 'lines.size', 'suggestedMarker', 'preparationRequest'])->latest('id');
         if ($s = $request->get('status')) $q->where('status', $s);
 
         return view('markers.requests', [
@@ -61,6 +61,9 @@ class MarkerController extends Controller
             'consignments' => Consignment::with(['color', 'fabricType'])->readyForProduction()
                                 ->orderBy('arrival_date')->orderBy('id')->get(),
             'models'       => ProductModel::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
+            'modelSizes'   => ProductModel::with(['sizes' => fn ($q) => $q->orderBy('sort_order')])->where('is_active', true)->get()
+                                ->mapWithKeys(fn ($m) => [$m->id => $m->sizes->map(fn ($s) => [$s->id, $s->name])->values()]),
+            'allSizes'     => \App\Models\Size::ordered()->where('is_active', true)->get()->map(fn ($s) => [$s->id, $s->name])->values(),
             'patternists'  => User::whereHas('roles', fn ($q) => $q->where('key', 'patternist'))
                                 ->where('is_active', true)->pluck('name', 'id'),
         ]);
@@ -115,6 +118,10 @@ class MarkerController extends Controller
             'product_model_ids'     => ['required', 'array', 'min:1'],
             'product_model_ids.*'   => ['integer', 'exists:product_models,id'],
             'sizes_note'            => ['nullable', 'string', 'max:191'],
+            // سطر لكل موديل + مقاس — المقاس من دروب داون مقاسات الموديل
+            'lines'                    => ['required', 'array', 'min:1'],
+            'lines.*.product_model_id' => ['required', 'integer', 'exists:product_models,id'],
+            'lines.*.size_id'          => ['required', 'integer', 'exists:sizes,id'],
             'copies'                => ['nullable', 'integer', 'min:0', 'max:50'],
             'assigned_to'           => ['nullable', 'exists:users,id'],
             'needed_by'             => ['nullable', 'date'],
@@ -123,6 +130,8 @@ class MarkerController extends Controller
         ], [], [
             'consignment_id'    => 'الرسالة',
             'product_model_ids' => 'الموديلات المطلوبة',
+            'lines'             => 'المقاسات',
+            'lines.*.size_id'   => 'المقاس',
         ]);
 
         // العرض والبنشر من الجودة — مش من الفورم (labels مقفولة)
@@ -132,11 +141,23 @@ class MarkerController extends Controller
         }
 
         $modelIds = array_values(array_unique(array_map('intval', $data['product_model_ids'])));
-        $names    = ProductModel::whereIn('id', $modelIds)->orderBy('name')->get()->pluck('label')->implode(' + ');
+
+        /* كل موديل مختار لازم يكون له مقاس واحد على الأقل، ومفيش مقاس لموديل مش مختار */
+        $lines = collect($data['lines'])->map(fn ($l) => ['product_model_id' => (int) $l['product_model_id'], 'size_id' => (int) $l['size_id']])
+            ->filter(fn ($l) => in_array($l['product_model_id'], $modelIds, true))
+            ->unique(fn ($l) => $l['product_model_id'] . '-' . $l['size_id'])->values();
+        $missing = array_diff($modelIds, $lines->pluck('product_model_id')->all());
+        if ($missing) {
+            return back()->withInput()->withErrors(['lines' => 'اختار المقاس لـ ' . ProductModel::whereIn('id', $missing)->pluck('name')->implode('، ') . '.']);
+        }
+
+        $sizeNames = \App\Models\Size::whereIn('id', $lines->pluck('size_id'))->pluck('name', 'id');
+        $modelRows = ProductModel::whereIn('id', $modelIds)->orderBy('name')->get();
+        $names     = $modelRows->map(fn ($m) => $m->label . ' (' . $lines->where('product_model_id', $m->id)->map(fn ($l) => $sizeNames[$l['size_id']] ?? '')->implode('، ') . ')')->implode(' + ');
 
         $useMarker = !empty($data['use_marker_id']) ? Marker::find($data['use_marker_id']) : null;
 
-        $req = DB::transaction(function () use ($data, $c, $modelIds, $names, $useMarker) {
+        $req = DB::transaction(function () use ($data, $c, $modelIds, $names, $useMarker, $lines) {
             $req = MarkerRequest::create([
                 'doc_no'                 => DocNumber::next('marker_request', 'marker_requests'),
                 'doc_date'               => $data['doc_date'],
@@ -156,6 +177,7 @@ class MarkerController extends Controller
                 'created_by'             => auth()->id(),
             ]);
             $req->models()->sync($modelIds);
+            foreach ($lines as $l) $req->lines()->create($l);
 
             if ($req->preparation_request_id) {
                 \App\Models\PreparationRequest::where('id', $req->preparation_request_id)->update(['marker_request_id' => $req->id]);
@@ -196,13 +218,17 @@ class MarkerController extends Controller
 
         $preset = [];
         if ($reqId = $request->get('request_id')) {
-            if ($mr = MarkerRequest::with('models')->find($reqId)) {
+            if ($mr = MarkerRequest::with('models', 'lines')->find($reqId)) {
                 $row->marker_request_id = $mr->id;
                 $row->factory_id        = $mr->factory_id;
                 $row->fabric_width_cm   = $mr->fabric_width_cm;
                 $row->name              = $mr->requested_models ? \Illuminate\Support\Str::limit($mr->requested_models, 120, '') : null;
                 // الموديلات المطلوبة تنزل جاهزة — الباترونست يكمّل القطع في الفرشة
-                foreach ($mr->models as $m) $preset[] = ['product_model_id' => $m->id, 'qty_per_spread' => 1];
+                if ($mr->lines->isNotEmpty()) {
+                    foreach ($mr->lines as $l) $preset[] = ['product_model_id' => $l->product_model_id, 'size_id' => $l->size_id, 'qty_per_spread' => 1];
+                } else {
+                    foreach ($mr->models as $m) $preset[] = ['product_model_id' => $m->id, 'qty_per_spread' => 1];
+                }
             }
         }
 

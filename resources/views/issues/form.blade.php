@@ -8,9 +8,9 @@
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   <span>
-    الورقة الواحدة بتصرف لأكتر من أمر شغل وأكتر من خامة. لو اخترت أمر شغل في السطر،
-    السيستم بيربط الصرف بخامة الأمر عشان يعرف اتصرف منها كام والباقي كام.
-    <b>اعتماد الإذن بيخصم فعليًا من رصيد الحوض.</b>
+    كل سطر = <b>خامة في أمر شغل معتمد</b> — الرسالة والوحدة والعرض جايين من الأمر.
+    إنت بتكتب <b>عدد الأتواب والقائم على الميزان</b> بس، والسيستم يخصم الكيس والماسورة ويطلّع الصافي.
+    الورقة الواحدة ممكن تصرف لأكتر من أمر وأكتر من خامة. <b>«اصرف للمصنع» بيخصم فعليًا من رصيد الرسالة.</b>
   </span>
 </div>
 
@@ -73,11 +73,10 @@
     <div class="table-responsive">
       <table class="table table-sm line-table mb-0">
         <thead><tr>
-          <th style="width:35px">م</th><th style="width:190px">أمر الشغل</th><th style="width:110px">الكود</th>
-          <th class="req" style="width:270px">رقم الرسالة</th><th style="width:96px">الوحدة</th>
-          <th style="width:90px">العرض (سم)</th><th style="width:90px">عدد الأتواب</th>
-          <th style="width:120px">القائم على الميزان</th>
-          <th class="req" style="width:110px">الصافي / الكمية</th><th>ملاحظات</th><th style="width:44px"><span class="visually-hidden">حذف</span></th>
+          <th style="width:35px">م</th><th class="req" style="min-width:320px">أمر الشغل والخامة</th><th style="width:110px">الكود</th>
+          <th class="req" style="width:90px">الأتواب</th>
+          <th style="width:130px">القائم على الميزان</th>
+          <th class="req" style="width:140px">الصافي</th><th>ملاحظات</th><th style="width:44px"><span class="visually-hidden">حذف</span></th>
         </tr></thead>
         <tbody id="lines">
           @foreach($lines as $i => $l) @include('issues.line', ['i'=>$i,'l'=>$l]) @endforeach
@@ -88,7 +87,7 @@
     <div class="card-footer bg-white hint">
       <i class="bi bi-info-circle" aria-hidden="true"></i>
       بالكيلو: اكتب اللي طلع على الميزان (قائم) وعدد الأتواب — السيستم يخصم الكيس والماسورة بأوزان الرسالة نفسها ويطلّع <b>الصافي</b>، وده اللي بيتخصم من الرصيد وبيتحسب عليه الاستهلاك.
-      بالمتر: اكتب الأمتار على طول. السيستم بيمنع الإرسال لو الكمية أكبر من المفرج عنه في الحوض.
+      بالمتر: خانة الصافي بتتفتح واكتب الأمتار على طول. السيستم بيمنع الصرف لو الكمية أكبر من اللي فاضل على خامة الأمر + الحر في الرسالة.
     </div>
   </div>
 
@@ -118,35 +117,40 @@
 @push('scripts')
 <script>
 window.LVI = {
+  /* اختيار خامة الأمر ⇒ بياناتها ثابتة جنب السطر، والمصنع ومنصرف إلى من الأمر لو لسه فاضيين */
+  pick(sel) {
+    const tr = sel.closest('tr'), o = sel.selectedOptions[0];
+    const info = tr.querySelector('.i-info'); if (info) info.textContent = o && o.value ? o.dataset.info + (o.dataset.pk ? ' · ' + o.dataset.pk : '') : '';
+    if (o && o.value) {
+      const f = document.querySelector('[name=factory_id]'), to = document.querySelector('[name=issued_to]');
+      if (f && !f.value && o.dataset.factory) f.value = o.dataset.factory;
+      if (to && !to.value && o.dataset.factoryName) to.value = o.dataset.factoryName;
+    }
+    LVI.net(sel);
+  },
   /* الصافي = القائم − (كيس + ماسورة) × الأتواب ÷ 1000 — بأوزان الرسالة المسجلة في إذن الإضافة */
   net(el) {
-    const tr = el.closest('tr'), o = tr.querySelector('.i-cn')?.selectedOptions[0];
+    const tr = el.closest('tr'), o = tr.querySelector('.i-wf')?.selectedOptions[0];
     const gross = Number(tr.querySelector('.i-gross')?.value) || 0, rolls = Number(tr.querySelector('.i-rolls')?.value) || 0;
-    const netIn = tr.querySelector('.i-net'), pk = tr.querySelector('.i-pk'), gIn = tr.querySelector('.i-gross');
+    const netIn = tr.querySelector('.i-net'), pk = tr.querySelector('.i-pk'), gIn = tr.querySelector('.i-gross'), left = tr.querySelector('.i-left');
     if (!o || !o.value) return;
-    const cpk = tr.querySelector('.i-cpk'); if (cpk) cpk.textContent = o.dataset.pk || '';
-    const meter = o.dataset.meter === '1';
+    const meter = o.dataset.meter === '1', unit = o.dataset.unit || '';
     if (gIn) { gIn.disabled = meter; gIn.placeholder = meter ? 'بالمتر — مفيش وزن' : 'على الميزان'; }
-    if (meter) { if (pk) pk.textContent = ''; return; }
-    if (!gross) { if (pk) pk.textContent = ''; return; }
-    const pack = Math.round((Number(o.dataset.bag) + Number(o.dataset.tube)) * rolls) / 1000;
-    const n = Math.max(0, Math.round((gross - pack) * 1000) / 1000);
-    if (netIn) netIn.value = n;
-    if (pk) pk.textContent = pack > 0 ? '− ' + pack + ' كيس وماسورة' : 'الرسالة من غير أوزان كيس/ماسورة';
-  },
-  manual(el) {
-    /* كتب الصافي بإيده؟ القائم بيتشال عشان ما يبقاش في رقمين متناقضين */
-    const tr = el.closest('tr'), g = tr.querySelector('.i-gross');
-    if (g && g.value && Math.abs(Number(g.value) - Number(el.value)) > 0.0005 && document.activeElement === el) { g.value = ''; const pk = tr.querySelector('.i-pk'); if (pk) pk.textContent = 'صافي مكتوب يدوي'; }
-  },
-  onWo(sel) {
-    /* لما تختار أمر شغل، مفيش ربط تلقائي بخامة معينة —
-       السيستم بيربط بالرسالة اللي تختارها في نفس السطر. */
-    const row = sel.closest('tr');
-    const hidden = row.querySelector('input[name$="[work_order_fabric_id]"]');
-    if (hidden && !sel.value) hidden.value = '';
+    if (netIn) { netIn.readOnly = !meter; netIn.tabIndex = meter ? 0 : -1; netIn.placeholder = meter ? 'الأمتار' : 'يتحسب'; }
+    if (!meter) {
+      if (!gross) { if (pk) pk.textContent = ''; }
+      else {
+        const pack = Math.round((Number(o.dataset.bag) + Number(o.dataset.tube)) * rolls) / 1000;
+        if (netIn) netIn.value = Math.max(0, Math.round((gross - pack) * 1000) / 1000);
+        if (pk) pk.textContent = pack > 0 ? '− ' + pack + ' كيس وماسورة' : 'الرسالة من غير أوزان كيس/ماسورة';
+      }
+    }
+    const n = Number(netIn?.value) || 0, l = Number(o.dataset.left) || 0;
+    if (left) left.innerHTML = 'فاضل على الخامة ' + l.toLocaleString('en-US', {maximumFractionDigits: 3}) + ' ' + unit
+      + (n > l + 0.0005 ? ' — <span class="text-warning">زيادة ' + (n - l).toLocaleString('en-US', {maximumFractionDigits: 3}) + '</span>' : '');
   }
 };
+document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('#lines .i-wf').forEach(s => { if (s.value) LVI.pick(s); }));
 </script>
 @endpush
 @endsection

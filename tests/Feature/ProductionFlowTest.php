@@ -252,4 +252,61 @@ class ProductionFlowTest extends FlowTestCase
         $this->assertSame($this->size->id, $page->viewData('products')[0]['size_id']);
         $this->assertEqualsWithDelta(400, $page->viewData('fabrics')[0]['planned_qty'], 0.001);
     }
+
+    /** الصرف على خامة أمر شغل: ما ياكلش من تخصيص أمر تاني ولا حجز طلب تحضير */
+    public function test_issue_cannot_eat_into_other_orders_or_reservations(): void
+    {
+        $wo = $this->approvedWorkOrder();                 // 600 متخصصة للأمر ده
+        $this->readyRequest($this->c, 1200);              // 1200 محجوزة لطلب تحضير تاني ⇒ الحر في الرسالة 40
+
+        // 700 = 600 على الخامة + 100 من الحر (40 بس) ⇒ مرفوض على حقل الكمية
+        $this->issue($wo, 700)->assertSessionHasErrors('lines.0.qty');
+        $this->assertEqualsWithDelta(0, (float) $wo->fabrics()->first()->issued_qty, 0.001);
+
+        // 630 = 600 + 30 من الحر ⇒ مقبول، والزيادة بتتحسب على الأمر (الحر بقى 10)
+        $this->issue($wo, 630)->assertSessionHasNoErrors();
+        $this->assertEqualsWithDelta(630, (float) $wo->fabrics()->first()->issued_qty, 0.001);
+        $this->assertEqualsWithDelta(10, (float) $this->c->refresh()->remaining_kg, 0.001);
+    }
+
+    /** السطر لازم يكون على خامة أمر شغل مفتوح — مفيش صرف على رسالة حرة */
+    public function test_issue_line_requires_an_open_work_order_fabric(): void
+    {
+        $this->as('hazem')->post(route('material-issues.store'), [
+            'doc_date' => now()->toDateString(), 'warehouse_id' => $this->warehouse->id, 'issued_to' => 'مصنع',
+            'lines' => [['consignment_id' => $this->c->id, 'rolls_count' => 3, 'qty' => 50]],
+        ])->assertSessionHasErrors('lines.0.work_order_fabric_id');
+
+        $draft = $this->createWorkOrder($this->c, 300);   // مسودة — لسه ما اتعتمدتش
+        $this->as('hazem')->post(route('material-issues.store'), [
+            'doc_date' => now()->toDateString(), 'warehouse_id' => $this->warehouse->id, 'issued_to' => 'مصنع',
+            'lines' => [['work_order_fabric_id' => $draft->fabrics()->first()->id, 'rolls_count' => 3, 'qty' => 50]],
+        ])->assertSessionHasErrors('lines.0.work_order_fabric_id');
+    }
+
+    /** طلب الماركر: المقاسات من دروب داون (سطر لكل موديل + مقاس) — والماركر بيبدأ بيها */
+    public function test_marker_request_sizes_are_picked_per_model_and_reach_the_marker(): void
+    {
+        $base = [
+            'doc_date' => now()->toDateString(), 'consignment_id' => $this->c->id,
+            'product_model_ids' => [$this->model->id],
+        ];
+
+        // موديل من غير مقاس ⇒ مرفوض
+        $this->as('mostafa')->post(route('markers.requests.store'), $base + ['lines' => []])
+            ->assertSessionHasErrors('lines');
+
+        $this->as('mostafa')->post(route('markers.requests.store'), $base + [
+            'lines' => [['product_model_id' => $this->model->id, 'size_id' => $this->size->id]],
+        ])->assertSessionHasNoErrors();
+
+        $mr = \App\Models\MarkerRequest::latest('id')->firstOrFail();
+        $this->assertSame(1, $mr->lines()->count());
+        $this->assertSame($this->size->id, (int) $mr->lines()->first()->size_id);
+
+        // الباترونيست يفتح الماركر من الطلب ⇒ السطر جاهز بالموديل والمقاس
+        $preset = $this->as('mostafa')->get(route('markers.create', ['request_id' => $mr->id]))->assertOk()->viewData('preset');
+        $this->assertSame($this->model->id, $preset[0]['product_model_id']);
+        $this->assertSame($this->size->id, $preset[0]['size_id']);
+    }
 }

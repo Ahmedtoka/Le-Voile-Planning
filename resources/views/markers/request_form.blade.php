@@ -51,8 +51,17 @@
             @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', $picked ?? []), 'onchange' => 'LVM.suggest()', 'allowNew' => true])
           </div>
         </div>
-        <div class="col-md-6"><label class="form-label">المقاسات / تفاصيل</label>
-          <input name="sizes_note" class="form-control" value="{{ old('sizes_note') }}" placeholder="مثال: مقاس 1 و 2 — نص بادي كات + بادي سابرينا"></div>
+        {{-- المقاسات: سطر لكل موديل + مقاس من دروب داون مقاسات الموديل (مش كلام حر) --}}
+        <div class="col-12">
+          <label class="form-label req">المقاسات لكل موديل <span class="hint">— اختار المقاس من القايمة، ولو الموديل ليه أكتر من مقاس في نفس الفرشة دوس «+ مقاس»</span></label>
+          <div class="table-responsive">
+            <table class="table table-sm line-table mb-0" id="mrSizes">
+              <thead><tr><th>الموديل</th><th style="width:240px">المقاس</th><th style="width:170px"><span class="visually-hidden">إجراءات</span></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="hint" id="mrSizesEmpty">اختار الموديلات فوق وهتظهر هنا عشان تحدد مقاساتها.</div>
+        </div>
         <div class="col-md-3"><label class="form-label">الباترونست</label>
           <select name="assigned_to" class="form-select"><option value="">— كل الباترونستات —</option>
             @foreach($patternists as $k=>$v)<option value="{{ $k }}" @selected(old('assigned_to')==$k)>{{ $v }}</option>@endforeach
@@ -86,6 +95,51 @@
 
 @push('scripts')
 <script>
+/* مقاسات طلب الماركر: صف لكل (موديل + مقاس). الموديل اللي اتشال من فوق صفوفه بتتشال،
+   والجديد بياخد صف بمقاسه الأول. المقاسات من مقاسات الموديل نفسه، ولو ملهوش ⇒ كل المقاسات. */
+window.LVMS = (function () {
+  const MODEL_SIZES = @json($modelSizes ?? []), ALL = @json($allSizes ?? []);
+  const OLD = @json(array_values(old('lines', [])));
+  let n = 0;
+  const body = () => document.querySelector('#mrSizes tbody');
+  const picked = () => [...document.querySelectorAll('#modelsBox .mp-chip')].map(c => ({id: c.dataset.id, label: c.childNodes[0].textContent.trim()}));
+  const sizesOf = id => (MODEL_SIZES[id] && MODEL_SIZES[id].length) ? MODEL_SIZES[id] : ALL;
+  function row(m, sizeId) {
+    const i = n++, tr = document.createElement('tr');
+    tr.dataset.model = m.id;
+    tr.innerHTML = '<td class="fw-bold">' + LVX.esc(m.label) + '<input type="hidden" name="lines[' + i + '][product_model_id]" value="' + m.id + '"></td>'
+      + '<td><select name="lines[' + i + '][size_id]" required aria-label="المقاس — ' + LVX.esc(m.label) + '"><option value="">— المقاس —</option>'
+      + sizesOf(m.id).map(s => '<option value="' + s[0] + '"' + (String(s[0]) === String(sizeId) ? ' selected' : '') + '>' + LVX.esc(s[1]) + '</option>').join('')
+      + '</select></td>'
+      + '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-plum" onclick="LVMS.more(this)" title="مقاس تاني لنفس الموديل"><i class="bi bi-plus-lg" aria-hidden="true"></i> مقاس</button> '
+      + '<button type="button" class="btn btn-sm btn-outline-danger btn-icon" onclick="LVMS.drop(this)" aria-label="شيل المقاس" title="شيل"><i class="bi bi-x" aria-hidden="true"></i></button></td>';
+    return tr;
+  }
+  function sync() {
+    const want = picked(), b = body(); if (!b) return;
+    [...b.querySelectorAll('tr')].forEach(tr => { if (!want.find(w => w.id === tr.dataset.model)) tr.remove(); });
+    want.forEach(m => {
+      if (b.querySelector('tr[data-model="' + m.id + '"]')) return;
+      const olds = OLD.filter(o => String(o.product_model_id) === String(m.id));
+      if (olds.length) olds.forEach(o => b.appendChild(row(m, o.size_id)));
+      else {
+        const only = sizesOf(m.id);
+        b.appendChild(row(m, only.length === 1 ? only[0][0] : null));   // مقاس واحد بس؟ بيتختار لوحده
+      }
+    });
+    document.getElementById('mrSizesEmpty').hidden = !!b.querySelector('tr');
+  }
+  function more(btn) {
+    const tr = btn.closest('tr'), m = {id: tr.dataset.model, label: tr.querySelector('td').childNodes[0].textContent.trim()};
+    tr.after(row(m, null));
+  }
+  function drop(btn) {
+    const tr = btn.closest('tr'), id = tr.dataset.model;
+    if (body().querySelectorAll('tr[data-model="' + id + '"]').length > 1) tr.remove();   // آخر مقاس للموديل بيتشال مع الموديل نفسه من فوق
+  }
+  document.addEventListener('DOMContentLoaded', () => { sync(); new MutationObserver(sync).observe(document.querySelector('#modelsBox .mp-chips'), {childList: true}); });
+  return {sync, more, drop};
+})();
 window.LVM = (function () {
   const sel = document.querySelector('[name=consignment_id]');
   let timer = null;
