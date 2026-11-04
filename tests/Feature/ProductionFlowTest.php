@@ -202,4 +202,54 @@ class ProductionFlowTest extends FlowTestCase
         $this->cut($wo, 10);
         $this->assertSame('closed', $wo->refresh()->status);
     }
+
+    /** أمر الشغل مبني على طلب تحضير اتوزن + ماركر — الأرقام من السيرفر، والحجز ما بيتفكّش وهو مسودة */
+    public function test_work_order_is_built_from_weighed_request_and_marker_only(): void
+    {
+        // طلب لسه ما اتوزنش ⇒ مينفعش يتبني عليه أمر
+        $pr = $this->readyRequest($this->c, 500);
+        $pr->update(['status' => 'open', 'actual_qty' => null]);
+        $this->as('mostafa')->post(route('work-orders.store'), [
+            'wo_date' => now()->toDateString(), 'due_date' => now()->addDays(10)->toDateString(), 'factory_id' => $this->factory->id,
+            'fabrics' => [['preparation_request_id' => $pr->id, 'marker_id' => $pr->markerRequest->marker_id]],
+        ])->assertSessionHasErrors('fabrics.0.preparation_request_id');
+        $pr->update(['status' => 'cancelled']);
+
+        // أرقام مكتوبة باليد في الفورم بتتجاهل — الكمية = الوزن الفعلي، الطول والقطع = الماركر
+        $wo = $this->createWorkOrder($this->c, 600, ['planned_qty' => 9999, 'spread_length_m' => 1, 'pieces_per_spread' => 99]);
+        $f = $wo->fabrics()->firstOrFail();
+        $this->assertEqualsWithDelta(600, (float) $f->planned_qty, 0.001);
+        $this->assertEqualsWithDelta(3.10, (float) $f->spread_length_m, 0.001);
+        $this->assertSame(12, (int) $f->pieces_per_spread);
+        $this->assertNotNull($f->preparation_request_id);
+        $this->assertNotNull($f->marker_id);
+
+        // اسم المنتج من الموديلات — مفيش خانة تتكتب باليد
+        $this->assertSame($this->model->name, $wo->product_title);
+
+        // وهو مسودة: طلب التحضير لسه حاجز الـ 600 (ما اتفكّش)، ومش متخصص للأمر لسه
+        $this->assertSame('weighed', $f->preparationRequest->status);
+        $this->assertEqualsWithDelta(1240, (float) $this->c->refresh()->remaining_kg, 0.001);
+
+        // بعد الاعتماد: الحجز اتحول لتخصيص الأمر — من غير ما يتحسب مرتين
+        $this->submitWorkOrder($wo);
+        $this->assertSame('used', $f->preparationRequest->refresh()->status);
+        $this->assertEqualsWithDelta(1240, (float) $this->c->refresh()->remaining_kg, 0.001);
+        $this->assertEqualsWithDelta(600, (float) $this->c->allocated_kg, 0.001);
+    }
+
+    /** شاشة البداية: الطلب الجاهز بيظهر، واختياره بيملا الأمر والموديلات من الماركر */
+    public function test_create_starts_from_ready_requests_and_prefills_from_marker(): void
+    {
+        $pr = $this->readyRequest($this->c, 400);
+
+        $this->as('mostafa')->get(route('work-orders.create'))->assertOk()
+            ->assertViewIs('workorders.pick')->assertSee($pr->doc_no)->assertSee('افتح أمر شغل');
+
+        $page = $this->as('mostafa')->get(route('work-orders.create', ['preparation_request_id' => $pr->id]))->assertOk()
+            ->assertViewIs('workorders.form');
+        $this->assertSame($this->model->id, $page->viewData('products')[0]['product_model_id']);
+        $this->assertSame($this->size->id, $page->viewData('products')[0]['size_id']);
+        $this->assertEqualsWithDelta(400, $page->viewData('fabrics')[0]['planned_qty'], 0.001);
+    }
 }

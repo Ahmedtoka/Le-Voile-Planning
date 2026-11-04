@@ -54,7 +54,7 @@ class PreparationRequestController extends Controller
 
     public function create(Request $request)
     {
-        $consignments = Consignment::with(['color', 'fabricType'])->readyForProduction()
+        $consignments = Consignment::with(['color', 'fabricType', 'purchaseOrder.models'])->readyForProduction()
             ->orderBy('arrival_date')->orderBy('id')->get();
 
         $pick = $request->get('consignment_id') ? $consignments->firstWhere('id', (int) $request->get('consignment_id')) : null;

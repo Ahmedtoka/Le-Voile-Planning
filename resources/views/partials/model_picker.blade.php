@@ -84,6 +84,8 @@
       fire();
     }
 
+    box.mpAdd = add;   // لشاشات تانية تضيف موديلات (موديلات طلب الشراء في طلب التحضير)
+
     chips.addEventListener('click', function (e) {
       var btn = e.target.closest('.btn-close'); if (!btn) return;
       btn.closest('.mp-chip').remove(); fire();

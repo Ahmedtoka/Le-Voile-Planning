@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('purpose', 'ورقة المصنع: الرسالة + الماركر + الحسبة — الخامة اللي بتدي أقل قطع هي اللي بتحكم الإنتاج')
+@section('purpose', 'ورقة المصنع: طلب التحضير (الوزن الفعلي) + الماركر + الحسبة — إنت بتختار المصنع وتاريخ التسليم بس')
 @section('content')
 @php
   $fabs  = old('fabrics', $fabrics ?: []);
@@ -11,12 +11,10 @@
 <div class="note-box mb-3">
   <i class="bi bi-info-circle" aria-hidden="true"></i>
   <span>
-    المنتج ممكن يتعمل من <b>أكتر من خامة</b> (طرحة تل + بونيه رباط مياي). كل خامة ليها
-    رسالتها وطول فرشتها وعرضها وعدد قطعها في الفرشة، وبتتحسب بطريقة مختلفة:
-    <b>بالوزن</b> (محتاجة عرض وبنشر) أو <b>بالطول</b> (الطول وحده كفاية).
-    <br>
-    <b>الخامة اللي بتدي أقل قطع هي اللي بتحكم الإنتاج</b> — والفرق بينها وبين الباقي
-    هو أهم رقم هنا، لأنه على الورق بيبقى مخفي تمامًا. اضغط ⓘ جنب أي رقم تشوف حسبته.
+    الأمر مبني على <b>طلب التحضير</b> اللي المخزن وزنه و<b>الماركر</b> اللي الباترونيست سلّمه —
+    <b>مفيش أرقام بتتكتب باليد</b>: الكمية = الوزن الفعلي، طول الفرشة والقطع = الماركر، العرض والبنشر = الجودة،
+    والموديلات والمقاسات من سطور الماركر (وتقدر تعدّلها). إنت بتختار <b>المصنع وتاريخ التسليم</b>.
+    المنتج من أكتر من خامة (طرحة تل + بونيه)؟ ضيف «خامة تانية من طلب تحضير» — والخامة اللي بتدي أقل قطع هي اللي بتحكم.
   </span>
 </div>
 
@@ -31,18 +29,18 @@
     </div>
     <div class="card-body">
       <div class="row g-3">
-        <div class="col-md-5"><label class="form-label req">اسم المنتج</label>
-          <input name="product_title" class="form-control"
-                 value="{{ old('product_title',$row->product_title) }}" required
-                 placeholder="مثال: طرحة تل + بونيه رباط مياي (بيج 241)"></div>
-        <div class="col-md-2"><label class="form-label">كود المنتج</label>
-          <input name="product_code" class="form-control" value="{{ old('product_code',$row->product_code) }}" placeholder="P-1014"></div>
-        <div class="col-md-2"><label class="form-label">كود Q.B</label>
-          <input name="qb_code" class="form-control" value="{{ old('qb_code',$row->qb_code) }}" placeholder="O1014"></div>
-        <div class="col-md-3"><label class="form-label req">تشغيل مصنع</label>
-          <select name="factory_id" class="form-select" required><option value="">— اختر المصنع —</option>
+        <div class="col-md-4"><label class="form-label req" for="wo_factory">تشغيل مصنع</label>
+          <select name="factory_id" id="wo_factory" class="form-select" required><option value="">— اختر المصنع —</option>
             @foreach($factories as $k=>$v)<option value="{{ $k }}" @selected(old('factory_id',$row->factory_id)==$k)>{{ $v }}</option>@endforeach
-          </select></div>
+          </select>
+          @if($mode === 'create' && $row->factory_id)<div class="hint">من طلب التحضير — تقدر تغيّره</div>@endif</div>
+        <div class="col-md-2"><label class="form-label" for="wo_pcode">كود المنتج</label>
+          <input name="product_code" id="wo_pcode" class="form-control" value="{{ old('product_code',$row->product_code) }}" placeholder="P-1014"></div>
+        <div class="col-md-2"><label class="form-label" for="wo_qb">كود Q.B</label>
+          <input name="qb_code" id="wo_qb" class="form-control" value="{{ old('qb_code',$row->qb_code) }}" placeholder="O1014"></div>
+        <div class="col-md-4"><label class="form-label">المنتج</label>
+          <div class="form-control-plaintext fw-bold" id="woTitle">{{ $row->product_title ?: '—' }}</div>
+          <div class="hint">بيتكوّن لوحده من الموديلات تحت</div></div>
 
         <div class="col-md-2"><label class="form-label req">التاريخ</label>
           <input type="date" name="wo_date" class="form-control"
@@ -50,8 +48,8 @@
         <div class="col-md-2"><label class="form-label">تاريخ الاستلام</label>
           <input type="date" name="receive_date" class="form-control"
                  value="{{ old('receive_date',$row->receive_date?->format('Y-m-d')) }}"></div>
-        <div class="col-md-2"><label class="form-label">تاريخ التسليم</label>
-          <input type="date" name="due_date" class="form-control"
+        <div class="col-md-2"><label class="form-label req" for="wo_due">تاريخ التسليم</label>
+          <input type="date" name="due_date" id="wo_due" class="form-control" required
                  value="{{ old('due_date',$row->due_date?->format('Y-m-d')) }}"></div>
         <div class="col-md-2"><label class="form-label">نسخ الماركر</label>
           <div class="input-group">
@@ -74,68 +72,51 @@
     </div>
   </div>
 
-  {{-- ② الخامات --}}
+  {{-- ② الخامات: كل خامة = طلب تحضير اتوزن + ماركر معتمد --}}
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
-      <span>الخامات وحسبة كل واحدة</span>
-      <div class="d-flex gap-2 align-items-center flex-wrap">
-        <input class="form-control form-control-sm w-wide" placeholder="فلتر الرسايل: كود / خامة / لون (مثال 0805)"
-               aria-label="فلتر الرسايل" oninput="LVF.filter(this.value)" title="بيفلتر قايمة الرسايل في كل السطور — مرتبة بالأقدم أولًا">
-        <button type="button" class="btn btn-sm btn-outline-plum" onclick="LV.add('fabTpl','fabrics'); LVF.calc()">
-          <i class="bi bi-plus-lg" aria-hidden="true"></i> خامة
-        </button>
-      </div>
+      <span>الخامات <span class="hint">— من طلب التحضير والماركر، كلها ليبلات</span></span>
+      @if(($readyMore ?? collect())->isNotEmpty())
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <select class="form-select form-select-sm w-auto" id="moreFabric" aria-label="خامة تانية من طلب تحضير">
+            <option value="">— خامة تانية من طلب تحضير جاهز —</option>
+            @foreach($readyMore as $r)
+              <option value="{{ $r->id }}">{{ $r->doc_no }} · {{ $r->consignment?->consignment_no }} · {{ $r->consignment?->fabricType?->name }} {{ $r->consignment?->color?->code }} · {{ lv_num($r->qty_for_work_order) }}</option>
+            @endforeach
+          </select>
+          <button type="button" class="btn btn-sm btn-outline-plum" onclick="LVF.addFabric()"><i class="bi bi-plus-lg" aria-hidden="true"></i> ضيف</button>
+        </div>
+      @endif
     </div>
-    <div class="table-responsive wo-fab-wrap">
+    <div class="table-responsive">
       <table class="table table-sm line-table wo-fab mb-0">
-        <colgroup>
-          <col style="width:36px"><col style="width:260px"><col style="width:104px"><col style="width:84px">
-          <col style="width:112px"><col style="width:96px"><col style="width:96px"><col style="width:88px">
-          <col style="width:96px"><col style="width:84px"><col style="width:170px"><col style="width:84px">
-          <col style="width:96px"><col style="width:200px"><col style="width:44px">
-        </colgroup>
         <thead><tr>
-          <th>م</th>
-          <th class="req">رقم الرسالة</th>
-          <th>الحساب</th>
-          <th>الوحدة</th>
-          <th class="req">الكمية</th>
-          <th class="req">طول الفرشة (م)</th>
-          <th>بالأمان (م)</th>
-          <th>العرض (م)
-            <select class="form-select form-select-sm mt-1" id="widthBasis" aria-label="احسب الاستهلاك على أنهي عرض" onchange="LVF.basis(this.value)" style="min-width:150px">
-              <option value="usable">عرض التشغيل (− تأمين)</option>
-              <option value="full">العرض الكامل المقاس</option>
-            </select></th>
-          <th>البنشر (كجم/م²)</th>
-          <th class="req">قطع الفرشة</th>
-          <th>حسبة السيستم</th>
-          <th>الرقات</th>
-          <th>القص المعتمد</th>
-          <th>الماركر</th>
-          <th><span class="visually-hidden">حذف</span></th>
+          <th style="width:36px">م</th>
+          <th>الرسالة وطلب التحضير</th>
+          <th style="width:130px">الوزن الفعلي</th>
+          <th style="width:300px">الماركر</th>
+          <th style="width:110px">طول الفرشة</th>
+          <th style="width:90px">قطع الفرشة</th>
+          <th style="width:170px">عرض الحسبة</th>
+          <th style="width:200px">حسبة السيستم</th>
+          <th style="width:44px"><span class="visually-hidden">شيل</span></th>
         </tr></thead>
         <tbody id="fabrics">
           @foreach($fabs as $i => $l) @include('workorders.fabric_row', ['i'=>$i,'l'=>$l]) @endforeach
-          @if(!count($fabs)) @include('workorders.fabric_row', ['i'=>0,'l'=>[]]) @endif
         </tbody>
       </table>
     </div>
     <div class="card-footer bg-white">
-      <div id="fabSummary" class="hint">دخّل الخامات وشوف الحسبة.</div>
-      <div class="hint mt-1">
-        <b>الرقات والقص المعتمد</b> سيبهم فاضيين والسيستم هيملاهم بحسبته.
-        لو كتبت رقم مختلف، ده اللي هيروح للمصنع والفرق هيفضل ظاهر.
-        <b>طول الأمان</b> = طول الفرشة + {{ rtrim(rtrim(number_format($safetyCm,2),'0'),'.') }} سم تلقائيًا لو سيبته فاضي.
-        الرسايل مرتبة <b>بالأقدم أولًا</b> — القديم يخرج الأول.
-      </div>
+      <div id="fabSummary" class="hint">—</div>
+      <div class="hint mt-1">الرِقّات والقص المعتمد بيتحسبوا من الوزن الفعلي والماركر — مفيش حاجة تتكتب.
+        طول الأمان = طول الفرشة + {{ lv_num($safetyCm, 0) }} سم تلقائيًا.</div>
     </div>
   </div>
 
 
   {{-- ③ المنتجات والمقاسات --}}
   <div class="card mb-3">
-    <div class="card-header">المنتجات والمقاسات <span class="hint">— ابحث بالكود أو الاسم واختار الموديلات اللي هتتشغل، كل موديل بيبقى سطر</span></div>
+    <div class="card-header">المنتجات والمقاسات <span class="hint">— نازلة من سطور الماركر؛ لو هتغيّر ابحث بالكود أو الاسم</span></div>
     <div class="card-body pb-2">
       @php $pickedModels = collect($prods)->pluck('product_model_id')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(); @endphp
       @include('partials.model_picker', ['name' => 'picked_models', 'models' => $models, 'picked' => $pickedModels, 'onchange' => 'LVW.sync()', 'allowNew' => true])
@@ -204,22 +185,9 @@
 </form>
 
 <style>
-/* جدول خامات أمر الشغل: عرض ثابت لكل عمود عشان السيلكت ما يتقصّش،
-   وعمود الرسالة ثابت مكانه وإنت بتعمل سكرول للحسبة */
-.wo-fab{table-layout:fixed;width:1650px}
-.wo-fab-wrap{contain:paint} /* من غيرها الجدول العريض بيوسّع الصفحة كلها في RTL */
-.wo-fab td,.wo-fab th{overflow:hidden}
-.wo-fab td.f-out{white-space:normal;font-size:var(--fs-xs);line-height:1.5;overflow:visible}
-.wo-fab td.f-out .fx{margin-inline-start:2px}
-.wo-fab tr > :nth-child(1),.wo-fab tr > :nth-child(2){position:sticky;z-index:2;background:var(--lv-white)}
-.wo-fab thead tr > :nth-child(1),.wo-fab thead tr > :nth-child(2){background:var(--lv-surface-2);z-index:3}
-.wo-fab tr > :nth-child(1){inset-inline-start:0}
-.wo-fab tr > :nth-child(2){inset-inline-start:36px;box-shadow:inset 1px 0 0 var(--lv-line)}
-.wo-fab .f-target{font-size:var(--fs-xs)!important;min-height:28px!important}
-@media (max-width:600px){ .wo-fab{width:1400px} }
+.wo-fab td.f-out{white-space:normal;font-size:var(--fs-xs);line-height:1.5}
 </style>
 
-<template id="fabTpl">@include('workorders.fabric_row', ['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
 <template id="prodTpl">@include('workorders.product_row', ['i'=>'__IDX__','l'=>[],'tpl'=>true])</template>
 @include('partials.lines_js', ['startIndex' => max(count($fabs), count($prods), 1)])
 
@@ -245,11 +213,13 @@ window.LVW = (function () {
       tr.querySelector('.p-label').textContent = w.label;
     });
     LV.renumber('products');
-    // اسم المنتج تلقائي من الموديلات لو فاضي
-    var t = document.querySelector('[name=product_title]');
-    if (t && (!t.value || t.dataset.auto === '1')) {
-      t.value = want.map(w => w.label.replace(/^[^—]+—\s*/, '')).join(' + '); t.dataset.auto = '1';
-    }
+    title();
+  }
+  /* المنتج = الموديلات اللي هتتشغل (ليبل — السيرفر بيكتبه بنفس الطريقة) */
+  function title() {
+    var el = document.getElementById('woTitle'); if (!el) return;
+    var names = picked().map(w => w.label.replace(/^[^—]+—\s*/, ''));
+    el.textContent = names.length ? names.join(' + ') : '—';
   }
   function removeRow(btn) {
     var tr = btn.closest('tr'), id = tr.dataset.model;
@@ -257,12 +227,9 @@ window.LVW = (function () {
     if (chip) chip.remove();
     tr.remove(); LV.renumber('products');
     var empty = document.querySelector('#mp_pickedmodels .mp-empty'); if (empty) empty.hidden = picked().length > 0;
-    var t = document.querySelector('[name=product_title]');
-    if (t && t.dataset.auto === '1') t.value = picked().map(w => w.label.replace(/^[^—]+—\s*/, '')).join(' + ');
+    title();
   }
-  document.addEventListener('DOMContentLoaded', function () {
-    var t = document.querySelector('[name=product_title]'); if (t) t.addEventListener('input', () => t.dataset.auto = '0');
-  });
+  document.addEventListener('DOMContentLoaded', title);
   return {sync, removeRow};
 })();
 
@@ -271,68 +238,40 @@ const LVF = (function () {
   const nf = n => n === null || n === undefined ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 4});
   let timer = null;
 
-  /* التخطيط بالكمية المستهدفة: قطع مطلوبة ⇒ رقات كاملة ⇒ كمية خامة.
-     رقات = سقف(القطع ÷ قطع الفرشة) · الكمية = رقات × (طول×عرض×بنشر) أو رقات × الطول */
-  function target(el) {
-    const r = el.closest('tr');
-    const pcs = Number(el.value) || 0;
-    const pps = Number(r.querySelector('.f-pps')?.value) || 0;
-    const sp  = Number(r.querySelector('.f-sps')?.value) || Number(r.querySelector('.f-sp')?.value) || 0;
-    const mode = r.querySelector('.f-mode')?.value || 'weight';
-    if (!pcs || !pps || !sp) return;
-
-    let perPly = sp;
-    if (mode === 'weight') {
-      const wd = Number(r.querySelector('.f-wd')?.value) || 0;
-      const g  = Number(r.querySelector('.f-gsm')?.value) || 0;
-      if (!wd || !g) return;
-      perPly = sp * wd * g;
-    }
-    const plies = Math.ceil(pcs / pps);
-    const qty = r.querySelector('.f-qty');
-    if (qty) { qty.value = (plies * perPly).toFixed(3); calc(); }
-  }
-
   const SAFETY_M = {{ $safetyCm }} / 100;
 
-  /* فلتر قايمة الرسايل في كل السطور — بحث بجزء من الكود/الخامة/اللون */
-  function filter(v) {
-    v = (v || '').toLowerCase().trim();
-    document.querySelectorAll('#fabrics select.f-cn option').forEach(o => {
-      if (!o.value) return;
-      o.hidden = v && !(o.dataset.search || '').includes(v);
-    });
-  }
-
-  /* طول الأمان الثابت: بيتملى لوحده أول ما تكتب طول الفرشة */
-  function safety(el) {
-    const r = el.closest('tr'), sps = r.querySelector('.f-sps');
-    const sp = Number(el.value) || 0;
-    if (sps && sp > 0 && (!sps.value || sps.dataset.auto === '1')) {
-      sps.value = (sp + SAFETY_M).toFixed(3); sps.dataset.auto = '1';
-    }
+  /* تغيير الماركر ⇒ طول الفرشة والقطع من الماركر الجديد */
+  function marker(sel) {
+    const o = sel.selectedOptions[0], r = sel.closest('tr');
+    if (!o) return;
+    r.querySelector('.f-sp').value = o.dataset.sp; r.querySelector('.f-pps').value = o.dataset.pps;
+    r.querySelector('.f-sp-l').textContent = Number(o.dataset.sp).toLocaleString('en-US', {maximumFractionDigits: 2});
+    r.querySelector('.f-pps-l').textContent = o.dataset.pps;
     calc();
   }
 
-  function pick(sel) {
-    const o = sel.selectedOptions[0], row = sel.closest('tr');
-    if (!o || !o.value) return;
-    const bw = row.querySelector('.f-break');
-    if (bw) { bw.hidden = o.dataset.break !== '1'; bw.title = o.dataset.breaknote || ''; }
-    const pkEl = row.querySelector('.f-pk'); if (pkEl) pkEl.textContent = o.dataset.pk || '';
-    const wd = row.querySelector('.f-wd'), gsm = row.querySelector('.f-gsm'), qty = row.querySelector('.f-qty');
-    const basis = document.getElementById('widthBasis')?.value || 'usable';
-    const wSrc = basis === 'full' ? (o.dataset.wf || o.dataset.w) : (o.dataset.w || o.dataset.wf);
-    if (wd && !wd.value && wSrc) wd.value = (Number(wSrc) / 100).toFixed(3);
-    const wb = row.querySelector('.f-wb'); if (wb) wb.value = basis;
-    if (gsm && !gsm.value && o.dataset.g) gsm.value = (Number(o.dataset.g) / 1000).toFixed(4);
-    if (qty && !qty.value && o.dataset.rem) qty.value = Number(o.dataset.rem).toFixed(3);
+  /* عرض الحسبة للسطر: عرض التشغيل (أقل عرض − التأمين) ولا العرض الكامل المقاس */
+  function basis(sel) {
+    const r = sel.closest('tr'), src = sel.value === 'full' ? r.dataset.wf : r.dataset.w;
+    if (src) r.querySelector('.f-wd').value = (Number(src) / 100).toFixed(3);
     calc();
+  }
+
+  /* خامة تانية: السطر بيتبني على السيرفر من طلب التحضير */
+  async function addFabric() {
+    const sel = document.getElementById('moreFabric'); if (!sel || !sel.value) { sel?.focus(); return; }
+    if (document.querySelector('#fabrics [name$="[preparation_request_id]"][value="' + sel.value + '"]')) { sel.value = ''; return; }
+    const i = 'n' + Date.now();
+    const res = await fetch('{{ route('work-orders.fabric-row') }}?preparation_request_id=' + sel.value + '&i=' + i, {headers: {'Accept': 'text/html'}});
+    if (!res.ok) { alert('طلب التحضير ده مش جاهز — لازم يتوزن ويكون له ماركر معتمد.'); return; }
+    document.getElementById('fabrics').insertAdjacentHTML('beforeend', await res.text());
+    sel.selectedOptions[0].disabled = true; sel.value = '';
+    LV.renumber('fabrics'); calc();
   }
 
   function collect() {
-    return [...document.querySelectorAll('#fabrics tr')].map(r => ({
-      label: (r.querySelector('.f-cn')?.selectedOptions[0]?.dataset.name) || 'خامة',
+    return [...document.querySelectorAll('#fabrics tr')].filter(r => r.querySelector('.f-qty')).map(r => ({
+      label: r.querySelector('.f-name')?.value || 'خامة',
       calc_mode: r.querySelector('.f-mode')?.value || 'weight',
       spread_length_m: r.querySelector('.f-sp')?.value || 0,
       // لو طول الأمان فاضي (مثلًا الطول جاي جاهز من طلب التحضير) نحسب بنفس قاعدة السيرفر: الطول + 5 سم
@@ -362,7 +301,7 @@ const LVF = (function () {
     if (!res.ok) return;
     const d = await res.json();
 
-    const rows = document.querySelectorAll('#fabrics tr');
+    const rows = [...document.querySelectorAll('#fabrics tr')].filter(r => r.querySelector('.f-qty'));
     const names = [];
     d.fabrics.forEach((f, i) => {
       const cell = rows[i]?.querySelector('.f-out');
@@ -395,9 +334,6 @@ const LVF = (function () {
       LVX.popovers(cell);
       names.push((f.label || inRow.label || 'خامة') + ' ' + expected);
 
-      const pl = rows[i].querySelector('.f-plies'), ex = rows[i].querySelector('.f-exp');
-      if (pl) pl.placeholder = f.plies;
-      if (ex) ex.placeholder = f.expected_pieces;
     });
 
     const s = document.getElementById('fabSummary');
@@ -428,18 +364,7 @@ const LVF = (function () {
   }
 
   document.addEventListener('DOMContentLoaded', () => setTimeout(run, 200));
-  /* احسب الاستهلاك على عرض التشغيل (الافتراضي) ولا العرض الكامل — بيتطبق على كل السطور */
-  function basis(v) {
-    document.querySelectorAll('#fabrics tr').forEach(r => {
-      const o = r.querySelector('.f-cn')?.selectedOptions[0], wd = r.querySelector('.f-wd'), wb = r.querySelector('.f-wb');
-      if (!o || !o.value || !wd) return;
-      const src = v === 'full' ? (o.dataset.wf || o.dataset.w) : (o.dataset.w || o.dataset.wf);
-      if (src) wd.value = (Number(src) / 100).toFixed(3);
-      if (wb) wb.value = v;
-    });
-    calc();
-  }
-  return {pick, calc, target, filter, safety, basis};
+  return {calc, marker, basis, addFabric};
 })();
 </script>
 @endpush

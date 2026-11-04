@@ -42,7 +42,12 @@
           <td class="hint" style="white-space:normal">
             @forelse($r->models as $m)<div class="text-nowrap">{{ $m->label }}</div>@empty {{ Str::limit($r->models_label, 70) }} @endforelse
             @if($r->sizes_note)<div>{{ $r->sizes_note }}</div>@endif
-            @if($r->suggestedMarker)<div class="text-success">اتقفل على ماركر قديم {{ $r->suggestedMarker->code }}</div>@endif</td>
+            @if($r->suggestedMarker)<div class="text-success">اتقفل على ماركر قديم {{ $r->suggestedMarker->code }}</div>@endif
+            {{-- الكمية اللي المخزن أكّدها — الباترونيست يعرف الماركر هيتقص على كام --}}
+            @if($pq = $r->preparationRequest)
+              <div class="mt-1">@if($pq->status === 'weighed' || $pq->status === 'used')<span class="pill pill-ok">المخزن وزن {{ lv_num($pq->qty_for_work_order) }} {{ $r->consignment?->unit_label }}</span>
+              @elseif($pq->status === 'open')<span class="pill pill-warn">مستني وزن المخزن — تقريبي {{ lv_num($pq->requested_qty) }}</span>@endif</div>
+            @endif</td>
           <td class="num">{{ $r->copies }}</td>
           <td>{{ $r->patternist?->name ?? '—' }}</td>
           <td class="num {{ $late ? 'text-danger fw-bold' : '' }}">{{ $r->needed_by?->format('Y-m-d') ?? '—' }}</td>

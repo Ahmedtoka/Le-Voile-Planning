@@ -212,6 +212,7 @@ Route::middleware('auth.user')->group(function () {
 
     Route::middleware('can.do:wo.manage')->group(function () {
         Route::get('work-orders/create',              [WorkOrderController::class, 'create'])->name('work-orders.create');
+        Route::get('work-orders-fabric-row',          [WorkOrderController::class, 'fabricRow'])->name('work-orders.fabric-row');
         Route::post('work-orders',                    [WorkOrderController::class, 'store'])->name('work-orders.store');
         Route::get('work-orders/{work_order}/edit',   [WorkOrderController::class, 'edit'])->name('work-orders.edit');
         Route::put('work-orders/{work_order}',        [WorkOrderController::class, 'update'])->name('work-orders.update');

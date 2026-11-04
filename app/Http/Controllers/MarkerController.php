@@ -30,7 +30,7 @@ class MarkerController extends Controller
 
     public function requests(Request $request)
     {
-        $q = MarkerRequest::with(['consignment', 'factory', 'patternist', 'marker', 'models', 'suggestedMarker'])->latest('id');
+        $q = MarkerRequest::with(['consignment', 'factory', 'patternist', 'marker', 'models', 'suggestedMarker', 'preparationRequest'])->latest('id');
         if ($s = $request->get('status')) $q->where('status', $s);
 
         return view('markers.requests', [

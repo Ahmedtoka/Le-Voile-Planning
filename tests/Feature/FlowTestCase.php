@@ -226,23 +226,43 @@ abstract class FlowTestCase extends TestCase
 
     // ── ⑤ أمر الشغل وما بعده ─────────────────────────────────────
 
-    /** أمر شغل بالحسبة المرجعية: 3.10 × 1.72 × 0.192 × 12 قطعة على 600 كجم */
+    /**
+     * طلب تحضير المخزن وزنه + ماركر معتمد — اللي أمر الشغل بيتبني عليهم (الميتينج 36).
+     * الماركر: 3.10 م × 12 قطعة (موديل الاختبار، مقاس M) على عرض 165 سم (بيدخل في عرض التشغيل 167).
+     */
+    protected function readyRequest(Consignment $c, float $kg = 600): \App\Models\PreparationRequest
+    {
+        $marker = \App\Models\Marker::create([
+            'code' => 'MK-T' . uniqid(), 'fabric_width_cm' => 165, 'spread_length_m' => 3.10, 'pieces_per_spread' => 12,
+            'status' => 'approved', 'is_active' => true,
+        ]);
+        \App\Models\MarkerLine::create(['marker_id' => $marker->id, 'product_model_id' => $this->model->id, 'size_id' => $this->size->id, 'qty_per_spread' => 12]);
+        $mr = \App\Models\MarkerRequest::create([
+            'doc_no' => 'MR-T' . uniqid(), 'doc_date' => now()->toDateString(), 'consignment_id' => $c->id,
+            'fabric_width_cm' => 165, 'status' => 'delivered', 'marker_id' => $marker->id,
+        ]);
+        $pr = \App\Models\PreparationRequest::create([
+            'doc_no' => 'PQ-T' . uniqid(), 'doc_date' => now()->toDateString(), 'consignment_id' => $c->id,
+            'requested_qty' => $kg, 'actual_qty' => $kg, 'status' => 'weighed', 'weighed_at' => now(),
+            'marker_request_id' => $mr->id,
+        ]);
+        $mr->update(['preparation_request_id' => $pr->id]);
+        $c->recalcRemaining();
+        return $pr;
+    }
+
+    /** أمر شغل بالحسبة المرجعية: 3.10 × 1.72 (العرض الكامل) × 0.192 × 12 قطعة على 600 كجم */
     protected function createWorkOrder(Consignment $c, float $kg = 600, array $override = []): WorkOrder
     {
+        $pr = $this->readyRequest($c, $kg);
         $this->as('mostafa')->post(route('work-orders.store'), [
             'wo_date'          => now()->toDateString(),
+            'due_date'         => now()->addDays(15)->toDateString(),
             'factory_id'       => $this->factory->id,
-            'product_title'    => 'بادي كات بيج',
-            'product_model_id' => $this->model->id,
             'fabrics'          => [array_merge([
-                'consignment_id'    => $c->id,
-                'calc_mode'         => 'weight',
-                'unit'              => 'كجم',
-                'planned_qty'       => $kg,
-                'spread_length_m'   => 3.10,
-                'fabric_width_m'    => 1.72,
-                'gsm_kg_m2'         => 0.192,
-                'pieces_per_spread' => 12,
+                'preparation_request_id' => $pr->id,
+                'marker_id'              => $pr->markerRequest->marker_id,
+                'width_basis'            => 'full',
             ], $override)],
             'products'         => [[
                 'product_model_id' => $this->model->id,

@@ -1,86 +1,83 @@
-@php $tpl = $tpl ?? false; @endphp
-@if(!$tpl)<tr class="fab-row">@endif
-  <td class="text-center row-no">{{ is_numeric($i) ? $i+1 : 1 }}</td>
+{{--
+  سطر خامة في أمر الشغل = طلب تحضير اتوزن + ماركر معتمد (الميتينج 36: «مفيش أرقام تتكتب يدوي»).
+  كل الأرقام ليبلات: الكمية = الوزن الفعلي من المخزن · الطول والقطع = الماركر · العرض والبنشر = الجودة.
+  الاختيار الوحيد: أنهي ماركر (من المعتمدة اللي تنفع على العرض) وعرض الحسبة (تشغيل ولا كامل).
+  الخانات المخفية f-* بتغذّي الحسبة اللايف بس — السيرفر بيعيد حسابها من الطلب والماركر.
+--}}
+@php
+  $pr      = $l['_pr'] ?? null;
+  $c       = $pr?->consignment;
+  $markers = $l['_markers'] ?? collect();
+  $mk      = $l['_marker'] ?? null;
+  $legacy  = !empty($l['_legacy']);
+  $meter   = (bool) $c?->is_meter;
+  $safetyCm = $safetyCm ?? (float) lv_setting('safety_margin_cm', 5);
+@endphp
+<tr class="fab-row" data-w="{{ $c?->usable_width ?: $c?->min_width_cm }}" data-wf="{{ $c?->min_width_cm }}">
+  <td class="text-center row-no">{{ is_numeric($i) ? $i+1 : '•' }}</td>
 
-  <td>
-    @if(!empty($l['preparation_request_id']))
-      <input type="hidden" name="fabrics[{{ $i }}][preparation_request_id]" value="{{ $l['preparation_request_id'] }}">
-      <div class="hint text-success"><i class="bi bi-speedometer2" aria-hidden="true"></i> الكمية = الوزن الفعلي من المخزن (طلب تحضير)</div>
-    @endif
-    <select name="fabrics[{{ $i }}][consignment_id]" class="f-cn" required onchange="LVF.pick(this)" aria-label="رقم الرسالة">
-      <option value="">— اختر رسالة —</option>
-      @foreach($consignments as $c)
-        <option value="{{ $c->id }}"
-                data-w="{{ $c->usable_width }}" data-wf="{{ $c->min_width_cm }}" data-g="{{ $c->avg_gsm }}"
-                data-pk="{{ (!$c->is_meter && (float) $c->gross_kg > 0) ? 'قائم ' . lv_num($c->gross_kg) . ' − كيس ' . lv_num($c->bag_g, 1) . ($c->fabric_form === 'open' ? ' + ماسورة ' . lv_num($c->tube_g, 1) : '') . ' جم × ' . (int) $c->rolls_count . ' توب = صافي ' . lv_num($c->total_kg) . ' كجم' : '' }}"
-                data-rem="{{ $c->remaining_kg }}" data-name="{{ $c->fabricType?->name }}"
-                data-break="{{ $c->has_color_break ? 1 : 0 }}" data-breaknote="{{ $c->color_break_note }}"
-                data-search="{{ strtolower($c->consignment_no . ' ' . ($c->fabricType?->name ?? '') . ' ' . ($c->color?->code ?? '') . ' ' . ($c->color?->name ?? '')) }}"
-                @selected(($l['consignment_id'] ?? null)==$c->id)>
-          {{ $c->consignment_no }} — {{ $c->fabricType?->name }} · {{ $c->color?->code }}
-          (متاح {{ rtrim(rtrim(number_format((float)$c->remaining_kg,1),'0'),'.') }} · {{ $c->arrival_date?->format('y-m-d') }})
-        </option>
-      @endforeach
-    </select>
-    <div class="f-break text-danger hint" hidden><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> فواصل / اختلاف لون في الرسالة دي</div>
-    <div class="f-pk hint num"></div>
-  </td>
+  @if($legacy || !$pr)
+    <td colspan="7">
+      <div class="text-danger fw-bold"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> خامة من غير طلب تحضير</div>
+      <div class="hint">الأمر ده اتعمل قبل ما أمر الشغل يتربط بطلب التحضير والماركر. امسح السطر ده وضيف الخامة من «خامة تانية من طلب تحضير».</div>
+    </td>
+  @else
+    <td>
+      <input type="hidden" name="fabrics[{{ $i }}][preparation_request_id]" value="{{ $pr->id }}">
+      {{-- للحسبة اللايف بس (السيرفر بيعيد حسابها من الطلب والماركر) --}}
+      <input type="hidden" class="f-mode" value="{{ $l['calc_mode'] }}">
+      <input type="hidden" class="f-qty"  value="{{ $l['planned_qty'] }}">
+      <input type="hidden" class="f-sp"   value="{{ $l['spread_length_m'] }}">
+      <input type="hidden" class="f-pps"  value="{{ $l['pieces_per_spread'] }}">
+      <input type="hidden" class="f-wd"   value="{{ $l['fabric_width_m'] }}">
+      <input type="hidden" class="f-gsm"  value="{{ $l['gsm_kg_m2'] }}">
+      <input type="hidden" class="f-name" value="{{ $c->fabricType?->name }}">
+      <div class="fw-bold num">{{ $c->consignment_no }}</div>
+      <div class="hint">{{ $c->fabricType?->name }} · {{ $c->color?->code }}</div>
+      <div class="hint">طلب تحضير <span class="num">{{ $pr->doc_no }}</span>
+        @if($c->has_color_break)<span class="text-danger"> · <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> فواصل لون</span>@endif</div>
+    </td>
 
-  <td><select name="fabrics[{{ $i }}][calc_mode]" class="f-mode" onchange="LVF.calc()" aria-label="طريقة الحساب">
-      <option value="weight" @selected(($l['calc_mode'] ?? 'weight')==='weight')>بالوزن</option>
-      <option value="length" @selected(($l['calc_mode'] ?? '')==='length')>بالطول</option>
-    </select></td>
+    <td class="num">
+      <div class="fw-bold text-success">{{ $meter ? lv_num($l['planned_qty'], 2) . ' م' : lv_kg($l['planned_qty']) }}</div>
+      <div class="hint">{{ $pr->is_remainder ? 'الباقي كله' : 'وزن المخزن' }} {{ $pr->weighed_at?->format('m-d') }}</div>
+    </td>
 
-  <td><select name="fabrics[{{ $i }}][unit]" class="f-unit" aria-label="الوحدة">
-      @foreach(['كجم','متر'] as $u)<option value="{{ $u }}" @selected(($l['unit'] ?? 'كجم')===$u)>{{ $u }}</option>@endforeach
-    </select></td>
+    <td>
+      <select name="fabrics[{{ $i }}][marker_id]" class="f-mk" onchange="LVF.marker(this)" aria-label="الماركر" required>
+        @foreach($markers as $m)
+          <option value="{{ $m->id }}" data-sp="{{ $m->spread_length_m }}" data-pps="{{ $m->pieces_per_spread }}" @selected($mk && $mk->id === $m->id)>
+            {{ $m->code }} — عرض {{ lv_num($m->fabric_width_cm, 1) }} سم{{ $pr->markerRequest?->marker_id === $m->id ? ' · ماركر الطلب' : '' }}
+          </option>
+        @endforeach
+      </select>
+      <div class="hint">{{ $markers->count() > 1 ? $markers->count() . ' ماركرات تنفع على العرض ده' : 'ماركر الطلب' }}</div>
+    </td>
 
-  <td class="num">
-    <input type="number" step="0.001" min="0" name="fabrics[{{ $i }}][planned_qty]" class="f-qty"
-           value="{{ $l['planned_qty'] ?? '' }}" required oninput="LVF.calc()" placeholder="مثال: 152.9" aria-label="الكمية">
-    {{-- التخطيط العكسي: اكتب القطع المستهدفة والسيستم يحسب الخامة المطلوبة --}}
-    <input type="number" min="0" class="f-target form-control form-control-sm mt-1"
-           placeholder="أو القطع…" title="اكتب عدد القطع المطلوب والسيستم يحسب كمية الخامة اللازمة"
-           aria-label="قطع مستهدفة" oninput="LVF.target(this)">
-  </td>
+    <td class="num">
+      <span class="f-sp-l fw-bold">{{ lv_num($l['spread_length_m'], 2) }}</span> م
+      <div class="hint">+{{ lv_num($safetyCm, 0) }} سم أمان</div>
+    </td>
+    <td class="num"><span class="f-pps-l fw-bold">{{ (int) $l['pieces_per_spread'] }}</span> قطعة</td>
 
-  <td class="num"><input type="number" step="0.001" min="0" name="fabrics[{{ $i }}][spread_length_m]" class="f-sp"
-             value="{{ $l['spread_length_m'] ?? '' }}" required oninput="LVF.safety(this)" placeholder="مثال: 3.07" aria-label="طول الفرشة بالمتر"></td>
+    <td class="num">
+      @if(!$meter)
+        <select name="fabrics[{{ $i }}][width_basis]" class="f-wb form-select-sm" onchange="LVF.basis(this)" aria-label="عرض الحسبة">
+          <option value="usable" @selected(($l['width_basis'] ?? 'usable') === 'usable')>تشغيل {{ lv_num($c->usable_width ?: $c->min_width_cm, 1) }} سم</option>
+          <option value="full" @selected(($l['width_basis'] ?? '') === 'full')>كامل {{ lv_num($c->min_width_cm, 1) }} سم</option>
+        </select>
+        <div class="hint">بنشر {{ lv_num($c->avg_gsm, 1) }} جم/م²</div>
+      @else
+        <span class="hint">بالطول — العرض مش داخل في الحسبة</span>
+      @endif
+    </td>
 
-  <td class="num"><input type="number" step="0.001" min="0" name="fabrics[{{ $i }}][spread_length_safe_m]" class="f-sps"
-             value="{{ $l['spread_length_safe_m'] ?? '' }}" oninput="this.dataset.auto='0'; LVF.calc()" placeholder="+{{ $safetyCm }} سم" aria-label="طول الفرشة بالأمان"></td>
+    <td class="f-out hint text-center">—</td>
 
-  <td class="num"><input type="number" step="0.001" min="0" name="fabrics[{{ $i }}][fabric_width_m]" class="f-wd"
-             value="{{ $l['fabric_width_m'] ?? '' }}" oninput="LVF.calc()" placeholder="1.72" aria-label="العرض بالمتر">
-    <input type="hidden" name="fabrics[{{ $i }}][width_basis]" class="f-wb" value="{{ $l['width_basis'] ?? 'usable' }}"></td>
-
-  <td class="num"><input type="number" step="0.0001" min="0" name="fabrics[{{ $i }}][gsm_kg_m2]" class="f-gsm"
-             value="{{ $l['gsm_kg_m2'] ?? '' }}" oninput="LVF.calc()" placeholder="0.192" aria-label="البنشر كجم لكل متر مربع"></td>
-
-  <td class="num"><input type="number" min="1" name="fabrics[{{ $i }}][pieces_per_spread]" class="f-pps"
-             value="{{ $l['pieces_per_spread'] ?? '' }}" required oninput="LVF.calc()" placeholder="مثال: 12" aria-label="قطع الفرشة"></td>
-
-  <td class="f-out hint text-center">—</td>
-
-  <td class="num"><input type="number" min="0" name="fabrics[{{ $i }}][plies]" class="f-plies"
-             value="{{ $l['plies'] ?? '' }}" placeholder="تلقائي" aria-label="الرقات"></td>
-
-  <td class="num"><input type="number" min="0" name="fabrics[{{ $i }}][expected_pieces]" class="f-exp"
-             value="{{ $l['expected_pieces'] ?? '' }}" placeholder="تلقائي" aria-label="القص المعتمد"></td>
-
-  <td><select name="fabrics[{{ $i }}][marker_id]" aria-label="الماركر">
-      <option value="">— بدون —</option>
-      @foreach($markers as $m)
-        {{-- مكتبة الماركرات: نفس الموديل على كل العروض — اختار اللي عرضه مطابق لأقل عرض الرسالة --}}
-        <option value="{{ $m->id }}" @selected(($l['marker_id'] ?? null)==$m->id)>
-          {{ $m->code }} — عرض {{ rtrim(rtrim(number_format((float)$m->fabric_width_cm,1),'0'),'.') }} سم
-          · {{ $m->pieces_per_spread }} قطعة{{ $m->efficiency_pct ? ' · كفاءة ' . rtrim(rtrim(number_format((float)$m->efficiency_pct,1),'0'),'.') . '%' : '' }}
-        </option>
-      @endforeach
-    </select></td>
+  @endif
 
   <td class="text-end"><div class="row-actions">
-    <button type="button" class="btn btn-sm btn-outline-danger btn-icon" aria-label="حذف الخامة" title="حذف الخامة"
-            onclick="LV.remove(this,'fabrics'); LVF.calc()"><i class="bi bi-x" aria-hidden="true"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-danger btn-icon" aria-label="شيل الخامة" title="شيل الخامة"
+            onclick="this.closest('tr').remove(); LV.renumber('fabrics'); LVF.calc()"><i class="bi bi-x" aria-hidden="true"></i></button>
   </div></td>
-@if(!$tpl)</tr>@endif
+</tr>

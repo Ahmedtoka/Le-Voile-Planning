@@ -37,8 +37,8 @@
         <table class="table table-sm line-table mb-0" id="pfTable">
           <thead><tr>
             <th style="width:40px"><span class="visually-hidden">اختيار</span></th>
-            <th>الرسالة</th><th>الخامة</th><th>اللون</th><th style="width:110px">المتاح</th><th style="width:70px">الأتواب</th><th style="width:100px">وصلت</th>
-            <th style="width:170px">الكمية المطلوبة</th><th style="width:110px">الباقي كله</th><th style="width:200px">هيفضل على الرسالة</th>
+            <th style="min-width:120px">الرسالة</th><th style="min-width:150px">الخامة</th><th style="min-width:100px">اللون</th><th style="width:110px">المتاح</th><th style="width:64px">الأتواب</th><th style="width:90px">وصلت</th>
+            <th style="width:150px">الكمية المطلوبة</th><th style="width:84px">الباقي كله</th><th style="width:150px">هيفضل على الرسالة</th>
           </tr></thead>
           <tbody>
           @forelse($consignments as $c)
@@ -49,20 +49,22 @@
             @endphp
             <tr class="pf-row {{ $on ? 'table-active' : '' }}" data-id="{{ $c->id }}" data-fab="{{ $c->fabric_type_id }}" data-col="{{ $c->color_id }}"
                 data-rem="{{ (float) $c->remaining_kg }}" data-unit="{{ $u }}"
+                data-models="{{ json_encode(($c->purchaseOrder?->models ?? collect())->map(fn ($m) => ['id' => $m->id, 'label' => $m->label])->values(), JSON_UNESCAPED_UNICODE) }}"
                 data-search="{{ mb_strtolower($c->consignment_no . ' ' . ($c->fabricType?->name ?? '') . ' ' . ($c->color?->code ?? '') . ' ' . ($c->color?->name ?? '')) }}">
               <td class="text-center"><input type="checkbox" class="form-check-input pf-on" name="items[{{ $c->id }}][on]" value="1" @checked($on) onchange="LVP.toggle(this)" aria-label="اختار الرسالة {{ $c->consignment_no }}"></td>
               <td class="num fw-bold">{{ $c->consignment_no }}
                 @if($c->has_color_break)<div class="text-danger hint"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> فواصل / اختلاف لون</div>@endif</td>
-              <td>{{ $c->fabricType?->name }}</td>
+              <td>{{ $c->fabricType?->name }}
+                @if($c->purchaseOrder?->models?->isNotEmpty())<div class="hint" title="الموديلات اللي الخامة اتشرت عشانها — بتنزل لوحدها لما تعلّم على الرسالة">اتطلبت لـ {{ Str::limit($c->purchaseOrder->models->pluck('name')->implode('، '), 60) }}</div>@endif</td>
               <td>{{ $c->color?->label ?? $c->color?->code }}</td>
               <td class="num">{{ lv_num($c->remaining_kg) }} {{ $u }}
                 @if(!$c->is_meter && (float) $c->gross_kg > 0)<div class="hint" style="white-space:nowrap">كيس {{ lv_num($c->bag_g, 1) }}{{ $c->fabric_form === 'open' ? ' + ماسورة ' . lv_num($c->tube_g, 1) : '' }} جم/توب</div>@endif</td>
               <td class="num">{{ (int) $c->rolls_count }}</td>
               <td class="num hint">{{ $c->arrival_date?->format('Y-m-d') }}</td>
               <td>
-                <div class="input-group input-group-sm">
-                  <input type="number" step="0.001" min="0" name="items[{{ $c->id }}][qty]" class="form-control pf-qty" value="{{ $o['qty'] ?? '' }}" placeholder="تقريبي" oninput="LVP.calc(this)" @disabled(!$on || !empty($o['rem']))>
-                  <span class="input-group-text">{{ $u }}</span>
+                <div class="qty-unit">
+                  <input type="number" step="0.001" min="0" name="items[{{ $c->id }}][qty]" class="pf-qty" value="{{ $o['qty'] ?? '' }}" placeholder="تقريبي" oninput="LVP.calc(this)" @disabled(!$on || !empty($o['rem'])) aria-label="الكمية المطلوبة من {{ $c->consignment_no }}">
+                  <span class="qu-unit">{{ $u }}</span>
                 </div>
               </td>
               <td class="text-center">
@@ -90,7 +92,7 @@
       <div class="row g-3">
         {{-- ② الموديلات — بحث، ولو مش موجود ضيفه --}}
         <div class="col-12">
-          <label class="form-label req">الموديلات اللي هتتشغل من الكمية دي <span class="hint">— اكتب كود أو اسم، ولو الموديل مش موجود ضيفه من نفس المكان</span></label>
+          <label class="form-label req">الموديلات اللي هتتشغل من الكمية دي <span class="hint">— بتنزل لوحدها من طلب الشراء بتاع الرسالة؛ تقدر تشيل أو تضيف بالكود أو الاسم</span></label>
           @include('partials.model_picker', ['name' => 'product_model_ids', 'models' => $models, 'picked' => old('product_model_ids', []), 'allowNew' => true])
         </div>
 
@@ -145,6 +147,12 @@ window.LVP = (function () {
   function toggle(cb) {
     var tr = cb.closest('tr'), q = tr.querySelector('.pf-qty'), r = tr.querySelector('.pf-rem');
     tr.classList.toggle('table-active', cb.checked);
+    /* الموديلات اللي الخامة اتشرت عشانها (طلب الشراء) بتنزل في البيكر — والمخطط يقدر يغيّرها */
+    if (cb.checked) {
+      var box = document.querySelector('.model-picker'), list = [];
+      try { list = JSON.parse(tr.dataset.models || '[]'); } catch (e) {}
+      if (box && box.mpAdd) list.forEach(function (m) { box.mpAdd(m); });
+    }
     if (r) r.disabled = !cb.checked;
     if (q) { q.disabled = !cb.checked || (r && r.checked); if (cb.checked && !q.disabled) q.focus(); }
     calc(q); count();

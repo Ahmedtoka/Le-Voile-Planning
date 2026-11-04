@@ -87,48 +87,34 @@ class WorkOrderController extends Controller
             'receive_date'  => now()->addDays(15)->toDateString(),
         ]);
 
-        // لو جاي من شاشة الحوض، نبدأ بسطر خامة جاهز عليه
-        $fabrics = []; $products = [];
-        if ($cid = $request->get('consignment_id')) {
-            if ($c = Consignment::find($cid)) {
-                $fabrics[] = [
-                    'consignment_id'  => $c->id,
-                    'calc_mode'       => 'weight',
-                    'unit'            => 'كجم',
-                    'planned_qty'     => $c->remaining_kg,
-                    'fabric_width_m'  => $c->usable_width ? round((float) $c->usable_width / 100, 3) : null,
-                    'gsm_kg_m2'       => $c->avg_gsm ? round((float) $c->avg_gsm / 1000, 4) : null,
-                ];
-            }
+        /* أمر الشغل بيتبني على طلب تحضير اتوزن + ماركر معتمد (الميتينج 36: «مفيش أرقام تتكتب يدوي»).
+           من غير طلب محدد ⇒ شاشة البداية: الطلبات الجاهزة لأمر شغل واللي لسه مستنية وزن أو ماركر. */
+        $pr = null;
+        if ($pid = $request->get('preparation_request_id')) {
+            $pr = \App\Models\PreparationRequest::find($pid);
+        } elseif ($cid = $request->get('consignment_id')) {
+            $ready = $this->readyRequests()->filter(fn ($r) => (int) $r->consignment_id === (int) $cid && $this->markerOptions($r)->isNotEmpty());
+            if ($ready->count() === 1) $pr = $ready->first();
         }
 
-        /* جاي من طلب تحضير اتوزن: الوزن الفعلي من المخزن هو الكمية (الميتينج)،
-           والماركر لو الباترونست سلّمه على الطلب الموازي، والمصنع والموديلات زي ما اتطلبوا. */
-        if ($pid = $request->get('preparation_request_id')) {
-            $pr = \App\Models\PreparationRequest::with(['consignment', 'models', 'markerRequest.marker'])->find($pid);
-            if ($pr && $pr->consignment && in_array($pr->status, ['weighed', 'open'], true)) {
-                $c = $pr->consignment;
-                $mk = $pr->markerRequest?->marker;
-                $fabrics = [[
-                    'consignment_id'         => $c->id,
-                    'preparation_request_id' => $pr->id,
-                    'calc_mode'              => 'weight',
-                    'unit'                   => 'كجم',
-                    'planned_qty'            => $pr->qty_for_work_order,
-                    'fabric_width_m'         => $c->usable_width ? round((float) $c->usable_width / 100, 3) : null,
-                    'gsm_kg_m2'              => $c->avg_gsm ? round((float) $c->avg_gsm / 1000, 4) : null,
-                    'marker_id'              => $mk?->status === 'approved' ? $mk->id : null,
-                    'spread_length_m'        => $mk?->spread_length_m,
-                    'pieces_per_spread'      => $mk?->pieces_per_spread,
-                ]];
-                $row->factory_id    = $pr->factory_id;
-                $row->product_title = $pr->models_label ?: null;
-                foreach ($pr->models as $m) $products[] = ['product_model_id' => $m->id];
-                if ($pr->status === 'open') {
-                    session()->flash('warning', 'طلب التحضير ' . $pr->doc_no . ' لسه ما اتوزنش — الكمية دي تقريبية، والأمر مش هيبقى «جاهز للتشغيل» غير بعد رد المخزن.');
-                }
-            }
+        if (!$pr || !$this->isReady($pr)) {
+            return view('workorders.pick', [
+                'title'    => 'أمر شغل جديد — اختار طلب التحضير',
+                // الجاهزية بتتحسب هنا (نفس قاعدة الحفظ) — الشاشة بتعرضها بس
+                'requests' => $this->readyRequests(includeWaiting: true)->each(function ($r) {
+                    $opts = $r->status === 'weighed' ? $this->markerOptions($r) : collect();
+                    $r->setRelation('readyMarker', $opts->first());
+                    $r->setAttribute('is_ready', $opts->isNotEmpty());
+                }),
+                'focus'    => $request->get('consignment_id'),
+                'notReady' => $pr && !$this->isReady($pr) ? $pr : null,
+            ]);
         }
+
+        $fabric = $this->fabricFromRequest($pr);
+        $fabrics = [$fabric];
+        $products = $this->defaultProducts($pr, $fabric['_marker']);
+        $row->factory_id = $pr->factory_id;
 
         return view('workorders.form', $this->formData([
             'row'      => $row,
@@ -201,10 +187,17 @@ class WorkOrderController extends Controller
         abort_unless($work_order->isEditable(), 403, 'أمر الشغل مقفول عن التعديل.');
         $work_order->load(['fabrics', 'lines']);
 
+        $fabrics = $work_order->fabrics->map(function ($f) {
+            $pr = $f->preparation_request_id ? \App\Models\PreparationRequest::with(['consignment', 'models', 'markerRequest.marker'])->find($f->preparation_request_id) : null;
+            return $pr && $pr->consignment
+                ? $this->fabricFromRequest($pr, $f->marker_id, $f->width_basis ?: 'usable')
+                : $f->toArray() + ['_legacy' => true];   // أمر قديم اتعمل قبل الربط بطلب التحضير
+        })->all();
+
         return view('workorders.form', $this->formData([
             'row'     => $work_order,
             'mode'    => 'edit',
-            'fabrics' => $work_order->fabrics->toArray(),
+            'fabrics' => $fabrics,
         ]));
     }
 
@@ -237,7 +230,7 @@ class WorkOrderController extends Controller
     public function submit(WorkOrder $work_order)
     {
         abort_unless($work_order->isEditable(), 403);
-        $work_order->load('fabrics.consignment');
+        $work_order->load('fabrics.consignment', 'fabrics.preparationRequest', 'fabrics.marker');
 
         if ($work_order->fabrics->isEmpty()) {
             return back()->withErrors(['msg' => 'أمر الشغل لازم يكون فيه خامة واحدة على الأقل.']);
@@ -247,7 +240,13 @@ class WorkOrderController extends Controller
         $blockers = [];
         foreach ($work_order->fabrics->values() as $i => $f) {
             $c = $f->consignment;
-            if (!$c) { $blockers["fabrics.$i.consignment_id"][] = 'اختار الرسالة اللي الخامة دي هتتصرف منها.'; continue; }
+            if (!$c) { $blockers["fabrics.$i.preparation_request_id"][] = 'اختار طلب التحضير اللي الخامة دي هتتصرف منه.'; continue; }
+            if (!$f->preparationRequest || $f->preparationRequest->status !== 'weighed') {
+                $blockers["fabrics.$i.preparation_request_id"][] = $c->consignment_no . ': لازم طلب تحضير المخزن وزنه — الوزن الفعلي هو اللي بيدخل الأمر.';
+            }
+            if (!$f->marker || $f->marker->status !== 'approved') {
+                $blockers["fabrics.$i.marker_id"][] = $c->consignment_no . ': لازم ماركر معتمد من الباترونيست.';
+            }
 
             foreach (PlanningEngine::warnings($c, $f->marker, (float) $f->planned_qty) as $w) {
                 if ($w['level'] === 'danger') $blockers["fabrics.$i.planned_qty"][] = $c->consignment_no . ': ' . $w['text'];
@@ -450,6 +449,120 @@ class WorkOrderController extends Controller
 
     // ── داخلي ────────────────────────────────────────────────────
 
+    /**
+     * طلبات التحضير اللي ينفع أمر شغل يتبني عليها: اتوزنت ولسه مادخلتش أمر (ولا محجوزة لأمر مسودة تاني).
+     * includeWaiting: كمان اللي لسه مستنية وزن المخزن — بتظهر في شاشة البداية عشان المخطط يعرف هي فين.
+     */
+    private function readyRequests(?WorkOrder $except = null, bool $includeWaiting = false)
+    {
+        $taken = WorkOrderFabric::whereNotNull('preparation_request_id')
+            ->whereHas('workOrder', fn ($q) => $q->whereNotIn('status', ['cancelled', 'rejected', 'superseded']))
+            ->when($except, fn ($q) => $q->where('work_order_id', '!=', $except->id))
+            ->pluck('preparation_request_id');
+
+        return \App\Models\PreparationRequest::with([
+                'consignment.fabricType', 'consignment.color', 'consignment.purchaseOrder.models',
+                'models', 'factory', 'markerRequest.marker',
+            ])
+            ->whereIn('status', $includeWaiting ? ['open', 'weighed'] : ['weighed'])
+            ->whereNull('work_order_id')
+            ->whereNotIn('id', $taken)
+            ->orderBy('id')
+            ->get()
+            ->filter(fn ($r) => $r->consignment);
+    }
+
+    /** ماركرات معتمدة تنفع على عرض الرسالة — ماركر طلب الماركر الموازي الأول */
+    private function markerOptions(\App\Models\PreparationRequest $pr)
+    {
+        $c     = $pr->consignment;
+        $width = (float) ($c->usable_width ?: $c->min_width_cm);
+        $own   = $pr->markerRequest?->marker;
+
+        $list = Marker::with(['lines.productModel', 'lines.size'])
+            ->where('status', 'approved')->where('is_active', true)->latest('id')->get()
+            ->filter(fn ($m) => $m->fitsWidth($width));
+
+        /* الترتيب: ماركر الطلب نفسه، بعده الماركرات اللي فيها موديلات الطلب (مكتبة الماركرات)، وبعدها الباقي */
+        $want = $pr->models->pluck('id');
+        $list = $list->sortByDesc(fn ($m) => $m->lines->pluck('product_model_id')->intersect($want)->count())->values();
+        if ($own && $own->status === 'approved') {
+            $own->loadMissing(['lines.productModel', 'lines.size']);
+            $list = collect([$own])->merge($list->where('id', '!=', $own->id));
+        }
+        return $list->values();
+    }
+
+    /** جاهز لأمر شغل = اتوزن + فيه ماركر معتمد ينفع على عرضه */
+    private function isReady(\App\Models\PreparationRequest $pr): bool
+    {
+        return $pr->status === 'weighed' && !$pr->work_order_id && $pr->consignment && $this->markerOptions($pr)->isNotEmpty();
+    }
+
+    /**
+     * سطر الخامة من طلب التحضير والماركر — السيرفر هو اللي بيحدد الأرقام:
+     * الكمية = الوزن الفعلي من المخزن · الطول والقطع = الماركر · العرض والبنشر = الجودة.
+     */
+    private function fabricFromRequest(\App\Models\PreparationRequest $pr, ?int $markerId = null, string $basis = 'usable'): array
+    {
+        $c       = $pr->consignment;
+        $markers = $this->markerOptions($pr);
+        $mk      = ($markerId ? $markers->firstWhere('id', $markerId) : null) ?? $markers->first();
+        $meter   = (bool) $c->is_meter;
+        $wCm     = $basis === 'full' ? $c->min_width_cm : ($c->usable_width ?: $c->min_width_cm);
+
+        return [
+            'preparation_request_id' => $pr->id,
+            'consignment_id'         => $c->id,
+            'marker_id'              => $mk?->id,
+            'width_basis'            => $basis,
+            'calc_mode'              => $meter ? 'length' : 'weight',
+            'unit'                   => $meter ? 'متر' : 'كجم',
+            'planned_qty'            => round($pr->qty_for_work_order, 3),
+            'spread_length_m'        => $mk?->spread_length_m,
+            'pieces_per_spread'      => $mk?->pieces_per_spread,
+            'fabric_width_m'         => $wCm ? round((float) $wCm / 100, 3) : null,
+            'gsm_kg_m2'              => $c->avg_gsm ? round((float) $c->avg_gsm / 1000, 4) : null,
+            '_pr'                    => $pr,
+            '_markers'               => $markers,
+            '_marker'                => $mk,
+        ];
+    }
+
+    /**
+     * المنتجات والمقاسات الافتراضية: من سطور الماركر (الموديل والمقاس وقطعه في الفرشة)،
+     * وإلا موديلات طلب التحضير، وإلا موديلات طلب الشراء اللي الرسالة جت عليه.
+     */
+    private function defaultProducts(\App\Models\PreparationRequest $pr, ?Marker $mk): array
+    {
+        $models = $pr->models->isNotEmpty() ? $pr->models : ($pr->consignment?->purchaseOrder?->models ?? collect());
+        $lines  = $mk?->lines ?? collect();
+
+        // سطور الماركر اللي موديلاتها هي موديلات الطلب (أو الماركر كله لو الطلب من غير موديلات)
+        $match = $models->isEmpty() ? $lines : $lines->whereIn('product_model_id', $models->pluck('id'));
+        if ($match->isNotEmpty()) {
+            return $match->map(fn ($l) => [
+                'product_model_id' => $l->product_model_id, 'size_id' => $l->size_id, 'qty_per_spread' => $l->qty_per_spread,
+            ])->values()->all();
+        }
+        // الماركر لموديلات تانية (ماركر قديم بنفس العرض) ⇒ موديلات الطلب، والمخطط يحدد المقاسات
+        return $models->map(fn ($m) => ['product_model_id' => $m->id])->values()->all();
+    }
+
+    /** سطر خامة تانية (منتج من أكتر من خامة) — بيتبني على السيرفر من طلب التحضير ويتحط في الجدول */
+    public function fabricRow(Request $request)
+    {
+        $pr = \App\Models\PreparationRequest::with(['consignment.fabricType', 'consignment.color', 'models', 'markerRequest.marker'])
+            ->find($request->integer('preparation_request_id'));
+        if (!$pr) return redirect()->route('work-orders.create');   // اتفتح مباشر من غير طلب ⇒ شاشة البداية
+        abort_unless($this->isReady($pr), 422, 'طلب التحضير ده مش جاهز — لازم يتوزن ويكون له ماركر معتمد.');
+
+        return view('workorders.fabric_row', [
+            'i' => (string) $request->get('i', 'x' . time()),
+            'l' => $this->fabricFromRequest($pr),
+        ]);
+    }
+
     private function formData(array $extra): array
     {
         return array_merge([
@@ -459,7 +572,8 @@ class WorkOrderController extends Controller
                                 ->orderBy('arrival_date')->orderBy('id')->get(),
             'safetyCm'     => (float) lv_setting('safety_margin_cm', 5),
             'products'     => [],
-            'markers'      => Marker::where('status', 'approved')->where('is_active', true)->latest('id')->get(),
+            // طلبات جاهزة تتضاف كخامة تانية على نفس الأمر
+            'readyMore'    => $this->readyRequests($extra['row'] ?? null)->filter(fn ($r) => $this->isReady($r))->values(),
             'factories'    => Factory::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'models'       => ProductModel::where('is_active', true)->orderBy('name')->get()->pluck('label', 'id'),
             'sizes'        => Size::ordered()->where('is_active', true)->pluck('name', 'id'),
@@ -475,7 +589,7 @@ class WorkOrderController extends Controller
             'factory_id'     => ['required', 'exists:factories,id'],
             'due_date'       => ['nullable', 'date'],
             'receive_date'   => ['nullable', 'date'],
-            'product_title'  => ['required', 'string', 'max:191'],
+            'product_title'  => ['nullable', 'string', 'max:191'],   // بيتكوّن من الموديلات لو فاضي
             'product_model_id' => ['nullable', 'exists:product_models,id'],
             'product_code'   => ['nullable', 'string', 'max:60'],
             'qb_code'        => ['nullable', 'string', 'max:60'],
@@ -489,21 +603,11 @@ class WorkOrderController extends Controller
 
             // ── الخامات ──
             'fabrics'                        => ['required', 'array', 'min:1'],
-            'fabrics.*.consignment_id'       => ['required', 'exists:consignments,id'],
+            /* الخامة = طلب تحضير اتوزن + ماركر معتمد. الأرقام كلها بتتحسب على السيرفر منهم —
+               اللي جاي من الفورم في الخانات دي بيتجاهل (الميتينج: «مفيش أرقام تتكتب يدوي») */
+            'fabrics.*.preparation_request_id' => ['required', 'exists:preparation_requests,id'],
+            'fabrics.*.marker_id'            => ['required', 'exists:markers,id'],
             'fabrics.*.width_basis'          => ['nullable', 'in:usable,full'],
-            'fabrics.*.preparation_request_id' => ['nullable', 'exists:preparation_requests,id'],
-            'fabrics.*.marker_id'            => ['nullable', 'exists:markers,id'],
-            'fabrics.*.role'                 => ['nullable', 'string', 'max:20'],
-            'fabrics.*.calc_mode'            => ['required', 'in:weight,length'],
-            'fabrics.*.unit'                 => ['required', 'string', 'max:20'],
-            'fabrics.*.planned_qty'          => ['required', 'numeric', 'min:0.001'],
-            'fabrics.*.spread_length_m'      => ['required', 'numeric', 'min:0.01'],
-            'fabrics.*.spread_length_safe_m' => ['nullable', 'numeric', 'min:0'],
-            'fabrics.*.fabric_width_m'       => ['nullable', 'numeric', 'min:0'],
-            'fabrics.*.gsm_kg_m2'            => ['nullable', 'numeric', 'min:0'],
-            'fabrics.*.pieces_per_spread'    => ['required', 'integer', 'min:1'],
-            'fabrics.*.plies'                => ['nullable', 'integer', 'min:0'],
-            'fabrics.*.expected_pieces'      => ['nullable', 'integer', 'min:0'],
             'fabrics.*.notes'                => ['nullable', 'string'],
 
             // ── المنتجات ──
@@ -517,11 +621,33 @@ class WorkOrderController extends Controller
             'factory_id'    => 'المصنع',
             'product_title' => 'اسم المنتج',
             'fabrics'       => 'الخامات',
-            'fabrics.*.consignment_id'    => 'رقم الرسالة',
-            'fabrics.*.planned_qty'       => 'الكمية',
-            'fabrics.*.spread_length_m'   => 'طول الفرشة',
-            'fabrics.*.pieces_per_spread' => 'عدد القطع في الفرشة',
+            'fabrics.*.preparation_request_id' => 'طلب التحضير',
+            'fabrics.*.marker_id'         => 'الماركر',
         ]);
+
+        /* كل خامة: الطلب اتوزن ولسه مادخلش أمر تاني، والماركر معتمد وينفع على عرض الرسالة */
+        $except = $request->route('work_order');
+        $readyIds = $this->readyRequests($except instanceof WorkOrder ? $except : null)->pluck('id')->all();
+        $errors = [];
+        foreach ($v['fabrics'] as $k => $f) {
+            $pr = \App\Models\PreparationRequest::with(['consignment', 'markerRequest.marker'])->find($f['preparation_request_id']);
+            if (!$pr || !in_array($pr->id, $readyIds, true)) {
+                $errors["fabrics.$k.preparation_request_id"] = 'طلب التحضير ده مش متاح — لازم يكون اتوزن ومادخلش أمر شغل تاني.';
+                continue;
+            }
+            if (!$this->markerOptions($pr)->firstWhere('id', (int) $f['marker_id'])) {
+                $errors["fabrics.$k.marker_id"] = 'اختار ماركر معتمد عرضه ينفع على الرسالة دي.';
+                continue;
+            }
+            $v['fabrics'][$k] = $this->fabricFromRequest($pr, (int) $f['marker_id'], $f['width_basis'] ?? 'usable') + ['notes' => $f['notes'] ?? null];
+        }
+        if ($errors) throw \Illuminate\Validation\ValidationException::withMessages($errors);
+
+        // اسم المنتج = الموديلات اللي هتتشغل (مفيش خانة تانية تتكتب باليد)
+        if (empty($v['product_title'])) {
+            $ids = collect($v['products'] ?? [])->pluck('product_model_id')->filter()->unique();
+            $v['product_title'] = ProductModel::whereIn('id', $ids)->pluck('name')->implode(' + ') ?: 'منتج';
+        }
 
         $fabrics  = $v['fabrics'];
         $products = $v['products'] ?? [];
@@ -544,12 +670,9 @@ class WorkOrderController extends Controller
                 $f['spread_length_safe_m'] = round((float) $f['spread_length_m'] + (float) lv_setting('safety_margin_cm', 5) / 100, 3);
             }
 
-            // طلب التحضير اللي الأمر اتعمل عليه — بيتعلّم «دخل أمر شغل» وحجزه بيتحول لتخصيص الأمر
-            if (!empty($f['preparation_request_id'])) {
-                \App\Models\PreparationRequest::where('id', $f['preparation_request_id'])
-                    ->whereNull('work_order_id')
-                    ->update(['work_order_id' => $wo->id, 'status' => 'used']);
-            }
+            /* طلب التحضير بيفضل حاجز الكمية على الرسالة طول ما الأمر مسودة —
+               بيتعلّم «دخل أمر شغل» وحجزه بيتحول لتخصيص الأمر لحظة الاعتماد (DocumentEffects::workOrder).
+               قبل كده كان بيتحرر وقت الحفظ والأمر لسه مسودة، فالكمية كانت بتبان متاحة لحد تاني. */
 
             $calc = PlanningEngine::computeFabric([
                 'calc_mode'            => $f['calc_mode'],
@@ -583,9 +706,9 @@ class WorkOrderController extends Controller
                 'consumption_per_piece'=> $calc['consumption_per_piece'] ?? null,
                 'calc_plies'           => $calc['plies'] ?? null,
                 'calc_pieces'          => $calc['expected_pieces'] ?? null,
-                // اللي بيروح للمصنع: اعتماد المخطط، وافتراضيًا حسبة السيستم
-                'plies'                => $f['plies'] ?? ($calc['plies'] ?? null),
-                'expected_pieces'      => $f['expected_pieces'] ?? ($calc['expected_pieces'] ?? null),
+                // اللي بيروح للمصنع = حسبة السيستم من الوزن الفعلي والماركر
+                'plies'                => $calc['plies'] ?? null,
+                'expected_pieces'      => $calc['expected_pieces'] ?? null,
                 'notes'                => $f['notes'] ?? null,
             ]);
         }

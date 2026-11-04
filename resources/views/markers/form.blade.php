@@ -43,6 +43,11 @@
             <div><div class="k">نسخ مطلوبة</div><div class="v num">{{ (int) $mr->copies }}</div></div>
             <div><div class="k">طلبه</div><div class="v">{{ $mr->creator?->name ?? '—' }}</div><div class="k num">{{ $mr->doc_date?->format('Y-m-d') }}{{ $mr->needed_by ? ' · مطلوب في ' . $mr->needed_by->format('Y-m-d') : '' }}</div></div>
             <div><div class="k">طلب التحضير</div><div class="v num">{{ $mr->preparationRequest?->doc_no ?? '—' }}</div></div>
+            @if($pq = $mr->preparationRequest)
+              <div><div class="k">الكمية من المخزن</div>
+                @if(in_array($pq->status, ['weighed', 'used'], true))<div class="v num text-success">{{ lv_num($pq->qty_for_work_order) }} {{ $mr->consignment?->unit_label }}</div><div class="k">وزن فعلي</div>
+                @else<div class="v num text-warning">{{ lv_num($pq->requested_qty) }} {{ $mr->consignment?->unit_label }}</div><div class="k">تقريبي — مستني وزن المخزن</div>@endif</div>
+            @endif
           </div>
           <table class="table table-sm kv mb-0 mt-2">
             <tr><th>الموديلات المطلوبة في الفرشة</th><td>{{ $mr->models_label ?: '—' }}</td></tr>

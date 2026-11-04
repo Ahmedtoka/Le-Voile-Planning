@@ -525,6 +525,12 @@ th.req::after{font-size:.9em}
 .is-invalid,.line-table .is-invalid{border-color:var(--lv-danger)!important;background-color:#FFF8F7}
 .is-invalid:focus{box-shadow:0 0 0 3px rgba(181,52,43,.16)!important}
 .line-table tr.row-invalid>td{background:#FFF8F7}
+/* كمية + وحدة في جدول سطور: خانة واحدة بحد واحد — الوحدة جوه الخانة مش زرار جنبها بارتفاع مختلف */
+.qty-unit{display:flex;align-items:stretch;min-height:var(--ctl-h-row);border:1px solid var(--lv-field);border-radius:7px;background:var(--lv-white);overflow:hidden}
+.qty-unit:focus-within{border-color:var(--lv-brand);box-shadow:var(--ring)}
+.qty-unit:has(input:disabled){background:var(--lv-surface-2)}
+.line-table .qty-unit input,.qty-unit input{flex:1 1 auto;min-width:0;width:auto;border:0!important;border-radius:0;box-shadow:none!important;background:transparent;min-height:0}
+.qty-unit .qu-unit{display:flex;align-items:center;padding:0 9px;background:var(--lv-surface-2);color:var(--lv-muted);font-size:var(--fs-xs);font-weight:600;border-inline-start:1px solid var(--lv-line)}
 .result-group.is-invalid{outline:2px solid var(--lv-danger);outline-offset:4px;border-radius:10px}   /* السطر اللي فيه الغلط باين في الجدول كله */
 .invalid-feedback{color:var(--lv-danger);font-size:var(--fs-xs);font-weight:600;margin-top:4px;line-height:1.45}
 .invalid-feedback.d-block{display:block}

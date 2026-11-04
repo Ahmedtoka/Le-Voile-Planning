@@ -784,6 +784,11 @@ class DocumentEffects
         DB::transaction(function () use ($wo) {
             $wo->load('fabrics.consignment');
 
+            // طلبات التحضير: حجزها بيتحول لتخصيص الأمر دلوقتي (مش وقت حفظ المسودة)
+            \App\Models\PreparationRequest::whereIn('id', $wo->fabrics->pluck('preparation_request_id')->filter())
+                ->whereNull('work_order_id')
+                ->update(['work_order_id' => $wo->id, 'status' => 'used']);
+
             foreach ($wo->fabrics as $f) {
                 $f->consignment?->recalcRemaining();
                 $f->consignment?->forceFill(['status' => 'in_production'])->save();
